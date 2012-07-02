@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <vector>
 #include <string>
+#include <netinet/in.h>
 #include "clientInterface.h"
 
 class socketThread;
@@ -105,6 +106,7 @@ class socketInterface: public fdInterface{
 		int getSockFP();
 		void closeFP();
 		void dispatchMessages(std::vector<messageType> in_message, int client_idx);
+		socketIntType getSocketType(){return socket_type;};
 
 		//Virtual functions inherited from abstract base class fdInterface
 		void fdBytesReceived(char *buffer, int num_bytes, fdInterface *from_thread);
@@ -127,15 +129,18 @@ class socketInterface: public fdInterface{
 
 class socketThread : public fdInterface{
 	public:
-		socketThread(int in_fp, fdInterface *in_sock, pthread_mutex_t *in_mutex);
+		socketThread(int in_fp, fdInterface *in_sock, pthread_mutex_t *in_mutex, bool is_datagram_socket, sockaddr_in *in_addr=NULL);//Optional address to send responses to in the case of datagram packets
 		void *socketReader();
 		void socketWriter(unsigned char *buffer, int buffer_length);
 		pthread_mutex_t *shared_mutex;
+		void receivedData(char *message, int num_bytes);
 
 		//Stuff inherited from fdInterface class
 		void dataFromUpstream(char *message, int num_bytes, fdInterface *from_interface);
 	private:
+		struct sockaddr_in udp_addr;
 		fdInterface *sock_int;
+		bool is_datagram_socket;
 		
 		int socket_fp;
 		int socket_id;

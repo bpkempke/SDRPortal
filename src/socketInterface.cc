@@ -310,34 +310,42 @@ static void *socketReaderProxy(void *in_socket_thread){
 	static_cast<socketThread*>(in_socket_thread)->socketReader();
 }
 
-socketThread::socketThread(int in_fp, fdInterface *in_sock, pthread_mutex_t *in_mutex){
+socketThread::socketThread(int in_fp, fdInterface *in_sock, pthread_mutex_t *in_mutex, bool in_is_datagram_socket, struct sockaddr_in *in_addr){
+	is_datagram_socket = in_is_datagram_socket;
 
 	socket_fp = in_fp;
 	sock_int = in_sock;
 	shared_mutex = in_mutex;
 	in_sock->registerDownstreamInterface(this);
 
+	udp_addr = *in_addr;
+
 	//Instantiate the thread which reads data from the socket
-	pthread_t new_socket_thread;	
-	pthread_create(&new_socket_thread, NULL, socketReaderProxy, this);
-	pthread_detach(new_socket_thread);
+	//NOTE: We only need this thread if we're not doing datagrams
+	if(!is_datagram_socket){
+		pthread_t new_socket_thread;	
+		pthread_create(&new_socket_thread, NULL, socketReaderProxy, this);
+		pthread_detach(new_socket_thread);
+	}
 }
 
 void *socketThread::socketReader(){
-	
+	struct sockaddr_in from;
+	socklen_t fromlen;
 	char buffer[256];
 
 	#ifdef DEBUG
 	printf("Got to the socket Reader function...\n");
 	#endif
 	while(1){
-		int n = read(socket_fp, buffer, 255);
+		int n;
+		n = read(socket_fp, buffer, sizeof(buffer));
 		if(n <= 0) break;
 
 		//Semaphore here to protect shared data structures
 		if(shared_mutex)
 			pthread_mutex_lock(shared_mutex);
-		sock_int->fdBytesReceived(buffer, n, this);
+		receivedData(buffer, n);
 		if(shared_mutex)
 			pthread_mutex_unlock(shared_mutex);
 		for(int ii = 0; ii < n; ii++){
@@ -356,15 +364,24 @@ void *socketThread::socketReader(){
 	sock_int->deleteDownstreamInterface(this);
 }
 
+void socketThread::receivedData(char *message, int num_bytes){
+	sock_int->fdBytesReceived(message, num_bytes, this);
+}
+
 void socketThread::dataFromUpstream(char *message, int num_bytes, fdInterface *from_interface){
 	socketWriter((unsigned char *)message, num_bytes);
 }
 
 void socketThread::socketWriter(unsigned char *buffer, int buffer_length){
 	if(socket_fp){
-		int n = write(socket_fp, buffer, buffer_length);
+		//TODO: this needs to go to a UDP socket sometimes!
+		int n;
+		if(is_datagram_socket)
+			n = sendto(socket_fp, buffer, buffer_length, 0, (struct sockaddr *)&udp_addr, sizeof(struct sockaddr_in));
+		else
+	        	n = write(socket_fp, buffer, buffer_length);
 		if(n <= 0){
-			//TODO: close out the sockets, etc.....
+			//TODO: Commit hara kiri...
 			printf("socket not open anymore...tried writing %s bytes...\n",buffer);
 		}
 	}
