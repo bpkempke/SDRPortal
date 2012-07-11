@@ -20,42 +20,6 @@
 using namespace std;
 
 /*
- * Serial port code
- *
- * Includes functions used in opening and setting up the specified serial port
- */
-#define LITHIUM_BAUD B38400
-int openSerialPort(char *which_port){
-	int return_fd;
-
-/*	//Open up the port, checking for errors
-	return_fd = open(which_port, O_RDWR | O_NOCTTY);
-	if(return_fd == -1){
-		printf("Unable to open the specified serial port...\n");
-		//TODO: figure out the appropriate error handling here
-		exit(0);
-	} else {
-		//TODO: what exactly does this do???
-		fcntl(return_fd, F_SETFL, 0);
-	}
-
-	//Set the baudrate, etc for this serial port
-	struct termios options;
-	fcntl(return_fd, F_SETOWN, getpid());
-//	fcntl(return_fd, F_SETFL, FASYNC);
-	tcgetattr(return_fd, &options);
-	options.c_cflag = LITHIUM_BAUD | CS8 | CLOCAL | CREAD;
-	options.c_iflag = 1;
-	options.c_oflag = 0;
-	options.c_lflag = 0;
-	tcsetattr(return_fd, TCSANOW, &options);*/
-	
-	//return the newly-created file descriptor
-	return return_fd;
-}
-
-
-/*
  * void *socketConnectionListener(void *in_socket)
  *
  *   This thread listens for incoming connection requests on the corresponding
