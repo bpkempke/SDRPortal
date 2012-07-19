@@ -48,6 +48,7 @@ void socketInterface::fdBytesReceived(char *buffer, int num_bytes, fdInterface *
 		}
 	}
 	messageType new_message = {buffer, num_bytes, UPSTREAM};
+	//FROM THE SOCKET
 	vector<messageType> new_packets = client_parsers[client_index]->parseDownstreamMessage(new_message);
 	dispatchMessages(new_packets, client_index);
 }
@@ -86,6 +87,7 @@ void socketInterface::registerUpstreamInterface(fdInterface *up_int){
 void socketInterface::dataFromUpstream(char *message, int num_bytes, fdInterface *from_interface){
 	messageType in_message = {message, num_bytes, DOWNSTREAM};
 	for(int ii = 0; ii < clients.size(); ii++){
+		//FROM THE USRP
 		vector<messageType> new_messages = client_parsers[ii]->parseUpstreamMessage(in_message);
 		dispatchMessages(new_messages, ii);
 	}
@@ -266,39 +268,42 @@ vector<messageType> wsSocketInterpreter::parseDownstreamMessage(messageType in_m
 }
 
 vector<messageType> wsSocketInterpreter::parseUpstreamMessage(messageType in_message){
-	//Construct a valid RFC 6455 message from the incoming message
+	vector<messageType> ret_vector(0);
+	if(connection_established){
+		//Construct a valid RFC 6455 message from the incoming message
 
-	//First, figure out how big our resulting message is going to be
-	bool ml_16 = in_message.num_bytes > 125 && in_message.num_bytes < 65535;
-	bool ml_64 = in_message.num_bytes > 65535;
-	int message_length = in_message.num_bytes+2;
-	if(ml_16) message_length += 2;
-	else if(ml_64) message_length += 8;
-	char *message = new char[message_length];
+		//First, figure out how big our resulting message is going to be
+		bool ml_16 = in_message.num_bytes > 125 && in_message.num_bytes < 65535;
+		bool ml_64 = in_message.num_bytes > 65535;
+		int message_length = in_message.num_bytes+2;
+		if(ml_16) message_length += 2;
+		else if(ml_64) message_length += 8;
+		char *message = new char[message_length];
 
-	//First byte: FIN (always true in our case) and opcode (0x02 = binary)
-	message[0] = 0x82;
+		//First byte: FIN (always true in our case) and opcode (0x02 = binary)
+		message[0] = 0x82;
 
-	//Next byte: payload length (0-125 if small message, 126 if length can fit in 16 bits, 127 if length can fit in 64 bits)
-	//Subsequent bytes: Length (if needed), then the actual message
-	if(!(ml_16 || ml_64)){
-		message[1] = (char)in_message.num_bytes;
-		memcpy(&message[2],in_message.buffer,in_message.num_bytes);
-	}else if(ml_16){
-		message[1] = 126;
-		uint16_t ml_temp = htons((uint16_t)in_message.num_bytes);
-		memcpy(&message[2],&ml_temp,2);
-		memcpy(&message[4],in_message.buffer,in_message.num_bytes);
-	}else if(ml_64){
-		message[1] = 127;
-		uint32_t ml_temp = htonl((uint32_t)in_message.num_bytes);
-		memset(&message[2],0,4);
-		memcpy(&message[6],&ml_temp,4);
-		memcpy(&message[10],in_message.buffer,in_message.num_bytes);
+		//Next byte: payload length (0-125 if small message, 126 if length can fit in 16 bits, 127 if length can fit in 64 bits)
+		//Subsequent bytes: Length (if needed), then the actual message
+		if(!(ml_16 || ml_64)){
+			message[1] = (char)in_message.num_bytes;
+			memcpy(&message[2],in_message.buffer,in_message.num_bytes);
+		}else if(ml_16){
+			message[1] = 126;
+			uint16_t ml_temp = htons((uint16_t)in_message.num_bytes);
+			memcpy(&message[2],&ml_temp,2);
+			memcpy(&message[4],in_message.buffer,in_message.num_bytes);
+		}else if(ml_64){
+			message[1] = 127;
+			uint32_t ml_temp = htonl((uint32_t)in_message.num_bytes);
+			memset(&message[2],0,4);
+			memcpy(&message[6],&ml_temp,4);
+			memcpy(&message[10],in_message.buffer,in_message.num_bytes);
+		}
+
+		messageType new_message = {message, message_length, DOWNSTREAM};
+		ret_vector.push_back(new_message);
 	}
-
-	messageType new_message = {message, message_length, DOWNSTREAM};
-	vector<messageType> ret_vector(1,new_message);
 	return ret_vector;
 }
 /*
@@ -318,7 +323,8 @@ socketThread::socketThread(int in_fp, fdInterface *in_sock, pthread_mutex_t *in_
 	shared_mutex = in_mutex;
 	in_sock->registerDownstreamInterface(this);
 
-	udp_addr = *in_addr;
+	if(is_datagram_socket)
+		udp_addr = *in_addr;
 
 	//Instantiate the thread which reads data from the socket
 	//NOTE: We only need this thread if we're not doing datagrams

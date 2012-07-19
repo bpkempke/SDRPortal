@@ -183,14 +183,16 @@ int main(int argv, char *argc[]){
 	int udp_cmd_portnum = atoi(argc[6]);
 	int ws_cmd_portnum = atoi(argc[7]);
 	tcp_portnum = newSocket(tcp_portnum, &tcp_interface, true);
-	udp_portnum = newSocket(udp_portnum, &udp_interface, false);
+	//udp_portnum = newSocket(udp_portnum, &udp_interface, false);
 	ws_portnum = newSocket(ws_portnum, &ws_interface, true);
 	tcp_cmd_portnum = newSocket(tcp_cmd_portnum, &tcp_cmd_interface, true);
-	udp_cmd_portnum = newSocket(udp_cmd_portnum, &udp_cmd_interface, false);
+	//udp_cmd_portnum = newSocket(udp_cmd_portnum, &udp_cmd_interface, false);
 	ws_cmd_portnum = newSocket(ws_cmd_portnum, &ws_cmd_interface, true);
 
 	//Instantiate a UHD interface and link in with the created ports
-	uhdInterface usrp_instance("","","","TX/RX","TX/RX",1000000,1000000,437000000,437000000,0,0);
+	uhdInterface usrp_instance("fpga=std_5g_4.rbf, fw=bandstitch.ihx","","","J1","J1",1000000,1000000,5630000000,5630000000,20.0,40.0);
+	//uhdInterface usrp_instance("","","","J1","J2",1000000,1000000,5630000000,5630000000,20.0,40.0);
+	//uhdInterface usrp_instance("","","","TX/RX","TX/RX",1000000,1000000,437000000,437000000,0,0);
 	
 	//Now fork off because this is a daemon!
 	//pid_t pid = fork();
@@ -208,10 +210,10 @@ int main(int argv, char *argc[]){
 	//udp_interface.registerUpstreamInterface(&usrp_instance);
 	//ws_interface.registerUpstreamInterface(&usrp_instance);
 	usrp_instance.registerDownstreamControlInterface(&tcp_interface, CONTROL_DATA);
-	usrp_instance.registerDownstreamControlInterface(&udp_interface, CONTROL_DATA);
+	//usrp_instance.registerDownstreamControlInterface(&udp_interface, CONTROL_DATA);
 	usrp_instance.registerDownstreamControlInterface(&ws_interface, CONTROL_DATA);
 	usrp_instance.registerDownstreamControlInterface(&tcp_cmd_interface, CONTROL_CMD);
-	usrp_instance.registerDownstreamControlInterface(&udp_cmd_interface, CONTROL_CMD);
+	//usrp_instance.registerDownstreamControlInterface(&udp_cmd_interface, CONTROL_CMD);
 	usrp_instance.registerDownstreamControlInterface(&ws_cmd_interface, CONTROL_CMD);
 
 	//Now onto the child task stuff...
@@ -220,10 +222,10 @@ int main(int argv, char *argc[]){
 
 	//Run a thread which listens to the data socket (only for non-datagram interfaces (TCP, WS))
 	pthread_create(&tcp_conn_listener, NULL, socketConnectionListener, (void *)&tcp_interface);
-	pthread_create(&udp_conn_listener, NULL, socketConnectionListener, (void *)&udp_interface);
+	//pthread_create(&udp_conn_listener, NULL, socketConnectionListener, (void *)&udp_interface);
 	pthread_create(&ws_conn_listener, NULL, socketConnectionListener, (void *)&ws_interface);
 	pthread_create(&tcp_cmd_conn_listener, NULL, socketConnectionListener, (void *)&tcp_cmd_interface);
-	pthread_create(&udp_cmd_conn_listener, NULL, socketConnectionListener, (void *)&udp_cmd_interface);
+	//pthread_create(&udp_cmd_conn_listener, NULL, socketConnectionListener, (void *)&udp_cmd_interface);
 	pthread_create(&ws_cmd_conn_listener, NULL, socketConnectionListener, (void *)&ws_cmd_interface);
 
 	while(1){

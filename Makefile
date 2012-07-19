@@ -17,7 +17,7 @@ INCLUDE = -Ilib
 all: uhdd
 
 uhdd: $(SOCKET_HANDLERS) $(CLIENT_INT) $(BASE64_LIB) $(SHA1_LIB) $(UHD_INT)
-	$(CPPC) $(THREAD_LIB) $(INCLUDE) src/uhd_daemon.cc $(LITHIUM_UTILS) $(SOCKET_HANDLERS) $(CLIENT_INT) $(UHD_INT) $(BASE64_LIB) $(SHA1_LIB) -luhd -o ./bin/uhdd
+	$(CPPC) -g $(THREAD_LIB) $(INCLUDE) src/uhd_daemon.cc $(LITHIUM_UTILS) $(SOCKET_HANDLERS) $(CLIENT_INT) $(UHD_INT) $(BASE64_LIB) $(SHA1_LIB) -luhd -o ./bin/uhdd
 
 $(SOCKET_HANDLERS): $(CLIENT_INT) src/socketInterface.cc lib/socketInterface.h
 	$(CPPC) $(THREAD_LIB) $(INCLUDE) $(CLIENT_INT)  -c src/socketInterface.cc -o $(SOCKET_HANDLERS)

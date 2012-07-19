@@ -37,14 +37,43 @@ uhdInterface::uhdInterface(string args, string tx_subdev, string rx_subdev, stri
 	shared_uhd->set_rx_gain(rx_gain);
 
 	//Set up the antennas
+	printf("setting up antennas....\n");
 	if(tx_ant != "") shared_uhd->set_tx_antenna(tx_ant);
 	if(rx_ant != "") shared_uhd->set_rx_antenna(rx_ant);
+
+	//TODO: Ugh... this is hard-coded...
+	//shared_uhd->set_tx_bandwidth(24e6);
+	//shared_uhd->set_rx_bandwidth(18e6);
 
 	//Set up the transmit and receive streamers (let's keep it to a float stream for now)
 	uhd::stream_args_t tx_stream_args("fc32");
 	tx_stream = shared_uhd->get_tx_stream(tx_stream_args);
-	uhd::stream_args_t rx_stream_args("fc32","sc16");
+	uhd::stream_args_t rx_stream_args("sc16","sc16");
 	rx_stream = shared_uhd->get_rx_stream(rx_stream_args);
+
+	//Write all the regs we need in order to get this demo to work....
+	printf("setting max2829 regs...\n");
+	writeMAX2829Reg(0x00D33);
+	writeMAX2829Reg(0x08004);
+	writeMAX2829Reg(0x38E35);
+	writeMAX2829Reg(0x04006);
+	writeMAX2829Reg(0x007A7);
+	writeMAX2829Reg(0x068B9);
+	writeMAX2829Reg(0x006CB);
+	writeMAX2829Reg(0x002AC);
+	printf("Setting gpio_ddr...\n");
+	uhd::usrp::dboard_iface::sptr  iface_ptr = shared_uhd->get_rx_dboard_iface();
+	iface_ptr->set_gpio_ddr(uhd::usrp::dboard_iface::UNIT_RX, 0x7FE0, 0xFFFF);
+	printf("Setting up atr registers...\n");
+	iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_RX_ONLY, 0xD010);
+	iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_TX_ONLY, 0x6810);
+	iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_FULL_DUPLEX, 0x6810);//TODO: This shouldn't really happen, should it??
+	//printf("First reading the atr registers...\n");
+	//printf("ATR_REG_RX_ONLY: %x\n",iface_ptr->get_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_RX_ONLY));
+	//Read back the state of the tx output to see if ANTSEL is switching...
+	//while(1)
+	//	printf("ANTSEL REG=%x\n",iface_ptr->read_gpio(uhd::usrp::dboard_iface::UNIT_TX));
+
 
 	//Other miscellaneous initialization stuff
 	tx_md.start_of_burst = false;
@@ -56,6 +85,12 @@ uhdInterface::uhdInterface(string args, string tx_subdev, string rx_subdev, stri
 
 	//A tx thread is also instantiated which handles sending stuff from tx_queue out to the radio
 	pthread_create(&tx_thread, NULL, uhdWriteProxy, (void*)this);
+}
+
+void uhdInterface::writeMAX2829Reg(uint32_t value){
+	uhd::usrp::dboard_iface::sptr  iface_ptr = shared_uhd->get_rx_dboard_iface();
+	printf("UHDINT_XCVR@%p: send value 0x%05x\n",(void*)(iface_ptr.get()),value);
+	iface_ptr->write_spi(uhd::usrp::dboard_iface::UNIT_RX, uhd::spi_config_t::EDGE_RISE, value, 24);
 }
 
 void uhdInterface::parseControlStream(string in_data){
@@ -107,11 +142,11 @@ int uhdInterface::rxData(complex<float> *rx_data_iq, int num_samples){
 
 	//Error checking
 	if(rx_md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
-		cout << "rx error 1";
+		cout << "rx error 1\n";
 	else if(rx_md.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW)
-		cout << "rx error 2";
+		cout << "rx error 2\n";
 	else if(rx_md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE){
-		cout << "rx error 3";
+		cout << "rx error 3\n";
 		ret = -1;
 	}
 
