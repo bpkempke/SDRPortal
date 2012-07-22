@@ -190,7 +190,7 @@ int main(int argv, char *argc[]){
 	ws_cmd_portnum = newSocket(ws_cmd_portnum, &ws_cmd_interface, true);
 
 	//Instantiate a UHD interface and link in with the created ports
-	uhdInterface usrp_instance("fpga=std_5g_4.rbf, fw=bandstitch.ihx","","","J1","J1",1000000,1000000,5630000000,5630000000,20.0,40.0);
+	uhdInterface usrp_instance("fpga=images/usrp1_fpga.rbf, fw=images/usrp1_ranging_fw.ihx","","","J1","J1",1000000,1000000,5630000000,5630000000,20.0,40.0);
 	//uhdInterface usrp_instance("","","","J1","J2",1000000,1000000,5630000000,5630000000,20.0,40.0);
 	//uhdInterface usrp_instance("","","","TX/RX","TX/RX",1000000,1000000,437000000,437000000,0,0);
 	

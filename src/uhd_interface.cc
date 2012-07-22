@@ -136,7 +136,7 @@ void uhdInterface::rxStart(){
 	shared_uhd->issue_stream_cmd(stream_cmd);
 }
 
-int uhdInterface::rxData(complex<float> *rx_data_iq, int num_samples){
+int uhdInterface::rxData(complex<int16_t> *rx_data_iq, int num_samples){
 	//Simple call to stream->recv
 	int ret = rx_stream->recv(rx_data_iq, num_samples, rx_md, 1.0); //1.0 is the timeout time (in seconds)
 
@@ -158,17 +158,20 @@ void uhdInterface::queueTXSamples(complex<float> *in_samples, int num_samples){
 }
 
 //Let's break this in to chunks of 256 samples for now.  Can go up or down, but let's try this for now
-#define RX_CHUNK_SIZE 256
+#define RX_CHUNK_SIZE 512
+int tot_bytes = 0;
 void uhdInterface::rxThread(){
-	complex<float> rx_data[RX_CHUNK_SIZE];
+	complex<int16_t> rx_data[RX_CHUNK_SIZE];
 	while(1){
 		rxData(rx_data, RX_CHUNK_SIZE);
+		//tot_bytes += RX_CHUNK_SIZE*sizeof(complex<int16_t>);
+		//printf("%d bytes so far...\n",tot_bytes);
 	
 		//Now we have to push it down to all downstream interfaces
 		map<fdInterface*,uhdControlConnection*>::iterator conn_it;
 		for(conn_it = control_connections.begin(); conn_it != control_connections.end(); conn_it++){
 			if((*conn_it).second->getIntType() == CONTROL_DATA){
-				(*conn_it).second->dataFromUpstream((char*)rx_data, RX_CHUNK_SIZE*sizeof(complex<float>), this);
+				(*conn_it).second->dataFromUpstream((char*)rx_data, RX_CHUNK_SIZE*sizeof(complex<int16_t>), this);
 			}
 		}
 	}

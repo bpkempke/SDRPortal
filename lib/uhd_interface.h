@@ -69,7 +69,7 @@ public:
 
 	//Receive data methods
 	void rxStart();
-	int rxData(std::complex<float> *rx_data_iq, int num_samples);
+	int rxData(std::complex<int16_t> *rx_data_iq, int num_samples);
 	void rxEnd();
 	void rxThread();
 	void txThread();
