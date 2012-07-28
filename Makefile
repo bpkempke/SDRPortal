@@ -1,5 +1,5 @@
 #
-# CDH Makefile
+# SDRPortal Makefile
 #
 # Ben Kempke
 #

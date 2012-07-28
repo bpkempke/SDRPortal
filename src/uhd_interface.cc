@@ -13,7 +13,7 @@ static void *uhdWriteProxy(void *in_uhd_int){
 /**********************
   * uhdInterface class
   *********************/
-uhdInterface::uhdInterface(string args, string tx_subdev, string rx_subdev, string tx_ant, string rx_ant, double tx_rate, double rx_rate, double tx_freq, double rx_freq, double tx_gain, double rx_gain){
+uhdInterface::uhdInterface(string args, string tx_subdev, string rx_subdev, string tx_ant, string rx_ant, double tx_rate, double rx_rate, double tx_freq, double rx_freq, double tx_gain, double rx_gain, bool codec_highspeed){
 	//Open blank UHD object
 	shared_uhd = uhd::usrp::multi_usrp::make(args);
 
@@ -51,28 +51,30 @@ uhdInterface::uhdInterface(string args, string tx_subdev, string rx_subdev, stri
 	uhd::stream_args_t rx_stream_args("sc16","sc16");
 	rx_stream = shared_uhd->get_rx_stream(rx_stream_args);
 
-	//Write all the regs we need in order to get this demo to work....
-	printf("setting max2829 regs...\n");
-	writeMAX2829Reg(0x00D33);
-	writeMAX2829Reg(0x08004);
-	writeMAX2829Reg(0x38E35);
-	writeMAX2829Reg(0x04006);
-	writeMAX2829Reg(0x007A7);
-	writeMAX2829Reg(0x068B9);
-	writeMAX2829Reg(0x006CB);
-	writeMAX2829Reg(0x002AC);
-	printf("Setting gpio_ddr...\n");
-	uhd::usrp::dboard_iface::sptr  iface_ptr = shared_uhd->get_rx_dboard_iface();
-	iface_ptr->set_gpio_ddr(uhd::usrp::dboard_iface::UNIT_RX, 0x7FE0, 0xFFFF);
-	printf("Setting up atr registers...\n");
-	iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_RX_ONLY, 0xD010);
-	iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_TX_ONLY, 0x6810);
-	iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_FULL_DUPLEX, 0x6810);//TODO: This shouldn't really happen, should it??
-	//printf("First reading the atr registers...\n");
-	//printf("ATR_REG_RX_ONLY: %x\n",iface_ptr->get_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_RX_ONLY));
-	//Read back the state of the tx output to see if ANTSEL is switching...
-	//while(1)
-	//	printf("ANTSEL REG=%x\n",iface_ptr->read_gpio(uhd::usrp::dboard_iface::UNIT_TX));
+	if(codec_highspeed){
+		//Write all the regs we need if using this for demo build
+		printf("setting max2829 regs...\n");
+		writeMAX2829Reg(0x00D33);
+		writeMAX2829Reg(0x08004);
+		writeMAX2829Reg(0x38E35);
+		writeMAX2829Reg(0x04006);
+		writeMAX2829Reg(0x007A7);
+		writeMAX2829Reg(0x068B9);
+		writeMAX2829Reg(0x006CB);
+		writeMAX2829Reg(0x002AC);
+		printf("Setting gpio_ddr...\n");
+		uhd::usrp::dboard_iface::sptr  iface_ptr = shared_uhd->get_rx_dboard_iface();
+		iface_ptr->set_gpio_ddr(uhd::usrp::dboard_iface::UNIT_RX, 0x7FE0, 0xFFFF);
+		printf("Setting up atr registers...\n");
+		iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_RX_ONLY, 0xD010);
+		iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_TX_ONLY, 0x6810);
+		iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_FULL_DUPLEX, 0x6810);//TODO: This shouldn't really happen, should it??
+		//printf("First reading the atr registers...\n");
+		//printf("ATR_REG_RX_ONLY: %x\n",iface_ptr->get_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_RX_ONLY));
+		//Read back the state of the tx output to see if ANTSEL is switching...
+		//while(1)
+		//	printf("ANTSEL REG=%x\n",iface_ptr->read_gpio(uhd::usrp::dboard_iface::UNIT_TX));
+	}
 
 
 	//Other miscellaneous initialization stuff

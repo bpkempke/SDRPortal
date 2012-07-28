@@ -1,4 +1,5 @@
 //#define DEBUG
+#include <getopt.h>
 #include "socketInterface.h"
 #include "uhd_interface.h"
 #include "sha1.h"
@@ -122,7 +123,7 @@ void sighandler(int sig){
 	exit(1);
 }
 
-int main(int argv, char *argc[]){
+int main(int argc, char *argv[]){
 
 	//In this thread, we'd like to ignore all SIGPIPE signals, and handle them separately
 	sigset_t set;
@@ -130,35 +131,37 @@ int main(int argv, char *argc[]){
 	sigaddset(&set, SIGPIPE);
 	pthread_sigmask(SIG_BLOCK, &set, NULL);
 
-    struct sigaction new_action, old_action;
-    /* Set up the structure to specify the new action. */
-    new_action.sa_handler = sighandler;
-    sigemptyset (&new_action.sa_mask);
-    new_action.sa_flags = 0;
+	struct sigaction new_action, old_action;
+	/* Set up the structure to specify the new action. */
+	new_action.sa_handler = sighandler;
+	sigemptyset (&new_action.sa_mask);
+	new_action.sa_flags = 0;
+	
+	//Set up signal handlers
+	sigaction (SIGINT, NULL, &old_action);
+	if (old_action.sa_handler != SIG_IGN)
+		sigaction (SIGINT, &new_action, NULL);
+		sigaction (SIGHUP, NULL, &old_action);
+	if (old_action.sa_handler != SIG_IGN)
+		sigaction (SIGHUP, &new_action, NULL);
+		sigaction (SIGTERM, NULL, &old_action);
+	if (old_action.sa_handler != SIG_IGN)
+		sigaction (SIGTERM, &new_action, NULL);
 
-    sigaction (SIGINT, NULL, &old_action);
-    if (old_action.sa_handler != SIG_IGN)
-      sigaction (SIGINT, &new_action, NULL);
-    sigaction (SIGHUP, NULL, &old_action);
-    if (old_action.sa_handler != SIG_IGN)
-      sigaction (SIGHUP, &new_action, NULL);
-    sigaction (SIGTERM, NULL, &old_action);
-    if (old_action.sa_handler != SIG_IGN)
-      sigaction (SIGTERM, &new_action, NULL);
-
-	#ifndef DEBUG
-	//init_daemon();
-	#endif
-
-	//Some error checking with input arguments...
-	if(argv != 8){
-		printf("Wrong number of input arguments, exiting...\n");
-		exit(0);
-	}
-
-	#ifdef DEBUG
-	printf("Opening a connection to the Lithium on %s...\n", argc[1]);
-	#endif
+	//Set up getopt
+	const char* const short_options = "t:u:w:T:U:W:f:F:h";
+	const struct option long_options[] = {
+		{"tcp_data", required_argument, 0, 't'},
+		{"udp_data", required_argument, 0, 'u'},
+		{"ws_data", required_argument, 0, 'w'},
+		{"tcp_cmd", required_argument, 0, 'T'},
+		{"udp_cmd", required_argument, 0, 'U'},
+		{"ws_cmd", required_argument, 0, 'W'},
+		{"firmware", required_argument, 0, 'f'},
+		{"fpga_image", required_argument, 0, 'F'},
+		{"codec_highspeed", no_argument, 0, 'h'},
+		{NULL, 0, NULL, 0}
+	};//TODO: Need to add more arguments such as tuning frequency, sampling rate, etc.
 
 	pthread_t tcp_conn_listener;
 	pthread_t udp_conn_listener;
@@ -167,32 +170,93 @@ int main(int argv, char *argc[]){
 	pthread_t udp_cmd_conn_listener;
 	pthread_t ws_cmd_conn_listener;
 
-	////Test out the base64 library
-	//unsigned char sha1_hash[20];
-	//char sha1_hex[41];
-	//sha1::calc("dGhlIHNhbXBsZSBub25jZQ==258EAFA5-E914-47DA-95CA-C5AB0DC85B11", 60, sha1_hash);
-	//sha1::toHexString(sha1_hash, sha1_hex);
-	//cout << sha1_hex << endl;
-	//cout << base64_encode(sha1_hash, 20) << endl;
-
 	//Open up two separate sockets, one for commands, and one for data
-	int tcp_portnum = atoi(argc[2]);
-	int udp_portnum = atoi(argc[3]);
-	int ws_portnum = atoi(argc[4]);
-	int tcp_cmd_portnum = atoi(argc[5]);
-	int udp_cmd_portnum = atoi(argc[6]);
-	int ws_cmd_portnum = atoi(argc[7]);
-	tcp_portnum = newSocket(tcp_portnum, &tcp_interface, true);
-	//udp_portnum = newSocket(udp_portnum, &udp_interface, false);
-	ws_portnum = newSocket(ws_portnum, &ws_interface, true);
-	tcp_cmd_portnum = newSocket(tcp_cmd_portnum, &tcp_cmd_interface, true);
-	//udp_cmd_portnum = newSocket(udp_cmd_portnum, &udp_cmd_interface, false);
-	ws_cmd_portnum = newSocket(ws_cmd_portnum, &ws_cmd_interface, true);
+	int tcp_portnum = 0;
+	int udp_portnum = 0;
+	int ws_portnum = 0;
+	int tcp_cmd_portnum = 0;
+	int udp_cmd_portnum = 0;
+	int ws_cmd_portnum = 0;
+	bool codec_highspeed = false;
+	string uhd_arguments = "";
+
+	//Parse out the arguments using getopt_long
+	int option_index, next_option;
+	while((next_option = getopt_long(argc, argv, short_options, long_options, NULL)) != -1){
+		switch(next_option){
+		case 't':
+			tcp_portnum = atoi(optarg);
+			break;
+		case 'u':
+			udp_portnum = atoi(optarg);
+			break;
+		case 'w':
+			ws_portnum = atoi(optarg);
+			break;
+		case 'T':
+			tcp_cmd_portnum = atoi(optarg);
+			break;
+		case 'U':
+			udp_cmd_portnum = atoi(optarg);
+			break;
+		case 'W':
+			ws_cmd_portnum = atoi(optarg);
+			break;
+		case 'f':
+			uhd_arguments += ", fpga=";
+			uhd_arguments += optarg;
+			break;
+		case 'F':
+			uhd_arguments += ", fw=";
+			uhd_arguments += optarg;
+			break;
+		case 'h':
+			codec_highspeed = true;
+			break;
+		default:
+			break;
+		}
+	}
+
+	//Check to see if there are any uhd arguments supplied, and if so, remove the leading comma
+	if(uhd_arguments[0] == ',')
+		uhd_arguments = uhd_arguments.substr(2,uhd_arguments.length()-2);
 
 	//Instantiate a UHD interface and link in with the created ports
-	uhdInterface usrp_instance("fpga=images/usrp1_fpga.rbf, fw=images/usrp1_ranging_fw.ihx","","","J1","J1",1000000,1000000,5630000000,5630000000,20.0,40.0);
-	//uhdInterface usrp_instance("","","","J1","J2",1000000,1000000,5630000000,5630000000,20.0,40.0);
-	//uhdInterface usrp_instance("","","","TX/RX","TX/RX",1000000,1000000,437000000,437000000,0,0);
+	uhdInterface usrp_instance(uhd_arguments,"","","J1","J1",1000000,1000000,5630000000,5630000000,20.0,40.0, codec_highspeed);
+
+	//Run a thread which listens to the data socket (only for non-datagram interfaces (TCP, WS))
+	if(tcp_portnum){
+		tcp_portnum = newSocket(tcp_portnum, &tcp_interface, true);
+		usrp_instance.registerDownstreamControlInterface(&tcp_interface, CONTROL_DATA);
+		pthread_create(&tcp_conn_listener, NULL, socketConnectionListener, (void *)&tcp_interface);
+	}
+	//if(udp_portnum){
+		//udp_portnum = newSocket(udp_portnum, &udp_interface, false);
+		//usrp_instance.registerDownstreamControlInterface(&udp_interface, CONTROL_DATA);
+		//pthread_create(&udp_conn_listener, NULL, socketConnectionListener, (void *)&udp_interface);
+	//}
+	if(ws_portnum){
+		ws_portnum = newSocket(ws_portnum, &ws_interface, true);
+		usrp_instance.registerDownstreamControlInterface(&ws_interface, CONTROL_DATA);
+		pthread_create(&ws_conn_listener, NULL, socketConnectionListener, (void *)&ws_interface);
+	}
+	if(tcp_cmd_portnum){
+		tcp_cmd_portnum = newSocket(tcp_cmd_portnum, &tcp_cmd_interface, true);
+		usrp_instance.registerDownstreamControlInterface(&tcp_cmd_interface, CONTROL_CMD);
+		pthread_create(&tcp_cmd_conn_listener, NULL, socketConnectionListener, (void *)&tcp_cmd_interface);
+	}
+	//if(udp_cmd_portnum){
+		//udp_cmd_portnum = newSocket(udp_cmd_portnum, &udp_cmd_interface, false);
+		//usrp_instance.registerDownstreamControlInterface(&udp_cmd_interface, CONTROL_CMD);
+		//pthread_create(&udp_cmd_conn_listener, NULL, socketConnectionListener, (void *)&udp_cmd_interface);
+	//}
+	if(ws_cmd_portnum){
+		ws_cmd_portnum = newSocket(ws_cmd_portnum, &ws_cmd_interface, true);
+		usrp_instance.registerDownstreamControlInterface(&ws_cmd_interface, CONTROL_CMD);
+		pthread_create(&ws_cmd_conn_listener, NULL, socketConnectionListener, (void *)&ws_cmd_interface);
+	}
+
 	
 	//Now fork off because this is a daemon!
 	//pid_t pid = fork();
@@ -205,28 +269,9 @@ int main(int argv, char *argc[]){
 	close(STDOUT_FILENO);
 	close(STDERR_FILENO);*/
 
-	//Register all downstream socket interfaces with the single usrp interface
-	//tcp_interface.registerUpstreamInterface(&usrp_instance);
-	//udp_interface.registerUpstreamInterface(&usrp_instance);
-	//ws_interface.registerUpstreamInterface(&usrp_instance);
-	usrp_instance.registerDownstreamControlInterface(&tcp_interface, CONTROL_DATA);
-	//usrp_instance.registerDownstreamControlInterface(&udp_interface, CONTROL_DATA);
-	usrp_instance.registerDownstreamControlInterface(&ws_interface, CONTROL_DATA);
-	usrp_instance.registerDownstreamControlInterface(&tcp_cmd_interface, CONTROL_CMD);
-	//usrp_instance.registerDownstreamControlInterface(&udp_cmd_interface, CONTROL_CMD);
-	usrp_instance.registerDownstreamControlInterface(&ws_cmd_interface, CONTROL_CMD);
-
 	//Now onto the child task stuff...
 //	umask(0);
 //	pid_t sid = setsid();
-
-	//Run a thread which listens to the data socket (only for non-datagram interfaces (TCP, WS))
-	pthread_create(&tcp_conn_listener, NULL, socketConnectionListener, (void *)&tcp_interface);
-	//pthread_create(&udp_conn_listener, NULL, socketConnectionListener, (void *)&udp_interface);
-	pthread_create(&ws_conn_listener, NULL, socketConnectionListener, (void *)&ws_interface);
-	pthread_create(&tcp_cmd_conn_listener, NULL, socketConnectionListener, (void *)&tcp_cmd_interface);
-	//pthread_create(&udp_cmd_conn_listener, NULL, socketConnectionListener, (void *)&udp_cmd_interface);
-	pthread_create(&ws_cmd_conn_listener, NULL, socketConnectionListener, (void *)&ws_cmd_interface);
 
 	while(1){
 		sleep(30);

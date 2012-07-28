@@ -55,7 +55,7 @@ private:
 class uhdInterface : public fdInterface{
 public:
 	//Constructor
-	uhdInterface(std::string args, std::string tx_subdev, std::string rx_subdev, std::string tx_ant, std::string rx_ant, double tx_rate, double rx_rate, double tx_freq, double rx_freq, double tx_gain, double rx_gain);
+	uhdInterface(std::string args, std::string tx_subdev, std::string rx_subdev, std::string tx_ant, std::string rx_ant, double tx_rate, double rx_rate, double tx_freq, double rx_freq, double tx_gain, double rx_gain, bool codec_highspeed);
 
 	//Interfacing methods
 	void parseControlStream(std::string in_data);
