@@ -1,5 +1,7 @@
 #include "uhd_interface.h"
 #include <cstdio>
+#include <iostream>
+#include <fstream>
 using namespace std;
 
 //Proxies in order to run a thread within a member function
@@ -10,10 +12,15 @@ static void *uhdWriteProxy(void *in_uhd_int){
 	static_cast<uhdInterface*>(in_uhd_int)->txThread();
 }
 
+ofstream log_file;
+
 /**********************
   * uhdInterface class
   *********************/
 uhdInterface::uhdInterface(string args, string tx_subdev, string rx_subdev, string tx_ant, string rx_ant, double tx_rate, double rx_rate, double tx_freq, double rx_freq, double tx_gain, double rx_gain, bool codec_highspeed){
+	//Open a log file
+	log_file.open("log.out", ios::out | ios::trunc | ios::binary);
+
 	//Open blank UHD object
 	shared_uhd = uhd::usrp::multi_usrp::make(args);
 
@@ -48,7 +55,7 @@ uhdInterface::uhdInterface(string args, string tx_subdev, string rx_subdev, stri
 	//Set up the transmit and receive streamers (let's keep it to a float stream for now)
 	uhd::stream_args_t tx_stream_args("fc32");
 	tx_stream = shared_uhd->get_tx_stream(tx_stream_args);
-	uhd::stream_args_t rx_stream_args("sc16","sc16");
+	uhd::stream_args_t rx_stream_args("sc16","sc16");//(application format, wire format)
 	rx_stream = shared_uhd->get_rx_stream(rx_stream_args);
 
 	if(codec_highspeed){
@@ -168,6 +175,7 @@ void uhdInterface::rxThread(){
 		rxData(rx_data, RX_CHUNK_SIZE);
 		//tot_bytes += RX_CHUNK_SIZE*sizeof(complex<int16_t>);
 		//printf("%d bytes so far...\n",tot_bytes);
+		log_file.write((char*)rx_data, RX_CHUNK_SIZE*sizeof(complex<int16_t>));
 	
 		//Now we have to push it down to all downstream interfaces
 		map<fdInterface*,uhdControlConnection*>::iterator conn_it;
@@ -201,6 +209,7 @@ void uhdInterface::txThread(){
 
 void uhdInterface::rxEnd(){
 	//TODO: Don't think there's anything we need to do here
+	log_file.close();
 }
 
 /***************************

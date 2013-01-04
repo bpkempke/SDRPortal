@@ -177,6 +177,8 @@ int main(int argc, char *argv[]){
 	int tcp_cmd_portnum = 0;
 	int udp_cmd_portnum = 0;
 	int ws_cmd_portnum = 0;
+	int rx_bandwidth = 1000000;
+	int tx_bandwidth = 1000000;
 	bool codec_highspeed = false;
 	string uhd_arguments = "";
 
@@ -213,6 +215,12 @@ int main(int argc, char *argv[]){
 		case 'h':
 			codec_highspeed = true;
 			break;
+		case 'b':
+			rx_bandwidth = atoi(optarg);
+			break;
+		case 'B':
+			tx_bandwidth = atoi(optarg);
+			break;
 		default:
 			break;
 		}
@@ -223,7 +231,7 @@ int main(int argc, char *argv[]){
 		uhd_arguments = uhd_arguments.substr(2,uhd_arguments.length()-2);
 
 	//Instantiate a UHD interface and link in with the created ports
-	uhdInterface usrp_instance(uhd_arguments,"","","J1","J1",1000000,1000000,5630000000,5630000000,20.0,40.0, codec_highspeed);
+	uhdInterface usrp_instance(uhd_arguments,"","","J1","J1",tx_bandwidth,rx_bandwidth,5630000000,5630000000,20.0,40.0, codec_highspeed);
 
 	//Run a thread which listens to the data socket (only for non-datagram interfaces (TCP, WS))
 	if(tcp_portnum){
