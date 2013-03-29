@@ -375,6 +375,8 @@ double xcvr2450::set_lo_freq_core(double target_freq){
     //clip the input to the range
     target_freq = xcvr_freq_range.clip(target_freq);
 
+    printf("Setting frequency to %f\n",target_freq);
+
     //variables used in the calculation below
     double scaler = xcvr2450::is_highband(target_freq)? (4.0/5.0) : (4.0/3.0);
     double ref_freq = this->get_iface()->get_clock_rate(dboard_iface::UNIT_TX);

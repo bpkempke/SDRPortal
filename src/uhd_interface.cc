@@ -61,26 +61,55 @@ uhdInterface::uhdInterface(string args, string tx_subdev, string rx_subdev, stri
 	if(codec_highspeed){
 		//Write all the regs we need if using this for demo build
 		printf("setting max2829 regs...\n");
-		writeMAX2829Reg(0x00D33);
-		writeMAX2829Reg(0x08004);
-		writeMAX2829Reg(0x38E35);
-		writeMAX2829Reg(0x04006);
-		writeMAX2829Reg(0x007A7);
-		writeMAX2829Reg(0x068B9);
-		writeMAX2829Reg(0x006CB);
-		writeMAX2829Reg(0x002AC);
-		printf("Setting gpio_ddr...\n");
-		uhd::usrp::dboard_iface::sptr  iface_ptr = shared_uhd->get_rx_dboard_iface();
-		iface_ptr->set_gpio_ddr(uhd::usrp::dboard_iface::UNIT_RX, 0x7FE0, 0xFFFF);
-		printf("Setting up atr registers...\n");
-		iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_RX_ONLY, 0xD010);
-		iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_TX_ONLY, 0x6810);
-		iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_FULL_DUPLEX, 0x6810);//TODO: This shouldn't really happen, should it??
-		//printf("First reading the atr registers...\n");
-		//printf("ATR_REG_RX_ONLY: %x\n",iface_ptr->get_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_RX_ONLY));
-		//Read back the state of the tx output to see if ANTSEL is switching...
-		//while(1)
-		//	printf("ANTSEL REG=%x\n",iface_ptr->read_gpio(uhd::usrp::dboard_iface::UNIT_TX));
+
+		if(rx_freq > 5e9){
+			//5.63 GHz
+			writeMAX2829Reg(0x00D33);
+			writeMAX2829Reg(0x08004);
+			writeMAX2829Reg(0x38E35);
+	
+			writeMAX2829Reg(0x04006);
+			writeMAX2829Reg(0x007A7);
+			writeMAX2829Reg(0x068B9);
+			writeMAX2829Reg(0x006CB);//RX Gain
+			writeMAX2829Reg(0x002AC);//TX Gain
+			printf("Setting gpio_ddr...\n");
+			uhd::usrp::dboard_iface::sptr  iface_ptr = shared_uhd->get_rx_dboard_iface();
+			iface_ptr->set_gpio_ddr(uhd::usrp::dboard_iface::UNIT_RX, 0x7FE0, 0xFFFF);
+			printf("Setting up atr registers...\n");
+			iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_RX_ONLY, 0xD010);
+			iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_TX_ONLY, 0x6810);
+			iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_FULL_DUPLEX, 0x6810);//TODO: This shouldn't really happen, should it??
+			//printf("First reading the atr registers...\n");
+			//printf("ATR_REG_RX_ONLY: %x\n",iface_ptr->get_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_RX_ONLY));
+			//Read back the state of the tx output to see if ANTSEL is switching...
+			//while(1)
+			//	printf("ANTSEL REG=%x\n",iface_ptr->read_gpio(uhd::usrp::dboard_iface::UNIT_TX));
+
+		} else {
+			//2.5 GHz
+//			writeMAX2829Reg(0x20A63);
+//			writeMAX2829Reg(0x2AAA4);
+//			writeMAX2829Reg(0x38E25);
+			writeMAX2829Reg(0x10d03);
+			writeMAX2829Reg(0x15554);
+			writeMAX2829Reg(0x38245);
+			writeMAX2829Reg(0x38A45);
+
+			writeMAX2829Reg(0x04006);
+			writeMAX2829Reg(0x007A7);
+			writeMAX2829Reg(0x068B9);
+			writeMAX2829Reg(0x006CB);//RX Gain
+			writeMAX2829Reg(0x002AC);//TX Gain
+			printf("Setting gpio_ddr...\n");
+			uhd::usrp::dboard_iface::sptr  iface_ptr = shared_uhd->get_rx_dboard_iface();
+			iface_ptr->set_gpio_ddr(uhd::usrp::dboard_iface::UNIT_RX, 0x7FE0, 0xFFFF);
+			printf("Setting up atr registers...\n");
+			iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_RX_ONLY, 0xD000);
+			iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_TX_ONLY, 0xA800);//Gotta make sure the right amp is turned on!
+			iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_FULL_DUPLEX, 0xA800);//TODO: This shouldn't really happen, should it??
+	
+		}
 	}
 
 

@@ -149,7 +149,7 @@ int main(int argc, char *argv[]){
 		sigaction (SIGTERM, &new_action, NULL);
 
 	//Set up getopt
-	const char* const short_options = "t:u:w:T:U:W:f:F:h";
+	const char* const short_options = "t:u:w:T:U:W:f:F:b:B:h";
 	const struct option long_options[] = {
 		{"tcp_data", required_argument, 0, 't'},
 		{"udp_data", required_argument, 0, 'u'},
@@ -159,6 +159,8 @@ int main(int argc, char *argv[]){
 		{"ws_cmd", required_argument, 0, 'W'},
 		{"firmware", required_argument, 0, 'f'},
 		{"fpga_image", required_argument, 0, 'F'},
+		{"rx_bandwidth", required_argument, 0, 'b'},
+		{"tx_bandwidth", required_argument, 0, 'B'},
 		{"codec_highspeed", no_argument, 0, 'h'},
 		{NULL, 0, NULL, 0}
 	};//TODO: Need to add more arguments such as tuning frequency, sampling rate, etc.
@@ -231,7 +233,8 @@ int main(int argc, char *argv[]){
 		uhd_arguments = uhd_arguments.substr(2,uhd_arguments.length()-2);
 
 	//Instantiate a UHD interface and link in with the created ports
-	uhdInterface usrp_instance(uhd_arguments,"","","J1","J1",tx_bandwidth,rx_bandwidth,5630000000,5630000000,20.0,40.0, codec_highspeed);
+//	uhdInterface usrp_instance(uhd_arguments,"","A:0","J1","J1",tx_bandwidth,rx_bandwidth,5630000000.0,5630000000.0,30.0,40.0, codec_highspeed);
+	uhdInterface usrp_instance(uhd_arguments,"","A:0","J1","J1",tx_bandwidth,rx_bandwidth,2500000000.0,2500000000.0,20.0,40.0, codec_highspeed);
 
 	//Run a thread which listens to the data socket (only for non-datagram interfaces (TCP, WS))
 	if(tcp_portnum){
