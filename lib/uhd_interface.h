@@ -107,36 +107,34 @@ private:
 	std::map<fdInterface*,uhdControlConnection*> control_connections;
 
 	//Current RX/TX Channel configurations
-	int rx_chan = 0;
-	int tx_chan = 0;
+	stream_type cur_stream_type;
+
+	//Special parameters just for the USRP series
 
 //Virtual memembers inherited from genericSDRInterface
 protected:
-	void setRXChannel(int chan){rx_chan = chan;};
-	void setTXChannel(int chan){tx_chan = chan;};
-	void setRXFreq(double freq){shared_uhd->set_rx_freq(rx_chan);};//TODO: Hrmm, this won't work..
-	void setTXFreq(double freq){shared_uhd->set_tx_freq(tx_chan);};
-	void setRXGain(double gain){shared_uhd->set_rx_gain(gain, rx_chan);};
-	void setTXGain(double gain){shared_uhd->set_tx_gain(gain, tx_chan);};
-	void setRXRate(double rate){shared_uhd->set_rx_rate(rate, rx_chan);};
-	void setTXRate(double rate){shared_uhd->set_tx_rate(rate, tx_chan);};
-	int getRXChannel(){return rx_chan;};
-	int getTXChannel(){return tx_chan;};
-	double getRXFreq(){return shared_uhd->get_rx_freq(rx_chan);};
-	double getTXFreq(){return shared_uhd->get_tx_freq(tx_chan);};
-	double getRXGain(){return shared_uhd->get_rx_gain(rx_chan);};
-	double getTXGain(){return shared_uhd->get_tx_gain(tx_chan);};
-	double getRXRate(){return shared_uhd->get_rx_rate(rx_chan);};
-	double getTXRate(){return shared_uhd->get_tx_rate(tx_chan);};
-	bool checkRXChannel(int chan){return (chan < shared_uhd->get_rx_num_channels());};
-	bool checkTXChannel(int chan){return (chan < shared_uhd->get_tx_num_channels());};
-	bool checkRXFreq(double freq){return (freq == shared_uhd->get_rx_freq_range(rx_chan).clip(freq));};
-	bool checkTXFreq(double freq){return (freq == shared_uhd->get_tx_freq_range(tx_chan).clip(freq));};
-	bool checkRXGain(double gain){return (gain == shared_uhd->get_rx_gain_range(rx_chan).clip(gain));};
-	bool checkTXGain(double gain){return (gain == shared_uhd->get_tx_gain_range(tx_chan).clip(gain));};
-	bool checkRXRate(double rate){return (rate == shared_uhd->get_rx_rates(rx_chan).clip(rate));};
-	bool checkTXRate(double rate){return (rate == shared_uhd->get_tx_rates(tx_chan).clip(rate));};
+	void setRXFreq(paramData in_param){shared_uhd->set_rx_freq(in_param.getDouble(), in_param.getChannel());};
+	void setTXFreq(paramData in_param){shared_uhd->set_tx_freq(in_param.getDouble(), in_param.getChannel());};
+	void setRXGain(paramData in_param){shared_uhd->set_rx_gain(in_param.getDouble(), in_param.getChannel());};
+	void setTXGain(paramData in_param){shared_uhd->set_tx_gain(in_param.getDouble(), in_param.getChannel());};
+	void setRXRate(paramData in_param){shared_uhd->set_rx_rate(in_param.getDouble(), in_param.getChannel());};
+	void setTXRate(paramData in_param){shared_uhd->set_tx_rate(in_param.getDouble(), in_param.getChannel());};
+	paramData getRXFreq(int in_chan){return shared_uhd->get_rx_freq(in_chan);};
+	paramData getTXFreq(int in_chan){return shared_uhd->get_tx_freq(in_chan);};
+	paramData getRXGain(int in_chan){return shared_uhd->get_rx_gain(in_chan);};
+	paramData getTXGain(int in_chan){return shared_uhd->get_tx_gain(in_chan);};
+	paramData getRXRate(int in_chan){return shared_uhd->get_rx_rate(in_chan);};
+	paramData getTXRate(int in_chan){return shared_uhd->get_tx_rate(in_chan);};
+	bool checkRXChannel(int in_chan){return (in_chan < shared_uhd->get_rx_num_channels());};
+	bool checkTXChannel(int in_chan){return (in_chan < shared_uhd->get_tx_num_channels());};
+	bool checkRXFreq(paramData in_param){return (in_param.getDouble() == shared_uhd->get_rx_freq_range(in_param.getChannel()).clip(in_param.getDouble()));};
+	bool checkTXFreq(paramData in_param){return (in_param.getDouble() == shared_uhd->get_tx_freq_range(in_param.getChannel()).clip(in_param.getDouble()));};
+	bool checkRXGain(paramData in_param){return (in_param.getDouble() == shared_uhd->get_rx_gain_range(in_param.getChannel()).clip(in_param.getDouble()));};
+	bool checkTXGain(paramData in_param){return (in_param.getDouble() == shared_uhd->get_tx_gain_range(in_param.getChannel()).clip(in_param.getDouble()));};
+	bool checkRXRate(paramData in_param){return (in_param.getDouble() == shared_uhd->get_rx_rates(in_param.getChannel()).clip(in_param.getDouble()));};
+	bool checkTXRate(paramData in_param){return (in_param.getDouble() == shared_uhd->get_tx_rates(in_param.getChannel()).clip(in_param.getDouble()));};
 	void setCustomSDRParameter(std::string name, std::string val);
 	std::string getCustomSDRParameter(std::string name);
+	void setStreamDataType(stream_type in_type){cur_stream_type = in_type};
 };
 

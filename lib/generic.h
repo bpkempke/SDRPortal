@@ -1,4 +1,12 @@
 
+enum {
+	COMPLEX_FLOAT,
+	COMPLEX_DOUBLE,
+	COMPLEX_INT8,
+	COMPLEX_INT16,
+	COMPLEX_INT32
+} stream_type;
+
 class badArgumentException : public std::exception{
 public:
 	enum ERRORS{
