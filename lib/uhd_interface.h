@@ -32,8 +32,10 @@ public:
 };
 
 class cmdConnectionInterpreter : public connectionInterpreter{
+private:
+	int cur_rx_channel, cur_tx_channel;
 public:
-	cmdConnectionInterpreter(uhdInterface *in_uhd_int, fdInterface *in_upstream_int) : connectionInterpreter(in_uhd_int, in_upstream_int){};
+	cmdConnectionInterpreter(uhdInterface *in_uhd_int, fdInterface *in_upstream_int) : connectionInterpreter(in_uhd_int, in_upstream_int){cur_rx_channel = cur_tx_channel = 0;};
 	void parse(char *buffer, int num_bytes, fdInterface *from_interface, int secondary_id);
 };
 
@@ -52,7 +54,7 @@ private:
 	std::map<int,connectionInterpreter*> interpreters;
 };
 
-class uhdInterface : public fdInterface{
+class uhdInterface : public fdInterface, public genericSDRInterface{
 public:
 	//Constructor
 	uhdInterface(std::string args, std::string tx_subdev, std::string rx_subdev, std::string tx_ant, std::string rx_ant, double tx_rate, double rx_rate, double tx_freq, double rx_freq, double tx_gain, double rx_gain, bool codec_highspeed);
@@ -103,5 +105,38 @@ private:
 
 	//maps used to identify the pointers coming up from downstream
 	std::map<fdInterface*,uhdControlConnection*> control_connections;
+
+	//Current RX/TX Channel configurations
+	int rx_chan = 0;
+	int tx_chan = 0;
+
+//Virtual memembers inherited from genericSDRInterface
+protected:
+	void setRXChannel(int chan){rx_chan = chan;};
+	void setTXChannel(int chan){tx_chan = chan;};
+	void setRXFreq(double freq){shared_uhd->set_rx_freq(rx_chan);};//TODO: Hrmm, this won't work..
+	void setTXFreq(double freq){shared_uhd->set_tx_freq(tx_chan);};
+	void setRXGain(double gain){shared_uhd->set_rx_gain(gain, rx_chan);};
+	void setTXGain(double gain){shared_uhd->set_tx_gain(gain, tx_chan);};
+	void setRXRate(double rate){shared_uhd->set_rx_rate(rate, rx_chan);};
+	void setTXRate(double rate){shared_uhd->set_tx_rate(rate, tx_chan);};
+	int getRXChannel(){return rx_chan;};
+	int getTXChannel(){return tx_chan;};
+	double getRXFreq(){return shared_uhd->get_rx_freq(rx_chan);};
+	double getTXFreq(){return shared_uhd->get_tx_freq(tx_chan);};
+	double getRXGain(){return shared_uhd->get_rx_gain(rx_chan);};
+	double getTXGain(){return shared_uhd->get_tx_gain(tx_chan);};
+	double getRXRate(){return shared_uhd->get_rx_rate(rx_chan);};
+	double getTXRate(){return shared_uhd->get_tx_rate(tx_chan);};
+	bool checkRXChannel(int chan){return (chan < shared_uhd->get_rx_num_channels());};
+	bool checkTXChannel(int chan){return (chan < shared_uhd->get_tx_num_channels());};
+	bool checkRXFreq(double freq){return (freq == shared_uhd->get_rx_freq_range(rx_chan).clip(freq));};
+	bool checkTXFreq(double freq){return (freq == shared_uhd->get_tx_freq_range(tx_chan).clip(freq));};
+	bool checkRXGain(double gain){return (gain == shared_uhd->get_rx_gain_range(rx_chan).clip(gain));};
+	bool checkTXGain(double gain){return (gain == shared_uhd->get_tx_gain_range(tx_chan).clip(gain));};
+	bool checkRXRate(double rate){return (rate == shared_uhd->get_rx_rates(rx_chan).clip(rate));};
+	bool checkTXRate(double rate){return (rate == shared_uhd->get_tx_rates(tx_chan).clip(rate));};
+	void setCustomSDRParameter(std::string name, std::string val);
+	std::string getCustomSDRParameter(std::string name);
 };
 

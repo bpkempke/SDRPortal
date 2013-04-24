@@ -1,4 +1,5 @@
 #include "uhd_interface.h"
+#include "generic.h"
 #include <cstdio>
 #include <iostream>
 #include <fstream>
@@ -241,6 +242,22 @@ void uhdInterface::rxEnd(){
 	log_file.close();
 }
 
+void uhdInterface::setCustomSDRParameter(string name, string val){
+	//There are a few custom USRP-specific parameters which must be dealt with
+	if(name == "RXANT" || name == "TXANT"){
+		vector<string> valid_antennas;
+		if(name == "RXANT") valid_antennas = shared_uhd->get_rx_antennas(rx_chan);
+		else valid_antennas = shared_uhd->get_tx_antennas(tx_chan);
+		vector<string>::iterator it = find(valid_antennas.begin(), valid_antennas.end(), val);
+		if(it != valid_antennas.end())
+			if(name == "RXANT") shared_uhd->set_rx_antenna(val, rx_chan);
+			else shared_uhd->set_tx_antenna(val, tx_chan);
+		else 
+			throw badArgumentException(OUT_OF_BOUNDS, val);
+	} else
+		throw invalidCommandException(name);
+}
+
 /***************************
   * uhdControlConnection class
   **************************/
@@ -308,6 +325,8 @@ void dataConnectionInterpreter::parse(char *buffer, int num_bytes, fdInterface *
 //  TXRATE 1000000
 //  RXANT 0
 //  TXANT 0
+//  RXCHANNEL 0
+//  TXCHANNEL 0
 //All of these can also be queried by following with a question mark
 //  RXFREQ?
 //  TXFREQ?
@@ -335,22 +354,97 @@ void cmdConnectionInterpreter::parse(char *in_data, int num_bytes, fdInterface *
 
 		//Now do whatever we need to do based on the received command
 		//TODO: Put in some error checking here
-		if(command == "RXFREQ")
-			uhd_int->getUHDObject()->set_rx_freq(atof(arg1.c_str()));
-		else if(command == "TXFREQ")
-			uhd_int->getUHDObject()->set_tx_freq(atof(arg1.c_str()));
-		else if(command == "RXGAIN")
-			uhd_int->getUHDObject()->set_rx_gain(atof(arg1.c_str()));
-		else if(command == "TXGAIN")
-			uhd_int->getUHDObject()->set_tx_gain(atof(arg1.c_str()));
-		else if(command == "RXRATE")
-			uhd_int->getUHDObject()->set_rx_rate(atof(arg1.c_str()));
-		else if(command == "TXRATE")
-			uhd_int->getUHDObject()->set_tx_rate(atof(arg1.c_str()));
-		else if(command == "RXANT")
-			uhd_int->getUHDObject()->set_rx_antenna(arg1);
-		else if(command == "TXANT")
-			uhd_int->getUHDObject()->set_tx_antenna(arg1);
+		try{
+			if(command == "RXCHANNEL"){
+				if(isInteger(arg1))
+					cur_rx_channel = strtol(arg1.c_str(), NULL);
+				else
+					throw badArgumentException(MALFORMED, 1, arg1);
+			} else if(command == "TXCHANNEL"){
+				if(isInteger(arg1))
+					cur_tx_channel = strtol(arg1.c_str(), NULL);
+				else
+					throw badArgumentException(MALFORMED, 1, arg1);
+			} else if(command == "RXFREQ"){
+				if(isDouble(arg1)){
+					double rx_freq_req = toDouble(arg1);
+					double rx_freq_clipped = uhd_int->clipRXFreq(rx_freq_req);
+					if(rx_freq_req == rx_freq_clipped)
+						uhd_int->setRXFreq(rx_freq_req);
+					else
+						throw badArgumentException(OUT_OF_BOUNDS, 1, arg1);
+				} else 
+					throw malformedArgumentException(1, arg1);
+			} else if(command == "TXFREQ"){
+				if(isDouble(arg1)){
+					double tx_freq_req = toDouble(arg1);
+					double tx_freq_clipped = uhd_int->clipTXFreq(tx_freq_req);
+					if(tx_freq_req == tx_freq_clipped)
+						uhd_int->setTXFreq(tx_freq_req);
+					else
+						throw badArgumentException(OUT_OF_BOUNDS, 1, arg1);
+				} else 
+					throw badArgumentException(MALFORMED, 1, arg1);
+			} else if(command == "RXGAIN"){
+				if(isDouble(arg1)){
+					double rx_gain_req = toDouble(arg1);
+					double rx_gain_clipped = uhd_int->clipRXGain(rx_gain_req);
+					if(rx_gain_req == rx_gain_clipped)
+						uhd_int->setRXGain(rx_gain_req);
+					else
+						throw badArgumentException(OUT_OF_BOUNDS, 1, arg1);
+				} else 
+					throw badArgumentException(MALFORMED, 1, arg1);
+			} else if(command == "TXGAIN"){
+				if(isDouble(arg1)){
+					double tx_gain_req = toDouble(arg1);
+					double tx_gain_clipped = uhd_int->clipTXGain(tx_gain_req);
+					if(tx_gain_req == tx_gain_clipped)
+						uhd_int->setTXGain(tx_gain_req);
+					else
+						throw badArgumentException(OUT_OF_BOUNDS, 1, arg1);
+				} else 
+					throw badArgumentException(MALFORMED, 1, arg1);
+			} else if(command == "RXRATE"){
+				if(isDouble(arg1)){
+					double rx_rate_req = toDouble(arg1);
+					double rx_rate_clipped = uhd_int->clipRXRate(rx_rate_req);
+					if(rx_rate_req == rx_rate_clipped)
+						uhd_int->setRXRate(rx_rate_req);
+					else
+						throw badArgumentException(OUT_OF_BOUNDS, 1, arg1);
+				} else 
+					throw badArgumentException(MALFORMED, 1, arg1);
+			} else if(command == "TXRATE"){
+				if(isDouble(arg1)){
+					double tx_rate_req = toDouble(arg1);
+					double tx_rate_clipped = uhd_int->clipTXRate(tx_rate_req);
+					if(tx_rate_req == tx_rate_clipped)
+						uhd_int->setRXRate(tx_rate_req);
+					else
+						throw badArgumentException(OUT_OF_BOUNDS, 1, arg1);
+				} else 
+					throw badArgumentException(MALFORMED, 1, arg1);
+			} else {
+				uhd_int->setRadioParameter(command, arg1, arg2);
+			}
+			/*//TODO: This needs to be transferred to the UHD interface code 
+			if(command == "RXANT"){
+				uhd_int->getUHDObject()->set_rx_antenna(arg1);
+			} else if(command == "TXANT"){
+				uhd_int->getUHDObject()->set_tx_antenna(arg1);
+			} else {
+				throw invalidCommandException();
+			}*/
+		} catch(badArgumentException const& e){
+			stringstream response;
+			response << "?" << e.what() << endl;
+			upstream_int->dataFromUpstream(response.str().c_str(),response.gcount(),uhd_int);
+		} catch(invalidCommandException const& e){
+			stringstream response;
+			response << "?" << e.what() << endl;
+			upstream_int->dataFromUpstream(response.str().c_str(),response.gcount(),uhd_int);
+		}
 
 		//Query-based commands
 		char response[20];
