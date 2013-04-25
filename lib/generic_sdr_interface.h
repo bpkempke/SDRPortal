@@ -13,11 +13,12 @@ private:
 	int channel;
 };
 
+template<class T>
 struct paramAccessors {
 	enum{DOUBLE, INT, VOID} arg_type;
-	void (genericSDRInterface::*setMethod)(paramData);
-	paramData (genericSDRInterface::*getMethod)();
-	bool (genericSDRInterface::*checkMethod)(paramData);
+	void (T::*setMethod)(paramData);
+	paramData (T::*getMethod)();
+	bool (T::*checkMethod)(paramData);
 };
 
 class genericSDRInterface {
