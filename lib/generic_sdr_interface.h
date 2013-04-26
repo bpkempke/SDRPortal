@@ -1,8 +1,13 @@
+#include <map>
+#include <string>
+#include <string.h>
+#include <generic.h>
+
 class paramData {
 public:
-	paramData(double in_data, int channel=0){scratch = new double(in_data); channel = in_channel;};
-	paramData(int in_data, int channel=0){scratch = new int(in_data); channel = in_channel;};
-	~paramData(){delete scratch;};
+	paramData(double in_data, int in_channel=0){scratch = new double(in_data); channel = in_channel;};
+	paramData(int in_data, int in_channel=0){scratch = new int(in_data); channel = in_channel;};
+	~paramData(){delete scratch;};//TODO: Fix this warning...
 
 	//Accessor methods
 	int getInt(){int ret_val; memcpy(&ret_val, scratch, sizeof(int)); return ret_val;};
@@ -13,16 +18,20 @@ private:
 	int channel;
 };
 
+enum primEnum {DOUBLE, INT, VOID};
+
 template<class T>
-struct paramAccessors {
-	enum{DOUBLE, INT, VOID} arg_type;
+struct paramAccessor {
+	primEnum arg_type;
 	void (T::*setMethod)(paramData);
 	paramData (T::*getMethod)();
 	bool (T::*checkMethod)(paramData);
 };
 
+template<class T>
 class genericSDRInterface {
 public:
+	genericSDRInterface();
 	void setSDRParameter(std::string name, std::string val);
 	void sendIQData(void *data, int num_elements, int uid_port);
 	int getRXPortUID(int rx_port);
@@ -51,11 +60,12 @@ protected:
 	virtual bool checkTXRate(paramData in_param) = 0;
 	virtual void setCustomSDRParameter(std::string name, std::string val) = 0;
 	virtual std::string getCustomSDRParameter(std::string name) = 0;
-	virtual void setStreamDataType(stream_type in_type) = 0;
+	virtual void setStreamDataType(streamType in_type) = 0;
 private:
-	int cur_uid = 0;
+	int cur_uid;
 	std::map<int, int> rx_to_uid;
 	std::map<int, int> tx_to_uid;
 	std::map<int, int> generic_to_uid;
-	std::map<std::string, paramDetails> param_accessors;
-}
+	std::map<std::string, paramAccessor<T> > param_accessors;
+};
+
