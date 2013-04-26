@@ -57,7 +57,7 @@ public:
 	virtual void registerDownstreamInterface(fdInterface *in_thread){};
 	virtual void deleteDownstreamInterface(fdInterface *in_thread){};
 	virtual void registerUpstreamInterface(fdInterface *up_int){};
-	virtual void dataFromUpstream(char *data, int num_bytes, fdInterface *from_interface){};
+	virtual void dataFromUpstream(const char *data, int num_bytes, fdInterface *from_interface){};
 	int secondary_id;
 	
 	//Overloaded functions for fdInterfaces which could have multiple independant connections

@@ -19,7 +19,7 @@ class badArgumentException {
 public:
 	enum errorEnum { MALFORMED, OUT_OF_BOUNDS };
 	badArgumentException(errorEnum error, int argnum, std::string argument_str){this->error = error; this->argnum = argnum; this->argument_str = argument_str;};
-	const char* what(){ 
+	const char* what() const{ 
 		std::stringstream response;
 		if(error == MALFORMED){
 			response << "Malformed argument exception: Argument #" << argnum << ": " << argument_str;
@@ -39,7 +39,7 @@ private:
 class invalidCommandException {
 public:
 	invalidCommandException(std::string command_str){this->command_str = command_str;};
-	const char* what(){
+	const char* what() const{
 		std::stringstream response;
 		response << "Invalid command exception: " << command_str;
 

@@ -1,4 +1,5 @@
 #include "socketInterface.h"
+#include "generic_sdr_interface.h"
 #include <uhd/usrp/multi_usrp.hpp>
 #include <map>
 
@@ -33,9 +34,9 @@ public:
 
 class cmdConnectionInterpreter : public connectionInterpreter{
 private:
-	int cur_rx_channel, cur_tx_channel;
+	int cur_channel;
 public:
-	cmdConnectionInterpreter(uhdInterface *in_uhd_int, fdInterface *in_upstream_int) : connectionInterpreter(in_uhd_int, in_upstream_int){cur_rx_channel = cur_tx_channel = 0;};
+	cmdConnectionInterpreter(uhdInterface *in_uhd_int, fdInterface *in_upstream_int) : connectionInterpreter(in_uhd_int, in_upstream_int){cur_channel = 0;};
 	void parse(char *buffer, int num_bytes, fdInterface *from_interface, int secondary_id);
 };
 
@@ -44,7 +45,7 @@ public:
 	uhdControlConnection(uhdInterface *in_parent_int, fdInterface *in_int, controlIntType in_int_type);
 	controlIntType getIntType();
 	void fdBytesReceived(char *buffer, int num_bytes, fdInterface *from_interface, int secondary_id);
-	void dataFromUpstream(char *data, int num_bytes, fdInterface *from_interface);
+	void dataFromUpstream(const char *data, int num_bytes, fdInterface *from_interface);
 	void registerDownstreamInterface(fdInterface *in_thread);
 private:		
 	fdInterface *downstream_int;
@@ -54,7 +55,8 @@ private:
 	std::map<int,connectionInterpreter*> interpreters;
 };
 
-class uhdInterface : public fdInterface, public genericSDRInterface{
+//This is utilizing the 'Curiously Recurring Template Pattern'
+class uhdInterface : public fdInterface, public genericSDRInterface<uhdInterface>{
 public:
 	//Constructor
 	uhdInterface(std::string args, std::string tx_subdev, std::string rx_subdev, std::string tx_ant, std::string rx_ant, double tx_rate, double rx_rate, double tx_freq, double rx_freq, double tx_gain, double rx_gain, bool codec_highspeed);
@@ -107,7 +109,7 @@ private:
 	std::map<fdInterface*,uhdControlConnection*> control_connections;
 
 	//Current RX/TX Channel configurations
-	stream_type cur_stream_type;
+	streamType cur_stream_type;
 
 	//Special parameters just for the USRP series
 
@@ -133,8 +135,8 @@ protected:
 	bool checkTXGain(paramData in_param){return (in_param.getDouble() == shared_uhd->get_tx_gain_range(in_param.getChannel()).clip(in_param.getDouble()));};
 	bool checkRXRate(paramData in_param){return (in_param.getDouble() == shared_uhd->get_rx_rates(in_param.getChannel()).clip(in_param.getDouble()));};
 	bool checkTXRate(paramData in_param){return (in_param.getDouble() == shared_uhd->get_tx_rates(in_param.getChannel()).clip(in_param.getDouble()));};
-	void setCustomSDRParameter(std::string name, std::string val);
+	void setCustomSDRParameter(std::string name, std::string val, int port);
 	std::string getCustomSDRParameter(std::string name);
-	void setStreamDataType(stream_type in_type){cur_stream_type = in_type};
+	void setStreamDataType(streamType in_type){cur_stream_type = in_type;};
 };
 

@@ -20,12 +20,12 @@ ofstream log_file;
   *********************/
 uhdInterface::uhdInterface(string args, string tx_subdev, string rx_subdev, string tx_ant, string rx_ant, double tx_rate, double rx_rate, double tx_freq, double rx_freq, double tx_gain, double rx_gain, bool codec_highspeed) : genericSDRInterface(){
 	//First, register all of the parameters which can be modified and the accessor methods which deal with them
-	param_accessors["RXFREQ"] = paramAccessors<uhdInterface>{DOUBLE, &uhdInterface::setRXFreq, &uhdInterface::getRXFreq, &uhdInterface::checkRXFreq};
-	param_accessors["TXFREQ"] = paramAccessors<uhdInterface>{DOUBLE, &uhdInterface::setTXFreq, &uhdInterface::getTXFreq, &uhdInterface::checkTXFreq};
-	param_accessors["RXGAIN"] = paramAccessors<uhdInterface>{DOUBLE, &uhdInterface::setRXGain, &uhdInterface::getRXGain, &uhdInterface::checkRXGain};
-	param_accessors["TXGAIN"] = paramAccessors<uhdInterface>{DOUBLE, &uhdInterface::setTXGain, &uhdInterface::getTXGain, &uhdInterface::checkTXGain};
-	param_accessors["RXRATE"] = paramAccessors<uhdInterface>{DOUBLE, &uhdInterface::setRXRate, &uhdInterface::getRXRate, &uhdInterface::checkRXRate};
-	param_accessors["TXRATE"] = paramAccessors<uhdInterface>{DOUBLE, &uhdInterface::setTXRate, &uhdInterface::getTXRate, &uhdInterface::checkTXRate};
+	param_accessors["RXFREQ"] = paramAccessor<uhdInterface>(DOUBLE, &uhdInterface::setRXFreq, &uhdInterface::getRXFreq, &uhdInterface::checkRXFreq);
+	param_accessors["TXFREQ"] = paramAccessor<uhdInterface>(DOUBLE, &uhdInterface::setTXFreq, &uhdInterface::getTXFreq, &uhdInterface::checkTXFreq);
+	param_accessors["RXGAIN"] = paramAccessor<uhdInterface>(DOUBLE, &uhdInterface::setRXGain, &uhdInterface::getRXGain, &uhdInterface::checkRXGain);
+	param_accessors["TXGAIN"] = paramAccessor<uhdInterface>(DOUBLE, &uhdInterface::setTXGain, &uhdInterface::getTXGain, &uhdInterface::checkTXGain);
+	param_accessors["RXRATE"] = paramAccessor<uhdInterface>(DOUBLE, &uhdInterface::setRXRate, &uhdInterface::getRXRate, &uhdInterface::checkRXRate);
+	param_accessors["TXRATE"] = paramAccessor<uhdInterface>(DOUBLE, &uhdInterface::setTXRate, &uhdInterface::getTXRate, &uhdInterface::checkTXRate);
 
 	//Open a log file
 	log_file.open("log.out", ios::out | ios::trunc | ios::binary);
@@ -250,18 +250,18 @@ void uhdInterface::rxEnd(){
 	log_file.close();
 }
 
-void uhdInterface::setCustomSDRParameter(string name, string val){
+void uhdInterface::setCustomSDRParameter(string name, string val, int in_chan){
 	//There are a few custom USRP-specific parameters which must be dealt with
 	if(name == "RXANT" || name == "TXANT"){
 		vector<string> valid_antennas;
-		if(name == "RXANT") valid_antennas = shared_uhd->get_rx_antennas(rx_chan);
-		else valid_antennas = shared_uhd->get_tx_antennas(tx_chan);
+		if(name == "RXANT") valid_antennas = shared_uhd->get_rx_antennas(in_chan);
+		else valid_antennas = shared_uhd->get_tx_antennas(in_chan);
 		vector<string>::iterator it = find(valid_antennas.begin(), valid_antennas.end(), val);
 		if(it != valid_antennas.end())
-			if(name == "RXANT") shared_uhd->set_rx_antenna(val, rx_chan);
-			else shared_uhd->set_tx_antenna(val, tx_chan);
+			if(name == "RXANT") shared_uhd->set_rx_antenna(val, in_chan);
+			else shared_uhd->set_tx_antenna(val, in_chan);
 		else 
-			throw badArgumentException(OUT_OF_BOUNDS, val);
+			throw badArgumentException(badArgumentException::OUT_OF_BOUNDS, 1, val);
 	} else
 		throw invalidCommandException(name);
 }
@@ -293,7 +293,7 @@ void uhdControlConnection::fdBytesReceived(char *buffer, int num_bytes, fdInterf
 	interpreters[secondary_id]->parse(buffer,num_bytes,from_interface, secondary_id);
 }
 
-void uhdControlConnection::dataFromUpstream(char *data, int num_bytes, fdInterface *from_interface){
+void uhdControlConnection::dataFromUpstream(const char *data, int num_bytes, fdInterface *from_interface){
 	//This is essentially a broadcast, so we need to send it to _all_ downstream connections
 	map<int,connectionInterpreter*>::iterator conn_it;
 	for(conn_it = interpreters.begin(); conn_it != interpreters.end(); conn_it++){
@@ -363,78 +363,35 @@ void cmdConnectionInterpreter::parse(char *in_data, int num_bytes, fdInterface *
 		//Now do whatever we need to do based on the received command
 		//TODO: Put in some error checking here
 		try{
-			if(command == "RXCHANNEL"){
+			if(command == "CHANNEL"){
+				if(isInteger(arg1)){
+					int candidate_channel = strtol(arg1.c_str(), NULL, 0);
+					if(uhd_int->getNumAllocatedChannels() > candidate_channel)
+						cur_channel = candidate_channel;
+					else
+						throw badArgumentException(badArgumentException::OUT_OF_BOUNDS, 1, arg1);
+				} else
+					throw badArgumentException(badArgumentException::MALFORMED, 1, arg1);
+			} else if(command == "RXCHANNEL"){
 				if(isInteger(arg1))
-					cur_rx_channel = strtol(arg1.c_str(), NULL);
+					if(isInteger(arg2))
+						cur_channel = uhd_int->getRXPortUID(strtol(arg1.c_str(), NULL, 0));
+						//TODO: Respond with UID
+					else
+						throw badArgumentException(badArgumentException::MALFORMED, 2, arg2);
 				else
-					throw badArgumentException(MALFORMED, 1, arg1);
+					throw badArgumentException(badArgumentException::MALFORMED, 1, arg1);
 			} else if(command == "TXCHANNEL"){
 				if(isInteger(arg1))
-					cur_tx_channel = strtol(arg1.c_str(), NULL);
+					if(isInteger(arg2))
+						cur_channel = uhd_int->getTXPortUID(strtol(arg1.c_str(), NULL, 0));
+						//TODO: Respond with UID
+					else
+						throw badArgumentException(badArgumentException::MALFORMED, 2, arg2);
 				else
-					throw badArgumentException(MALFORMED, 1, arg1);
-			} else if(command == "RXFREQ"){
-				if(isDouble(arg1)){
-					double rx_freq_req = toDouble(arg1);
-					double rx_freq_clipped = uhd_int->clipRXFreq(rx_freq_req);
-					if(rx_freq_req == rx_freq_clipped)
-						uhd_int->setRXFreq(rx_freq_req);
-					else
-						throw badArgumentException(OUT_OF_BOUNDS, 1, arg1);
-				} else 
-					throw malformedArgumentException(1, arg1);
-			} else if(command == "TXFREQ"){
-				if(isDouble(arg1)){
-					double tx_freq_req = toDouble(arg1);
-					double tx_freq_clipped = uhd_int->clipTXFreq(tx_freq_req);
-					if(tx_freq_req == tx_freq_clipped)
-						uhd_int->setTXFreq(tx_freq_req);
-					else
-						throw badArgumentException(OUT_OF_BOUNDS, 1, arg1);
-				} else 
-					throw badArgumentException(MALFORMED, 1, arg1);
-			} else if(command == "RXGAIN"){
-				if(isDouble(arg1)){
-					double rx_gain_req = toDouble(arg1);
-					double rx_gain_clipped = uhd_int->clipRXGain(rx_gain_req);
-					if(rx_gain_req == rx_gain_clipped)
-						uhd_int->setRXGain(rx_gain_req);
-					else
-						throw badArgumentException(OUT_OF_BOUNDS, 1, arg1);
-				} else 
-					throw badArgumentException(MALFORMED, 1, arg1);
-			} else if(command == "TXGAIN"){
-				if(isDouble(arg1)){
-					double tx_gain_req = toDouble(arg1);
-					double tx_gain_clipped = uhd_int->clipTXGain(tx_gain_req);
-					if(tx_gain_req == tx_gain_clipped)
-						uhd_int->setTXGain(tx_gain_req);
-					else
-						throw badArgumentException(OUT_OF_BOUNDS, 1, arg1);
-				} else 
-					throw badArgumentException(MALFORMED, 1, arg1);
-			} else if(command == "RXRATE"){
-				if(isDouble(arg1)){
-					double rx_rate_req = toDouble(arg1);
-					double rx_rate_clipped = uhd_int->clipRXRate(rx_rate_req);
-					if(rx_rate_req == rx_rate_clipped)
-						uhd_int->setRXRate(rx_rate_req);
-					else
-						throw badArgumentException(OUT_OF_BOUNDS, 1, arg1);
-				} else 
-					throw badArgumentException(MALFORMED, 1, arg1);
-			} else if(command == "TXRATE"){
-				if(isDouble(arg1)){
-					double tx_rate_req = toDouble(arg1);
-					double tx_rate_clipped = uhd_int->clipTXRate(tx_rate_req);
-					if(tx_rate_req == tx_rate_clipped)
-						uhd_int->setRXRate(tx_rate_req);
-					else
-						throw badArgumentException(OUT_OF_BOUNDS, 1, arg1);
-				} else 
-					throw badArgumentException(MALFORMED, 1, arg1);
+					throw badArgumentException(badArgumentException::MALFORMED, 1, arg1);
 			} else {
-				uhd_int->setRadioParameter(command, arg1, arg2);
+				uhd_int->setSDRParameter(command, arg1);
 			}
 			/*//TODO: This needs to be transferred to the UHD interface code 
 			if(command == "RXANT"){
