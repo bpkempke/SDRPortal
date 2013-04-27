@@ -1,11 +1,12 @@
 #include <string>
+#include <generic.h>
 
 bool isInteger(std::string in_string){
-
+	return true;
 }
 
 bool isDouble(std::string in_string){
-
+	return true;
 }
 
 /*void setParamIntegerNoClip(){

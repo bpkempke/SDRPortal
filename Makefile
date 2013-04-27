@@ -12,12 +12,13 @@ CLIENT_INT = ./bin/obj/clientInterface.o
 BASE64_LIB = ./bin/obj/base64.o
 SHA1_LIB = ./bin/obj/sha1.o
 UHD_INT = ./bin/obj/uhd_int.o
+GENERIC_LIB = ./bin/obj/generic.o
 INCLUDE = -Ilib
 
 all: uhdd
 
-uhdd: $(SOCKET_HANDLERS) $(CLIENT_INT) $(BASE64_LIB) $(SHA1_LIB) $(UHD_INT)
-	$(CPPC) -g $(THREAD_LIB) $(INCLUDE) src/uhd_daemon.cc $(LITHIUM_UTILS) $(SOCKET_HANDLERS) $(CLIENT_INT) $(UHD_INT) $(BASE64_LIB) $(SHA1_LIB) -luhd -o ./bin/uhdd
+uhdd: $(SOCKET_HANDLERS) $(CLIENT_INT) $(BASE64_LIB) $(SHA1_LIB) $(GENERIC_LIB) $(UHD_INT)
+	$(CPPC) -g $(THREAD_LIB) $(INCLUDE) src/uhd_daemon.cc $(LITHIUM_UTILS) $(SOCKET_HANDLERS) $(CLIENT_INT) $(UHD_INT) $(BASE64_LIB) $(SHA1_LIB) $(GENERIC_LIB) -luhd -o ./bin/uhdd
 
 $(SOCKET_HANDLERS): $(CLIENT_INT) src/socketInterface.cc lib/socketInterface.h
 	$(CPPC) $(THREAD_LIB) $(INCLUDE) $(CLIENT_INT)  -c src/socketInterface.cc -o $(SOCKET_HANDLERS)
@@ -33,6 +34,9 @@ $(CLIENT_INT): src/clientInterface.cc lib/clientInterface.h
 
 $(UHD_INT): src/uhd_interface.cc lib/uhd_interface.h
 	$(CPPC) $(INCLUDE) -c src/uhd_interface.cc -o $(UHD_INT)
+
+$(GENERIC_LIB): src/generic.cc lib/generic.h
+	$(CPPC) $(INCLUDE) -c src/generic.cc -o $(GENERIC_LIB)
 
 clean:
 	rm -f ./bin/obj/*.o

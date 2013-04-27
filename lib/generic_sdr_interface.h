@@ -6,12 +6,16 @@
 #ifndef GENERIC_SDR_INT_H
 #define GENERIC_SDR_INT_H
 
+enum primEnum {DOUBLE, INT, VOID};
+
 class paramData {
 public:
-	paramData(double in_data, int in_channel=0){scratch = new double(in_data); channel = in_channel;};
-	paramData(int in_data, int in_channel=0){scratch = new int(in_data); channel = in_channel;};
-	paramData(){scratch = NULL;};
-	~paramData(){if(scratch) delete scratch;};//TODO: Fix this warning...
+	paramData(double in_data, int in_channel=0){data_type = DOUBLE; scratch = new double(in_data); channel = in_channel;};
+	paramData(int in_data, int in_channel=0){data_type = INT; scratch = new int(in_data); channel = in_channel;};
+	paramData(){data_type = VOID;};
+	~paramData(){
+		if(data_type == DOUBLE) delete (double*)scratch;
+		else if(data_type == INT) delete (int*)scratch;};
 
 	//Accessor methods
 	int getInt(){int ret_val; memcpy(&ret_val, scratch, sizeof(int)); return ret_val;};
@@ -19,10 +23,9 @@ public:
 	int getChannel(){return channel;};
 private:
 	void *scratch;
+	primEnum data_type;
 	int channel;
 };
-
-enum primEnum {DOUBLE, INT, VOID};
 
 template<class T>
 struct paramAccessor {
@@ -74,7 +77,7 @@ protected:
 	virtual bool checkRXRate(paramData in_param) = 0;
 	virtual bool checkTXRate(paramData in_param) = 0;
 	virtual void setCustomSDRParameter(std::string name, std::string val, int in_chan) = 0;
-	virtual std::string getCustomSDRParameter(std::string name) = 0;
+	//virtual std::string getCustomSDRParameter(std::string name) = 0;
 	virtual void setStreamDataType(streamType in_type) = 0;
 	std::map<std::string, paramAccessor<T> > param_accessors;
 private:
