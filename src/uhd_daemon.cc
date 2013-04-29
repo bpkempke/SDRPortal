@@ -20,92 +20,9 @@
 
 using namespace std;
 
-/*
- * void *socketConnectionListener(void *in_socket)
- *
- *   This thread listens for incoming connection requests on the corresponding
- *   socket and instantiates an associated object to deal with each new one.
- */
-pthread_mutex_t uplink_lock = PTHREAD_MUTEX_INITIALIZER;
-void *socketConnectionListener(void *in_socket){
-	struct sockaddr_in data_cli;
-	int datasock_fd, socket_fd;
-	socklen_t data_cli_len;
-
-	//UDP stuff
-	char buf[1472];
-	//TODO: This is ugly and probably won't work behind NATs
-	std::map<in_addr_t,socketThread*> listeners;
-
-	socketInterface *sock = (socketInterface*)(in_socket);
-	socket_fd = sock->getSockFP();
-
-	while(1){
-		data_cli_len = sizeof(data_cli);
-		if(sock->getSocketType() == SOCKET_UDP){
-			//UDP sockets communicate with datagrams, so this thread will just receive the messages and pass them off and create new socketThreads when a new address is detected
-			int n = recvfrom(socket_fd, buf, sizeof(buf), 0, (struct sockaddr *)&data_cli, &data_cli_len);
-			//Figure out if this datagram has come from someone we've heard from before
-			//TODO: What happens if we're trying to send to multiple remotes behind a firewall?
-			map<in_addr_t,socketThread*>::iterator found_listeners = listeners.find(data_cli.sin_addr.s_addr);
-			if(found_listeners != listeners.end()){
-				//We've already gotten something from this person, let's send it off to the corresponding socketThread!
-				listeners[data_cli.sin_addr.s_addr]->receivedData(buf, n);
-			} else {
-				//We've never heard anything from this person before... let's make another socketThread to handle all communication to/from this person
-				listeners[data_cli.sin_addr.s_addr] = new socketThread(socket_fd, sock, &uplink_lock, true, &data_cli);
-			}	
-		}else{
-			datasock_fd = accept(socket_fd, (struct sockaddr *) &data_cli, &data_cli_len);
-
-			//TODO: put some sort of error checking here....
-			if(datasock_fd < 0)
-				printf("ERROR on accept, socket_fd = %d\n", socket_fd);
-			
-			//Launch all the threads necessary to keep track of this new socket connection
-			new socketThread(datasock_fd, sock, &uplink_lock, false);
-		}
-			//Invoke an 
-			printf("got a connection...\n");
-	}
-}
 
 //Return value errors
 #define BAD_BIND 1
-
-int newSocket(int port, socketInterface *in_interface, bool is_tcp/*FALSE IF UDP*/){
-	struct sockaddr_in in_addr;
-
-	int ret_id;
-
-	//Open the socket descriptor
-	ret_id = socket(AF_INET, (is_tcp) ? SOCK_STREAM : SOCK_DGRAM, (is_tcp) ? 0 : IPPROTO_UDP);
-
-	// set SO_REUSEADDR on a socket to true (1):
-	int optval = 1;
-	setsockopt(ret_id, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval);
-
-	//Set up socket-specific information, such as address, etc.
-	memset((char *)&in_addr, 0, sizeof(sockaddr_in));
-	in_addr.sin_family = AF_INET;
-	in_addr.sin_addr.s_addr = INADDR_ANY;
-	in_addr.sin_port = htons(port);
-
-	if(bind(ret_id, (struct sockaddr *) &in_addr, sizeof(in_addr)) < 0)
-	{
-		exit(BAD_BIND); //TODO: Maybe this shouldn't be so harsh...
-	}
-
-	//If it's UDP, we only need one thread.  If TCP, we will accept up to 5 simultaneous connections (on different threads)
-	if(is_tcp)
-		listen(ret_id, 5);
-	else
-		new socketThread(ret_id, in_interface, &uplink_lock, true);
-
-	//Bind the new file id to the socket interface so we have access to it in the future
-	in_interface->bind(ret_id);
-	return ret_id;
-}
 
 socketInterface tcp_interface(SOCKET_TCP);
 socketInterface udp_interface(SOCKET_UDP);

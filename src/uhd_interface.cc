@@ -19,14 +19,6 @@ ofstream log_file;
   * uhdInterface class
   *********************/
 uhdInterface::uhdInterface(string args, string tx_subdev, string rx_subdev, string tx_ant, string rx_ant, double tx_rate, double rx_rate, double tx_freq, double rx_freq, double tx_gain, double rx_gain, bool codec_highspeed) : genericSDRInterface(){
-	//First, register all of the parameters which can be modified and the accessor methods which deal with them
-	param_accessors["RXFREQ"] = paramAccessor<uhdInterface>(DOUBLE, &uhdInterface::setRXFreq, &uhdInterface::getRXFreq, &uhdInterface::checkRXFreq);
-	param_accessors["TXFREQ"] = paramAccessor<uhdInterface>(DOUBLE, &uhdInterface::setTXFreq, &uhdInterface::getTXFreq, &uhdInterface::checkTXFreq);
-	param_accessors["RXGAIN"] = paramAccessor<uhdInterface>(DOUBLE, &uhdInterface::setRXGain, &uhdInterface::getRXGain, &uhdInterface::checkRXGain);
-	param_accessors["TXGAIN"] = paramAccessor<uhdInterface>(DOUBLE, &uhdInterface::setTXGain, &uhdInterface::getTXGain, &uhdInterface::checkTXGain);
-	param_accessors["RXRATE"] = paramAccessor<uhdInterface>(DOUBLE, &uhdInterface::setRXRate, &uhdInterface::getRXRate, &uhdInterface::checkRXRate);
-	param_accessors["TXRATE"] = paramAccessor<uhdInterface>(DOUBLE, &uhdInterface::setTXRate, &uhdInterface::getTXRate, &uhdInterface::checkTXRate);
-
 	//Open a log file
 	log_file.open("log.out", ios::out | ios::trunc | ios::binary);
 
