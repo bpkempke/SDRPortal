@@ -27,6 +27,12 @@ private:
 	int channel;
 };
 
+struct iqData {
+	void *data;
+	int num_bytes;
+	int channel_uid;
+};
+
 struct paramAccessor {
 	//typdefs to make things prettier later on...
 	typedef void (genericSDRInterface::*setMethodType)(paramData);
@@ -44,15 +50,15 @@ struct paramAccessor {
 	paramAccessor(){};
 };
 
-class genericSDRInterface {
+class genericSDRInterface{
 public:
 	genericSDRInterface();
 	void setSDRParameter(std::string name, std::string val);
-	void sendIQData(void *data, int num_elements, int uid_port);
 	int getRXPortUID(int rx_port);
 	int getTXPortUID(int tx_port);
 	int getGenericPortUID(int generic_port);
 	int getNumAllocatedChannels();
+
 protected:
 	//All possible get/set/check methods.  If they're not implemented, the virtual method will default to throwing an exception
 	virtual void setRXFreq(paramData in_param){throw invalidCommandException("");};
@@ -78,9 +84,11 @@ protected:
 	virtual void setCustomSDRParameter(std::string name, std::string val, int in_chan) = 0;
 	//virtual std::string getCustomSDRParameter(std::string name) = 0;
 	virtual void setStreamDataType(streamType in_type) = 0;
+	virtual void sendIQData(void *data, int num_bytes, int uid_port) = 0;
 	std::map<std::string, paramAccessor > param_accessors;
 private:
 	int cur_uid;
+	std::vector<int> uid_to_channel;
 	std::map<int, int> rx_to_uid;
 	std::map<int, int> tx_to_uid;
 	std::map<int, int> generic_to_uid;
