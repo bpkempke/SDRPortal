@@ -60,7 +60,8 @@ int genericSDRInterface::getRXPortUID(int rx_port){
 		return rx_to_uid[rx_port];
 	else {
 		int ret_uid = cur_uid;
-		rx_to_uid[rx_port] = cur_uid;
+		uid_to_channel[cur_uid] = rx_port;
+		rx_to_uid[rx_port] = cur_uid++;
 		return ret_uid;
 	}
 }
@@ -72,7 +73,8 @@ int genericSDRInterface::getTXPortUID(int tx_port){
 		return tx_to_uid[tx_port];
 	else {
 		int ret_uid = cur_uid;
-		tx_to_uid[tx_port] = cur_uid;
+		uid_to_channel[cur_uid] = tx_port;
+		tx_to_uid[tx_port] = cur_uid++;
 		return ret_uid;
 	}
 }
@@ -84,7 +86,8 @@ int genericSDRInterface::getGenericPortUID(int generic_port){
 		return generic_to_uid[generic_port];
 	else {
 		int ret_uid = cur_uid;
-		generic_to_uid[generic_port] = cur_uid;
+		uid_to_channel[cur_uid] = generic_port;
+		generic_to_uid[generic_port] = cur_uid++;
 		return ret_uid;
 	}
 }

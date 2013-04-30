@@ -4,7 +4,7 @@ static void *socketListenerProxy(void *in_ptr){
 	static_cast<portalSocketInterface*>(in_ptr)->connectionListenerThread();
 }
 
-portalSocketInterface::portalSocketInterface(int portnum, socketType in_socket_type, genericSDRInterface *in_sdr_int){
+portalSocketInterface::portalSocketInterface(int portnum, socketType in_socket_type, genericSDRInterface *in_sdr_int) : hierarchicalDataflowBlock(2, 0){
 	socket_type = in_socket_type;
 	sdr_int = in_sdr_int;
 
@@ -13,6 +13,22 @@ portalSocketInterface::portalSocketInterface(int portnum, socketType in_socket_t
 
 	//Start up a thread to listen for incoming connections
 	pthread_create(&conn_listener, NULL, socketListenerProxy, (void*)this);
+}
+
+void genericSDRInterface::dataFromLowerLevel(void *data, int num_bytes, int local_down_channel=0){
+	//Channel 0 = Command Channel
+	if(local_down_channel == 0){
+		//Commands should all come in as vectors of strings
+		std::vector<std::string> *in_command_vector = (std::vector<std::string> *)(data);
+		sdr_int->setSDRParameter(in_comand_vector[0], in_command_vector[1]);
+	}
+
+	//Channel 1 = Data Channel
+	else if(local_down_channel == 1){
+		//This is raw I/Q data or at least some sort of raw data + metadata stream.  Forward to derived class
+		iqData *in_iq = (iqData *)(data);
+		sdr_int->sendIQData(in_iq->data, in_iq->num_bytes, uid_to_channel[in_iq->channel_uid]);
+	}
 }
 
 int portalSocketInterface::initSocket(int portnum){
@@ -65,6 +81,6 @@ void *portalSocketInterface::connectionListenerThread(){
 		//Create two objects using this connection, one command connection and one data connection which is bound to a random port
 		portalDataSocket *new_data_socket = new portalDataSocket(socket_type, sdr_int);
 		int data_port_fid = new_data_socket->initSocket();
-		new socketThread(datasock_fd, sock, &uplink_lock, false);
+		new socketThread(datasock_fd, new_data_socket, &uplink_lock, false);
 	}
 }

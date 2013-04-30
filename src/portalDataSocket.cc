@@ -4,7 +4,7 @@ static void *listeningThreadProxy(void *in_ptr){
 	static_cast<portalDataSocket*>(in_ptr)->listeningThread();
 }
 
-portalDataSocket::portalDataSocket(socketType in_socket_type, genericSDRInterface *in_sdr_itn){
+portalDataSocket::portalDataSocket(socketType in_socket_type, genericSDRInterface *in_sdr_itn) : hierarchicalDataflowBlock(1, 1){
 	socket_type = in_socket_type;
 	sdr_int = in_sdr_int;
 
@@ -13,6 +13,14 @@ portalDataSocket::portalDataSocket(socketType in_socket_type, genericSDRInterfac
 
 	//Start up a thread to listen for incoming connections
 	pthread_create(&conn_listener, NULL, listeningThreadProxy, (void*)this);
+
+}
+
+void portalDataSocket::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0){
+
+}
+
+void portalDataSocket::dataFromLowerLevel(void *data, int num_bytes, int local_down_channel=0){
 
 }
 
@@ -65,6 +73,7 @@ void portalDataSocket::listeningThread(){
 			
 		//Since we can only accept one connection at a time, the rest of the socket reading (which needs to be running inside of a thread) just goes here
 		socketInterface socket_int(socket_type);
+		socket_int.bind(datasock_fd);
 		//TODO: This...
 	}
 }
