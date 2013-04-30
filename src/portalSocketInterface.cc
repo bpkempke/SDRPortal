@@ -12,7 +12,7 @@ portalSocketInterface::portalSocketInterface(int portnum, socketType in_socket_t
 	int socket_fid = initSocket(portnum);
 
 	//Start up a thread to listen for incoming connections
-	pthread_create(&conn_listener, NULL, uhdReadProxy, (void*)this);
+	pthread_create(&conn_listener, NULL, socketListenerProxy, (void*)this);
 }
 
 int portalSocketInterface::initSocket(int portnum){

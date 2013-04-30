@@ -10,5 +10,4 @@ private:
 	genericSDRInterface *sdr_int;
 	int socket_fid;
 	pthread_t conn_listener;
-	void connectionListenerThread();
 };
