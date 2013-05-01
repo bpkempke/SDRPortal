@@ -83,18 +83,31 @@ void *genericSocketInterface::connectionListenerThread(){
 			printf("ERROR on accept, socket_fid = %d\n", socket_fid);
 			
 		//TODO: Put a check for number of connections here...
+		socketInterpreter *new_interpreter;
+		if(socket_type == SOCKET_TCP)
+			new_interpreter = new tcpSocketInterpreter();
+		else if(socket_type == SOCKET_UDP)
+			new_interpreter = new udpSocketInterpreter();
+		else if(socket_type == SOCKET_WS)
+			new_interpreter = new wsSocketInterpreter();
 
-		socketThread *new_socket_thread = new socketThread();
+		socketThread *new_socket_thread = new socketThread(datasock_fd, this, &this.mutex, new_interpreter);
+		new_socket_thread->addUpperLevel(this);
+		this->addLowerLevel(new_socket_thread);
 	}
 
 }
 
 void genericSocketInterface::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0){
-
+	messageType in_message = {message, num_bytes, DOWNSTREAM};
+	for(int ii = 0; ii < clients.size(); ii++){
+		//FROM THE USRP
+		vector<messageType> new_messages = client_parsers[ii]->parseUpstreamMessage(in_message);
+		dispatchMessages(new_messages, ii);
+	}
 }
 
-void genericSocketInterface::fdBytesReceived(char *buffer, int num_bytes, fdInterface *from_interface)
-{
+void genericSocketInterface::dataFromLowerLevel(void *data, int num_bytes, int local_down_channel=0){
 	//This function packetizes and then distributes incoming bytes
 	//TODO: this should probably be done faster than a linear search, but with only a few clients, it should be fine
 	int client_index = 0;
@@ -136,15 +149,6 @@ void genericSocketInterface::deleteDownstreamInterface(fdInterface *in_thread){
 void genericSocketInterface::registerUpstreamInterface(fdInterface *up_int){
 	this_uplink = up_int;
 	this_uplink->registerDownstreamInterface(this);
-}
-
-void genericSocketInterface::dataFromUpstream(char *message, int num_bytes, fdInterface *from_interface){
-	messageType in_message = {message, num_bytes, DOWNSTREAM};
-	for(int ii = 0; ii < clients.size(); ii++){
-		//FROM THE USRP
-		vector<messageType> new_messages = client_parsers[ii]->parseUpstreamMessage(in_message);
-		dispatchMessages(new_messages, ii);
-	}
 }
 
 void genericSocketInterface::dispatchMessages(vector<messageType> in_messages, int client_idx){
@@ -369,13 +373,10 @@ static void *socketReaderProxy(void *in_socket_thread){
 	static_cast<socketThread*>(in_socket_thread)->socketReader();
 }
 
-socketThread::socketThread(int in_fp, fdInterface *in_sock, pthread_mutex_t *in_mutex, struct sockaddr_in *in_addr){
-	is_datagram_socket = in_is_datagram_socket;
+socketThread::socketThread(int in_fp, pthread_mutex_t *in_mutex) : hierarchicalDataflowBlock(0, 1) {
 
 	socket_fp = in_fp;
-	sock_int = in_sock;
 	shared_mutex = in_mutex;
-	in_sock->registerDownstreamInterface(this);
 
 	//Instantiate the thread which reads data from the socket
 	pthread_t new_socket_thread;	
@@ -388,9 +389,6 @@ void *socketThread::socketReader(){
 	socklen_t fromlen;
 	char buffer[256];
 
-	#ifdef DEBUG
-	printf("Got to the socket Reader function...\n");
-	#endif
 	while(1){
 		int n;
 		n = read(socket_fp, buffer, sizeof(buffer));
@@ -399,31 +397,17 @@ void *socketThread::socketReader(){
 		//Semaphore here to protect shared data structures
 		if(shared_mutex)
 			pthread_mutex_lock(shared_mutex);
-		receivedData(buffer, n);
+		dataToUpperLevel(buffer, n);
 		if(shared_mutex)
 			pthread_mutex_unlock(shared_mutex);
-		for(int ii = 0; ii < n; ii++){
-			//printf("%c",buffer[ii]);
-		}
-		fflush(stdout);
-		#ifdef DEBUG
-		printf("Got some data here......\n");
-		#endif
 	}
 
-	#ifdef DEBUG
-	printf("exiting...\n");
-	#endif
 	close(socket_fp);
 	sock_int->deleteDownstreamInterface(this);
 }
 
-void socketThread::receivedData(char *message, int num_bytes){
-	sock_int->fdBytesReceived(message, num_bytes, this);
-}
-
-void socketThread::dataFromUpstream(char *message, int num_bytes, fdInterface *from_interface){
-	socketWriter((unsigned char *)message, num_bytes);
+void socketThread::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0){
+	socketWriter((unsigned char *)data, num_bytes);
 }
 
 void socketThread::socketWriter(unsigned char *buffer, int buffer_length){

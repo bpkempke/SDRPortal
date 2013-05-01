@@ -36,6 +36,7 @@ private:
 	void initSocket();
 	std::vector<socketInterpreter*> client_parsers;
 	pthread_t conn_listener;
+	pthread_mutex_t mutex;
 };
 
 class socketInterpreter{
@@ -72,23 +73,18 @@ private:
 	std::string message_parser;
 };
 
-class socketThread : public fdInterface{
-	public:
-		socketThread(int in_fp, fdInterface *in_sock, pthread_mutex_t *in_mutex, bool is_datagram_socket, sockaddr_in *in_addr=NULL);//Optional address to send responses to in the case of datagram packets
-		void *socketReader();
-		void socketWriter(unsigned char *buffer, int buffer_length);
-		pthread_mutex_t *shared_mutex;
-		void receivedData(char *message, int num_bytes);
+class socketThread : public hierarchicalDataflowBlock{
+public:
+	socketThread(int in_fp, pthread_mutex_t *in_mutex, socketInterpreter *in_interp);
+	void *socketReader();
+	void socketWriter(unsigned char *buffer, int buffer_length);
 
-		//Stuff inherited from fdInterface class
-		void dataFromUpstream(char *message, int num_bytes, fdInterface *from_interface);
-	private:
-		struct sockaddr_in udp_addr;
-		fdInterface *sock_int;
-		bool is_datagram_socket;
-		
-		int socket_fp;
-		int socket_id;
+	//Methods inherited from hierarchicalDataflowBlock
+	virtual void dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0);
+	virtual void dataFromLowerLevel(void *data, int num_bytes, int local_down_channel=0){};
+private:
+	pthread_mutex_t *shared_mutex;
+	int socket_fp;
 };
 
 #endif
