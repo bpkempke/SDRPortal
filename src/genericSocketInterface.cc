@@ -373,10 +373,11 @@ static void *socketReaderProxy(void *in_socket_thread){
 	static_cast<socketThread*>(in_socket_thread)->socketReader();
 }
 
-socketThread::socketThread(int in_fp, pthread_mutex_t *in_mutex) : hierarchicalDataflowBlock(0, 1) {
+socketThread::socketThread(int in_fp, pthread_mutex_t *in_mutex, socketInterpreter *in_interp) : hierarchicalDataflowBlock(0, 1) {
 
 	socket_fp = in_fp;
 	shared_mutex = in_mutex;
+	interp = in_interp;
 
 	//Instantiate the thread which reads data from the socket
 	pthread_t new_socket_thread;	
@@ -397,6 +398,8 @@ void *socketThread::socketReader(){
 		//Semaphore here to protect shared data structures
 		if(shared_mutex)
 			pthread_mutex_lock(shared_mutex);
+		//TODO: Add parsing logic here...
+		interp->parseDownstreamMessage();
 		dataToUpperLevel(buffer, n);
 		if(shared_mutex)
 			pthread_mutex_unlock(shared_mutex);
