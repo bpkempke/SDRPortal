@@ -16,6 +16,7 @@ enum socketIntType{
 class genericSocketInterface: public hierarchicalDataflowBlock{
 public:
 	genericSocketInterface(socketIntType in_socket_type, int portnum, int max_connections=0);
+	~genericSocketInterface();
 	void dispatchMessages(std::vector<messageType> in_message, int client_idx);
 	socketIntType getSocketType(){return socket_type;};
 	void *connectionListenerThread();

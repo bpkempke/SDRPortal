@@ -35,6 +35,10 @@ genericSocketInterface::genericSocketInterface(socketIntType in_socket_type, int
 	pthread_create(&conn_listener, NULL, listeningThreadProxy, (void*)this);
 }
 
+genericSocketInterface::~genericSocketInterface(){
+	close(socket_fp);
+}
+
 int genericSocketInterface::initSocket(int portnum){
 	struct sockaddr_in in_addr;
 

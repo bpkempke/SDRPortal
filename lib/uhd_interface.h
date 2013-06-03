@@ -58,7 +58,7 @@ private:
 //This is utilizing the 'Curiously Recurring Template Pattern'
 //TODO: Change uhdInterface to be a subclass of hierarchicalDataflowBlock
 //TODO: Implement virtual functions of hierarchicalDataflowBlock
-class uhdInterface : public fdInterface, public genericSDRInterface<uhdInterface>{
+class uhdInterface : public hierarchicalDataflowBlock, public genericSDRInterface{
 public:
 	//Constructor
 	uhdInterface(std::string args, std::string tx_subdev, std::string rx_subdev, std::string tx_ant, std::string rx_ant, double tx_rate, double rx_rate, double tx_freq, double rx_freq, double tx_gain, double rx_gain, bool codec_highspeed);
@@ -86,8 +86,9 @@ public:
 	//Connection add/removal operations
 	void registerDownstreamControlInterface(fdInterface *in_int, controlIntType in_int_type);
 	
-	//Certain functions inherited from fdInterface class
-	void fdBytesReceived(char *buffer, int num_bytes, fdInterface *from_interface, int secondary_id);
+	//Certain functions inherited from hierarchicalDataflowBlock class
+	virtual void dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0);
+	virtual void dataFromLowerLevel(void *data, int num_bytes, int local_down_channel=0);
 
 
 private:
