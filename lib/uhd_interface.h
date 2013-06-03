@@ -56,6 +56,8 @@ private:
 };
 
 //This is utilizing the 'Curiously Recurring Template Pattern'
+//TODO: Change uhdInterface to be a subclass of hierarchicalDataflowBlock
+//TODO: Implement virtual functions of hierarchicalDataflowBlock
 class uhdInterface : public fdInterface, public genericSDRInterface<uhdInterface>{
 public:
 	//Constructor

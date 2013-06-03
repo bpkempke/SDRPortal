@@ -398,9 +398,13 @@ void *socketThread::socketReader(){
 		//Semaphore here to protect shared data structures
 		if(shared_mutex)
 			pthread_mutex_lock(shared_mutex);
-		//TODO: Add parsing logic here...
-		interp->parseDownstreamMessage();
-		dataToUpperLevel(buffer, n);
+		messageType new_message;
+		new_message.buffer = buffer;
+		new_message.num_bytes = n;
+		//new_message.message_dest = DOWNSTREAM;
+		vector<messageType> result_messages = interp->parseDownstreamMessage(new_message);
+		if(result_messages.size())
+			dataToUpperLevel(&result_messages, n);
 		if(shared_mutex)
 			pthread_mutex_unlock(shared_mutex);
 	}
@@ -410,7 +414,16 @@ void *socketThread::socketReader(){
 }
 
 void socketThread::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0){
-	socketWriter((unsigned char *)data, num_bytes);
+	vector<messageType> *in_message_vec = static_cast<vector<messageType> *>(data);
+	for(int ii=0; ii < in_message_vec->size(); ii++){
+		//First format everything correctly for the corresponding socket
+		vector<messageType> resulting_messages = interp->parseUpstreamMessage(in_message_vec[ii]);
+		
+		for(int jj=0; jj < resulting_messages.size(); jj++){
+			//Then write the raw data out to the corresponding socket
+			socketWriter(resulting_messages[jj].buffer, resulting_messages[jj].num_bytes);
+		}
+	}
 }
 
 void socketThread::socketWriter(unsigned char *buffer, int buffer_length){
@@ -422,7 +435,7 @@ void socketThread::socketWriter(unsigned char *buffer, int buffer_length){
 		else
 	        	n = write(socket_fp, buffer, buffer_length);
 		if(n <= 0){
-			//TODO: Commit hara kiri...
+			//TODO: What should we do here?
 			printf("socket not open anymore...tried writing %s bytes...\n",buffer);
 		}
 	}

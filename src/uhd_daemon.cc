@@ -154,6 +154,8 @@ int main(int argc, char *argv[]){
 	uhdInterface usrp_instance(uhd_arguments,"","A:0","J1","J1",tx_bandwidth,rx_bandwidth,2500000000.0,2500000000.0,20.0,40.0, codec_highspeed);
 
 	//Run a thread which listens to the data socket (only for non-datagram interfaces (TCP, WS))
+	//TODO: Change these to be genericSocketInterface objects instead
+	//TODO: Implement command socket interpreters and data socket interpreters here
 	if(tcp_portnum){
 		tcp_portnum = newSocket(tcp_portnum, &tcp_interface, true);
 		usrp_instance.registerDownstreamControlInterface(&tcp_interface, CONTROL_DATA);
