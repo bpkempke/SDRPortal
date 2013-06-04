@@ -5,6 +5,10 @@ portalDataSocket::portalDataSocket(socketType in_socket_type, int socket_num, ge
 
 	//Create the socket that we'll be listening on...
 	socket_int = new genericSocketInterface(in_socket_type, socket_num);
+
+	//Link upper and lower 
+	in_sdr_int->addLowerLevel(this);
+	socket_int->addUpperLevel(this);
 }
 
 portalDataSocket::~portalDataSocket(){
@@ -12,10 +16,14 @@ portalDataSocket::~portalDataSocket(){
 }
 
 void portalDataSocket::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0){
+	//Data coming in from the SDR
 
+	//TODO: This I/Q data should be forwarded directly to the socket
 }
 
 void portalDataSocket::dataFromLowerLevel(void *data, int num_bytes, int local_down_channel=0){
+	//Data coming in from the socket
 
+	//TODO: This data should be forwarded directly to the SDR for immediate I/Q transmission
 }
 
