@@ -421,7 +421,7 @@ void socketThread::dataFromUpperLevel(void *data, int num_bytes, int local_up_ch
 	vector<messageType> *in_message_vec = static_cast<vector<messageType> *>(data);
 	for(int ii=0; ii < in_message_vec->size(); ii++){
 		//First format everything correctly for the corresponding socket
-		vector<messageType> resulting_messages = interp->parseUpstreamMessage(in_message_vec[ii]);
+		vector<messageType> resulting_messages = interp->parseUpstreamMessage((*in_message_vec)[ii]);
 		
 		for(int jj=0; jj < resulting_messages.size(); jj++){
 			//Then write the raw data out to the corresponding socket

@@ -18,18 +18,28 @@ portalCommandSocket::~portalCommandSocket(){
 void portalCommandSocket::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0){
 	//Data coming in from the SDR
 
-	//TODO: Will this be needed? All responses to commands should be sent back immediately.  Maybe we should just forward on to the socket anyways in case there are timed command responses
+	messageType new_message;
+	new_message.buffer = data;
+	new_message.num_bytes = num_bytes;
+
+	vector<messageType> transmit_messages;
+	transmit_messages.push_back(new_message);
+
+	socket_int->dataFromUpperLevel(&transmit_messages, num_bytes);
 }
 
 void portalCommandSocket::dataFromLowerLevel(void *data, int num_bytes, int local_down_channel=0){
 	//Data coming in from the socket
 
+	//First, we need to make sure data is casted correctly (data is a pointer to a vector of messages)
+	vector<messageType> *in_messages = static_cast<vector<messageType>*>(data);
+
 	//Insert historic messages into a string stream so as to easily extract lines
 	static stringstream command_stream;
-	string in_data_string(in_data,num_bytes);
-	command_stream << in_data_string;
-
-	cout << "in cmdConnectionInterpreter::parse" << endl;
+	for(int ii=0; ii < in_messages->size(); ii++){
+		string in_data_string((*in_messages)[ii].buffer,(*in_messages)[ii].num_bytes);
+		command_stream << in_data_string;
+	}
 
 	//Now parse out incoming commands
 	string current_command;
@@ -116,6 +126,7 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_bytes, int loca
 			response_length = sprintf(response,"%s\r\n",uhd_int->getUHDObject()->get_tx_antenna().c_str());
 
 		//Send off the response
+		//TODO: This upstream object is different now...
 		upstream_int->dataFromUpstream(response,response_length,uhd_int);
 	}
 
