@@ -15,6 +15,14 @@ portalDataSocket::~portalDataSocket(){
 	delete socket_int;
 }
 
+int portalDataSocket::getPortNum(){
+	return socket_int->getPortNum();
+}
+
+void portalDataSocket::setUID(int in_uid){
+	uid = in_uid;
+}
+
 void portalDataSocket::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0){
 	//Data coming in from the SDR
 
@@ -25,7 +33,7 @@ void portalDataSocket::dataFromUpperLevel(void *data, int num_bytes, int local_u
 	vector<messageType> transmit_messages;
 	transmit_messages.push_back(new_message);
 
-	socket_int->dataFromUpperLevel(&transmit_messages, num_bytes);
+	dataToLowerLevel(&transmit_messages, num_bytes);
 }
 
 void portalDataSocket::dataFromLowerLevel(void *data, int num_bytes, int local_down_channel=0){

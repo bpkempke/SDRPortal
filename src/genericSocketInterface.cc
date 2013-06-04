@@ -102,6 +102,13 @@ void *genericSocketInterface::connectionListenerThread(){
 
 }
 
+int genericSocketInterface::getPortNum(){
+	struct sockaddr_in addr;
+	getsockname(socket_fp, (struct sockaddr *)&addr, sizeof(addr));
+
+	return addr.sin_port;
+}
+
 void genericSocketInterface::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0){
 	messageType in_message = {message, num_bytes, DOWNSTREAM};
 	for(int ii = 0; ii < clients.size(); ii++){

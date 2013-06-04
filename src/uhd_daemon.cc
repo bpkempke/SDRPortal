@@ -17,18 +17,14 @@ enum SDRType {UHD};
 
 //GLOBALS
 genericSDRInterface *sdr_interface = NULL;
-portalDataSocket *tcp_data_socket = NULL;
 portalCommandSocket *tcp_cmd_socket = NULL;
-portalDataSocket *ws_data_socket = NULL;
 portalCommandSocket *ws_cmd_socket = NULL;
 
 void sighandler(int sig){
 	printf("sdrportal: signal %d caught...\n", sig);
 
 	//Delete all dynamically-allocated things
-	delete tcp_data_socket;
 	delete tcp_cmd_socket;
-	delete ws_data_socket;
 	delete ws_cmd_socket;
 	delete sdr_interface;
 
@@ -64,8 +60,6 @@ int main(int argc, char *argv[]){
 	const char* const short_options = "s:t:w:T:W:a:";
 	const struct option long_options[] = {
 		{"sdr_type", required_argument, 0, 's'},
-		{"tcp_data", required_argument, 0, 't'},
-		{"ws_data", required_argument, 0, 'w'},
 		{"tcp_cmd", required_argument, 0, 'T'},
 		{"ws_cmd", required_argument, 0, 'W'},
 		{"sdr_args", required_argument, 0, 'a'},
@@ -73,8 +67,6 @@ int main(int argc, char *argv[]){
 	};
 
 	//Open up two separate sockets, one for commands, and one for data
-	int tcp_portnum = 0;
-	int ws_portnum = 0;
 	int tcp_cmd_portnum = 0;
 	int ws_cmd_portnum = 0;
 	SDRType sdr_type = UHD;
@@ -87,12 +79,6 @@ int main(int argc, char *argv[]){
 		case 's':
 			if(!strcmp("UHD",optarg))
 				sdr_type = UHD;
-			break;
-		case 't':
-			tcp_portnum = atoi(optarg);
-			break;
-		case 'w':
-			ws_portnum = atoi(optarg);
 			break;
 		case 'T':
 			tcp_cmd_portnum = atoi(optarg);
@@ -115,11 +101,7 @@ int main(int argc, char *argv[]){
 		sdr_interface = new uhdInterface(sdr_arguments);
 	}
 
-	//Run a thread which listens to the data socket (only for non-datagram interfaces (TCP, WS))
-	if(tcp_portnum)
-		tcp_data_socket = new portalDataSocket(SOCKET_TCP, tcp_portnum, sdr_interface);
-	if(ws_portnum)
-		ws_data_socket = new portalDataSocket(SOCKET_WS, ws_portnum, sdr_interface);
+	//Create command sockets which will spawn data sockets if requested
 	if(tcp_cmd_portnum)
 		tcp_cmd_socket = new portalCommandSocket(SOCKET_TCP, tcp_cmd_portnum, sdr_interface);
 	if(ws_cmd_portnum)

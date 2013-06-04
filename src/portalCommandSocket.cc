@@ -2,6 +2,9 @@
 
 portalCommandSocket::portalCommandSocket(socketType in_socket_type, int socket_num, genericSDRInterface *in_sdr_int) : hierarchicalDataflowBlock(1, 1){
 	sdr_int = in_sdr_int;
+	socket_type = in_socket_type;
+	num_channels = 0;
+	cur_channel = 0;
 
 	//Create the socket that we'll be listening on...
 	socket_int = new genericSocketInterface(in_socket_type, socket_num);
@@ -56,8 +59,20 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_bytes, int loca
 
 		//Now do whatever we need to do based on the received command
 		//TODO: Put in some error checking here
+		char response[20];
+		int response_length;
 		try{
-			if(command == "CHANNEL"){
+			if(command == "NEWCHANNEL"){
+				//The client wants to add a data channel connection...
+				// Better create one! (and pass the random port back to the client so that he can connect to it...)
+				portalDataSocket *data_socket = new portalDataSocket(socket_type, 0, sdr_int);
+				response_length = sprintf(response,"%d: %d\r\n", num_channels, data_socket->getPortNum());
+				dataToLowerLevel(response, response_length);
+				
+				//Also create a sequential UID for this port as well
+				uid_map[data_socket] = num_channels;
+				data_socket->setUID(num_channels++);
+			} else if(command == "CHANNEL"){
 				if(isInteger(arg1)){
 					int candidate_channel = strtol(arg1.c_str(), NULL, 0);
 					if(uhd_int->getNumAllocatedChannels() > candidate_channel)
@@ -106,8 +121,6 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_bytes, int loca
 		}
 
 		//Query-based commands
-		char response[20];
-		int response_length;
 		if(command.substr(0,6) == "RXFREQ")
 			response_length = sprintf(response,"%d\r\n",(int)(uhd_int->getUHDObject()->get_rx_freq()+0.5));
 		else if(command.substr(0,6) == "TXFREQ")
