@@ -81,13 +81,13 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_bytes, int loca
 					throw badArgumentException(badArgumentException::MALFORMED, 1, arg1);
 			} else if(command == "RXCHANNEL"){
 				if(isInteger(arg1))
-					sdr_int->setRXChannel(strtol(arg1.c_str()), cur_channel);
+					sdr_int->bindRXChannel(strtol(arg1.c_str()), cur_channel);
 					//TODO: Respond with UID
 				else
 					throw badArgumentException(badArgumentException::MALFORMED, 1, arg1);
 			} else if(command == "TXCHANNEL"){
 				if(isInteger(arg1))
-					sdr_int->setTXChannel(strtol(arg1.c_str()), cur_channel);
+					sdr_int->bindTXChannel(strtol(arg1.c_str()), cur_channel);
 					//TODO: Respond with UID
 				else
 					throw badArgumentException(badArgumentException::MALFORMED, 1, arg1);

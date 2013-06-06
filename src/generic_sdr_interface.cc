@@ -1,7 +1,6 @@
 #include <generic_sdr_interface.h>
 
 genericSDRInterface::genericSDRInterface(){
-	cur_uid = 0;//TODO: Some of this pre-existing UID stuff can be taken out
 	num_channels = 0;
 	cur_channel = 0;
 
@@ -15,16 +14,16 @@ genericSDRInterface::genericSDRInterface(){
 
 }
 
-int genericSDRInterface::addChannel(hierarchicalDataflowBlock *in_channel){
+int genericSDRInterface::addChannel(portalDataSocket *in_channel){
 	
 	//Also create a sequential UID for this port as well
 	uid_map[in_channel] = num_channels;
-	data_socket->setUID(num_channels++);
+	in_channel->setUID(num_channels++);
 
 	return num_channels;
 }
 
-void genericSDRInterface::setSDRParameter(std::string name, std::string val){
+void genericSDRInterface::setSDRParameter(int in_uid, std::string name, std::string val){
 	//This function dynamically checks parameters of differing types and then loads into an abstract primitive container to avoid double dispatch
 	typename std::map<std::string, paramAccessor >::iterator it = param_accessors.find(name);
 	if(it == param_accessors.end()){
@@ -37,73 +36,83 @@ void genericSDRInterface::setSDRParameter(std::string name, std::string val){
 		if(cur_param_details.arg_type == INT){
 			paramData val_int;
 			if(isInteger(val))
-				val_int = paramData((int)(strtol(val.c_str(), NULL, 0)));
+				val_int = paramData((int)(strtol(val.c_str(), NULL, 0)), uid_to_chaninfo[in_uid]);
 			else
 				throw badArgumentException(badArgumentException::MALFORMED, 1, val);
 
 			//Check to make sure the value is within bounds
-			if(!(derivedClass->*(cur_param_details.checkMethod))(val_int))
+			if(!(this->*(cur_param_details.checkMethod))(val_int))
 				throw badArgumentException(badArgumentException::OUT_OF_BOUNDS, 1, val);
 
-			(derivedClass->*cur_param_details.setMethod)(val_int);
+			(this->*cur_param_details.setMethod)(val_int);
 		} else if(cur_param_details.arg_type == DOUBLE){
 			paramData val_double;
 			if(isInteger(val))
-				val_double = paramData(strtod(val.c_str(), NULL));
+				val_double = paramData(strtod(val.c_str(), NULL), uid_to_chaninfo[in_uid]);
 			else
 				throw badArgumentException(badArgumentException::MALFORMED, 1, val);
 
 			//Check to make sure the value is within bounds
-			if(!(derivedClass->*(cur_param_details.checkMethod))(val_double))
+			if(!(this->*(cur_param_details.checkMethod))(val_double))
 				throw badArgumentException(badArgumentException::OUT_OF_BOUNDS, 1, val);
 
-			(derivedClass->*(cur_param_details.setMethod))(val_double);
+			(this->*(cur_param_details.setMethod))(val_double);
 		} else {
 			//TODO: Any other parameter types we want to support?
 		}
 	}
 }
 
-int genericSDRInterface::getRXPortUID(int rx_port){
-	//First try to see if this port's been given a UID
-	std::map<int, int>::iterator it = rx_to_uid.find(rx_port);
-	if(it != rx_to_uid.end())
-		return rx_to_uid[rx_port];
-	else {
-		int ret_uid = cur_uid;
-		uid_to_channel[cur_uid] = rx_port;
-		rx_to_uid[rx_port] = cur_uid++;
-		return ret_uid;
+void genericSDRInterface::bindRXChannel(int rx_chan, int in_uid){
+	//Check to see if the RX channel is an actual channel
+	if(checkRXChannel(rx_chan)){
+		//Open the RX channel since it's valid (don't care if it's been opened before)
+		openRXChannel(rx_chan);
+		rx_chan_to_streams[rx_chan].push_back(uid_map.find(in_uid));
+		uid_to_chaninfo[in_uid].rx_chan = rx_chan;
+	} else {
+		throw badArgumentException(badArgumentException::MALFORMED, 1, val); //TODO: is this the correct exception to throw?
 	}
 }
 
-int genericSDRInterface::getTXPortUID(int tx_port){
-	//First try to see if this port's been given a UID
-	std::map<int, int>::iterator it = tx_to_uid.find(tx_port);
-	if(it != tx_to_uid.end())
-		return tx_to_uid[tx_port];
-	else {
-		int ret_uid = cur_uid;
-		uid_to_channel[cur_uid] = tx_port;
-		tx_to_uid[tx_port] = cur_uid++;
-		return ret_uid;
-	}
-}
-
-int genericSDRInterface::getGenericPortUID(int generic_port){
-	//First try to see if this port's been given a UID
-	std::map<int, int>::iterator it = generic_to_uid.find(generic_port);
-	if(it != generic_to_uid.end())
-		return generic_to_uid[generic_port];
-	else {
-		int ret_uid = cur_uid;
-		uid_to_channel[cur_uid] = generic_port;
-		generic_to_uid[generic_port] = cur_uid++;
-		return ret_uid;
+void genericSDRInterface::bindTXChannel(int tx_chan, int in_uid){
+	//Check to see if the RX channel is an actual channel
+	if(checkTXChannel(tx_chan)){
+		//Open the RX channel since it's valid (don't care if it's been opened before)
+		openTXChannel(tx_chan);
+		tx_chan_to_streams[tx_chan].push_back(uid_map.find(in_uid));
+		uid_to_chaninfo[in_uid].tx_chan = tx_chan;
+	} else {
+		throw badArgumentException(badArgumentException::MALFORMED, 1, val); //TODO: is this the correct exception to throw?
 	}
 }
 
 int genericSDRInterface::getNumAllocatedChannels(){
-	return cur_uid;
+	return num_channels;
 }
 
+vector<primType> genericSDRInterface::getResultingPrimTypes(int rx_chan){
+	vector<primType> resulting_prim_types;
+	vector<portalDataSocket*> rx_streams = rx_chan_to_streams[rx_chan];
+	for(int ii=0; ii < rx_streams.size(); ii++){
+		primType cur_prim_type = rx_streams[ii]->getDataType();
+		vector<primType>::iterator it = find(resulting_prim_types.begin(), resulting_prim_types.end(), cur_prim_type);
+		if(it == resulting_prim_types.end())
+			resulting_prim_types.push_back(cur_prim_type);
+	}
+	return resulting_prim_types;
+}
+
+//TODO: How do we do any type changes?
+void genericSDRInterface::distributeRXData(void *in_data, int num_bytes, int rx_chan){
+	//Data coming from SDR RX for distribution to sockets
+	vector<hierarchicalDataflowBlock*> streams = rx_chan_to_streams[rx_chan];
+	for(int ii=0; ii < streams.size(); ii++)
+		streams[ii].dataFromUpperLevel(in_data, num_bytes);
+}
+
+void genericSDRInterface::sendIQData(void *in_data, int num_bytes, int uid_port){
+	//Data coming from socket for TX
+	int tx_chan = uid_to_chaninfo[uid_port].tx_chan;
+	txIQData(in_data, num_bytes, tx_chan);
+}

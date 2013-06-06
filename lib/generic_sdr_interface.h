@@ -7,11 +7,17 @@
 #define GENERIC_SDR_INT_H
 
 enum primEnum {DOUBLE, INT, VOID};
+enum cPrimType {C_DOUBLE64, C_FLOAT32, C_INT32, C_INT16, C_INT8};
+
+struct rxtxChanInfo{
+	int rx_chan;
+	int tx_chan;
+};
 
 class paramData {
 public:
-	paramData(double in_data, int in_channel=0){data_type = DOUBLE; scratch = new double(in_data); channel = in_channel;};
-	paramData(int in_data, int in_channel=0){data_type = INT; scratch = new int(in_data); channel = in_channel;};
+	paramData(double in_data, rxtxChanInfo in_channel=0){data_type = DOUBLE; scratch = new double(in_data); channel = in_channel;};
+	paramData(int in_data, rxtxChanInfo in_channel=0){data_type = INT; scratch = new int(in_data); channel = in_channel;};
 	paramData(){data_type = VOID;};
 	~paramData(){
 		if(data_type == DOUBLE) delete (double*)scratch;
@@ -24,7 +30,7 @@ public:
 private:
 	void *scratch;
 	primEnum data_type;
-	int channel;
+	rxtxChanInfo channel;
 };
 
 struct iqData {
@@ -53,18 +59,16 @@ struct paramAccessor {
 class genericSDRInterface{
 public:
 	genericSDRInterface();
-	void setSDRParameter(std::string name, std::string val);
-	int getRXPortUID(int rx_port);
-	int getTXPortUID(int tx_port);
-	int getGenericPortUID(int generic_port);
+	void setSDRParameter(int in_uid, std::string name, std::string val);
 	int getNumAllocatedChannels();
 
-	int addChannel(hierarchicalDataflowBlock *in_channel);
+	int addChannel(portalDataSocket *in_channel);
+	void bindRXChannel(int rx_chan, int in_uid);
+	void bindTXChannel(int tx_chan, int in_uid);
 
-	//TODO: Implement these functions for accessing possible parameter setters/getters
-	bool isCommand(string in_candidate);
-	void setCommand(string in_command, vector<string> in_args);
-	string getCommand(string in_command);
+	vector<primType> getResultingPrimTypes(int rx_chan);
+	void distributeRXData(void *in_data, int num_bytes, int rx_chan);
+	void sendIQData(void *data, int num_bytes, int uid_port);
 
 protected:
 	//All possible get/set/check methods.  If they're not implemented, the virtual method will default to throwing an exception
@@ -74,14 +78,16 @@ protected:
 	virtual void setTXGain(paramData in_param){throw invalidCommandException("");};
 	virtual void setRXRate(paramData in_param){throw invalidCommandException("");};
 	virtual void setTXRate(paramData in_param){throw invalidCommandException("");};
-	virtual paramData getRXFreq(int in_chan){throw invalidCommandException("");};
-	virtual paramData getTXFreq(int in_chan){throw invalidCommandException("");};
-	virtual paramData getRXGain(int in_chan){throw invalidCommandException("");};
-	virtual paramData getTXGain(int in_chan){throw invalidCommandException("");};
-	virtual paramData getRXRate(int in_chan){throw invalidCommandException("");};
-	virtual paramData getTXRate(int in_chan){throw invalidCommandException("");};
+	virtual paramData getRXFreq(rxtxChanInfo in_chan){throw invalidCommandException("");};
+	virtual paramData getTXFreq(rxtxChanInfo in_chan){throw invalidCommandException("");};
+	virtual paramData getRXGain(rxtxChanInfo in_chan){throw invalidCommandException("");};
+	virtual paramData getTXGain(rxtxChanInfo in_chan){throw invalidCommandException("");};
+	virtual paramData getRXRate(rxtxChanInfo in_chan){throw invalidCommandException("");};
+	virtual paramData getTXRate(rxtxChanInfo in_chan){throw invalidCommandException("");};
 	virtual bool checkRXChannel(int in_chan){throw invalidCommandException("");};
 	virtual bool checkTXChannel(int in_chan){throw invalidCommandException("");};
+	virtual void openRXChannel(int in_chan){throw invalidCommandException("");};
+	virtual void openTXChannel(int in_chan){throw invalidCommandException("");};
 	virtual bool checkRXFreq(paramData in_param){throw invalidCommandException("");};
 	virtual bool checkTXFreq(paramData in_param){throw invalidCommandException("");};
 	virtual bool checkRXGain(paramData in_param){throw invalidCommandException("");};
@@ -91,17 +97,14 @@ protected:
 	virtual void setCustomSDRParameter(std::string name, std::string val, int in_chan) = 0;
 	//virtual std::string getCustomSDRParameter(std::string name) = 0;
 	virtual void setStreamDataType(streamType in_type) = 0;
-	virtual void sendIQData(void *data, int num_bytes, int uid_port) = 0;
+	virtual void txIQData(void *data, int num_bytes, int tx_chan) = 0;
+	virtual cPrimType getStreamPrimType(cPrimType desired_type) = 0;
 	std::map<std::string, paramAccessor > param_accessors;
 private:
-	int cur_uid;
-	std::vector<int> uid_to_channel;
-	std::map<int, int> rx_to_uid;
-	std::map<int, int> tx_to_uid;
-	std::map<int, int> generic_to_uid;
-
 	int num_channels, cur_channel;
-	map<hierarchicalDataflowBlock*,int> uid_map;
+	map<portalDataSocket*,int> uid_map;
+	map<int,vector<portalDataSocket*> > rx_chan_to_streams, tx_chan_to_streams;
+	map<int,rxtxChanInfo> uid_to_chaninfo;
 };
 
 #endif
