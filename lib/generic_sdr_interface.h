@@ -67,8 +67,8 @@ public:
 	void bindTXChannel(int tx_chan, int in_uid);
 
 	vector<primType> getResultingPrimTypes(int rx_chan);
-	void distributeRXData(void *in_data, int num_bytes, int rx_chan);
-	void sendIQData(void *data, int num_bytes, int uid_port);
+	void distributeRXData(void *in_data, int num_bytes, int rx_chan, primType in_type);
+	void sendIQData(void *data, int num_bytes, int uid_port, primType in_type);
 
 protected:
 	//All possible get/set/check methods.  If they're not implemented, the virtual method will default to throwing an exception
@@ -96,8 +96,8 @@ protected:
 	virtual bool checkTXRate(paramData in_param){throw invalidCommandException("");};
 	virtual void setCustomSDRParameter(std::string name, std::string val, int in_chan) = 0;
 	//virtual std::string getCustomSDRParameter(std::string name) = 0;
-	virtual void setStreamDataType(streamType in_type) = 0;
-	virtual void txIQData(void *data, int num_bytes, int tx_chan) = 0;
+	virtual void setStreamDataType(streamType in_type) = 0; //TODO: Need to integrate this in
+	virtual void txIQData(void *data, int num_bytes, int tx_chan, primType in_type) = 0;
 	virtual cPrimType getStreamPrimType(cPrimType desired_type) = 0;
 	std::map<std::string, paramAccessor > param_accessors;
 private:

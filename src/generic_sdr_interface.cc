@@ -103,16 +103,17 @@ vector<primType> genericSDRInterface::getResultingPrimTypes(int rx_chan){
 	return resulting_prim_types;
 }
 
-//TODO: How do we do any type changes?
-void genericSDRInterface::distributeRXData(void *in_data, int num_bytes, int rx_chan){
+void genericSDRInterface::distributeRXData(void *in_data, int num_bytes, int rx_chan, primType in_type){
 	//Data coming from SDR RX for distribution to sockets
-	vector<hierarchicalDataflowBlock*> streams = rx_chan_to_streams[rx_chan];
+	vector<portalDataSocket*> streams = rx_chan_to_streams[rx_chan];
 	for(int ii=0; ii < streams.size(); ii++)
-		streams[ii].dataFromUpperLevel(in_data, num_bytes);
+		if(streams[ii]->getDataType() == in_type)
+			streams[ii]->dataFromUpperLevel(in_data, num_bytes);
 }
 
-void genericSDRInterface::sendIQData(void *in_data, int num_bytes, int uid_port){
+//TODO: How does this get integrate in?  Should genericSDRInterface be implementing hierarchicalDataflowBlock instead?
+void genericSDRInterface::sendIQData(void *in_data, int num_bytes, int uid_port, primType in_type){
 	//Data coming from socket for TX
 	int tx_chan = uid_to_chaninfo[uid_port].tx_chan;
-	txIQData(in_data, num_bytes, tx_chan);
+	txIQData(in_data, num_bytes, tx_chan, in_type);
 }
