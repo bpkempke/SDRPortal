@@ -1,7 +1,9 @@
 #include <generic_sdr_interface.h>
 
 genericSDRInterface::genericSDRInterface(){
-	cur_uid = 0;
+	cur_uid = 0;//TODO: Some of this pre-existing UID stuff can be taken out
+	num_channels = 0;
+	cur_channel = 0;
 
 	//First, register all of the parameters which can be modified and the accessor methods which deal with them
 	param_accessors["RXFREQ"] = paramAccessor(DOUBLE, &genericSDRInterface::setRXFreq, &genericSDRInterface::getRXFreq, &genericSDRInterface::checkRXFreq);
@@ -11,6 +13,15 @@ genericSDRInterface::genericSDRInterface(){
 	param_accessors["RXRATE"] = paramAccessor(DOUBLE, &genericSDRInterface::setRXRate, &genericSDRInterface::getRXRate, &genericSDRInterface::checkRXRate);
 	param_accessors["TXRATE"] = paramAccessor(DOUBLE, &genericSDRInterface::setTXRate, &genericSDRInterface::getTXRate, &genericSDRInterface::checkTXRate);
 
+}
+
+int genericSDRInterface::addChannel(hierarchicalDataflowBlock *in_channel){
+	
+	//Also create a sequential UID for this port as well
+	uid_map[in_channel] = num_channels;
+	data_socket->setUID(num_channels++);
+
+	return num_channels;
 }
 
 void genericSDRInterface::setSDRParameter(std::string name, std::string val){

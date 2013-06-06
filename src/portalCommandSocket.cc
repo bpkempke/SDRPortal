@@ -3,8 +3,6 @@
 portalCommandSocket::portalCommandSocket(socketType in_socket_type, int socket_num, genericSDRInterface *in_sdr_int) : hierarchicalDataflowBlock(1, 1){
 	sdr_int = in_sdr_int;
 	socket_type = in_socket_type;
-	num_channels = 0;
-	cur_channel = 0;
 
 	//Create the socket that we'll be listening on...
 	socket_int = new genericSocketInterface(in_socket_type, socket_num);
@@ -66,12 +64,12 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_bytes, int loca
 				//The client wants to add a data channel connection...
 				// Better create one! (and pass the random port back to the client so that he can connect to it...)
 				portalDataSocket *data_socket = new portalDataSocket(socket_type, 0, sdr_int);
-				response_length = sprintf(response,"%d: %d\r\n", num_channels, data_socket->getPortNum());
+				data_socket->addUpperLevel(sdr_int);
+				data_socket->addLowerLevel(socket_int);
+
+				int new_channel = sdr_int->addChannel(data_socket);
+				response_length = sprintf(response,"%d\r\n", new_channel);
 				dataToLowerLevel(response, response_length);
-				
-				//Also create a sequential UID for this port as well
-				uid_map[data_socket] = num_channels;
-				data_socket->setUID(num_channels++);
 			} else if(command == "CHANNEL"){
 				if(isInteger(arg1)){
 					int candidate_channel = strtol(arg1.c_str(), NULL, 0);
@@ -83,20 +81,14 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_bytes, int loca
 					throw badArgumentException(badArgumentException::MALFORMED, 1, arg1);
 			} else if(command == "RXCHANNEL"){
 				if(isInteger(arg1))
-					if(isInteger(arg2))
-						cur_channel = uhd_int->getRXPortUID(strtol(arg1.c_str(), NULL, 0));
-						//TODO: Respond with UID
-					else
-						throw badArgumentException(badArgumentException::MALFORMED, 2, arg2);
+					sdr_int->setRXChannel(strtol(arg1.c_str()), cur_channel);
+					//TODO: Respond with UID
 				else
 					throw badArgumentException(badArgumentException::MALFORMED, 1, arg1);
 			} else if(command == "TXCHANNEL"){
 				if(isInteger(arg1))
-					if(isInteger(arg2))
-						cur_channel = uhd_int->getTXPortUID(strtol(arg1.c_str(), NULL, 0));
-						//TODO: Respond with UID
-					else
-						throw badArgumentException(badArgumentException::MALFORMED, 2, arg2);
+					sdr_int->setTXChannel(strtol(arg1.c_str()), cur_channel);
+					//TODO: Respond with UID
 				else
 					throw badArgumentException(badArgumentException::MALFORMED, 1, arg1);
 			} else {

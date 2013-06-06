@@ -59,6 +59,13 @@ public:
 	int getGenericPortUID(int generic_port);
 	int getNumAllocatedChannels();
 
+	int addChannel(hierarchicalDataflowBlock *in_channel);
+
+	//TODO: Implement these functions for accessing possible parameter setters/getters
+	bool isCommand(string in_candidate);
+	void setCommand(string in_command, vector<string> in_args);
+	string getCommand(string in_command);
+
 protected:
 	//All possible get/set/check methods.  If they're not implemented, the virtual method will default to throwing an exception
 	virtual void setRXFreq(paramData in_param){throw invalidCommandException("");};
@@ -92,6 +99,9 @@ private:
 	std::map<int, int> rx_to_uid;
 	std::map<int, int> tx_to_uid;
 	std::map<int, int> generic_to_uid;
+
+	int num_channels, cur_channel;
+	map<hierarchicalDataflowBlock*,int> uid_map;
 };
 
 #endif

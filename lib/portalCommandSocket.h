@@ -11,6 +11,4 @@ private:
 	socketType socket_type;
 	genericSocketInterface *socket_int;
 	genericSDRInterface *sdr_int;
-	int num_channels, cur_channel;
-	map<portaDataSocket*,int> uid_map;
 };
