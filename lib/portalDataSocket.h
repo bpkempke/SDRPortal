@@ -6,6 +6,7 @@ public:
 
 	int getPortNum();
 	void setUID(int in_uid);
+	int getUID();
 
 	primType getDataType(){return data_type};
 	void setDataType(primType in_data_type){data_type = in_data_type};

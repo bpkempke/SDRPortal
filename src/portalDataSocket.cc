@@ -23,6 +23,10 @@ void portalDataSocket::setUID(int in_uid){
 	uid = in_uid;
 }
 
+void portalDataSocket::getUID(){
+	return uid;
+}
+
 void portalDataSocket::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0){
 	//Data coming in from the SDR
 
@@ -44,7 +48,7 @@ void portalDataSocket::dataFromLowerLevel(void *data, int num_bytes, int local_d
 
 	//Traverse all incoming messages and forward all IQ data on to the SDR
 	for(int ii=0; ii < in_messages->size(); ii++){
-		sdr_int->sendIQData((*in_messages)[ii].buffer, (*in_messages)[ii].num_bytes, sdr_int->getRXPortUID(local_down_channel)); //TODO: Is local_down_channel correct???
+		sdr_int->sendIQData((*in_messages)[ii].buffer, (*in_messages)[ii].num_bytes, uid, data_type);
 	}
 }
 
