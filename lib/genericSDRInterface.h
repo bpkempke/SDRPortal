@@ -12,6 +12,7 @@ enum cPrimType {C_DOUBLE64, C_FLOAT32, C_INT32, C_INT16, C_INT8};
 struct rxtxChanInfo{
 	int rx_chan;
 	int tx_chan;
+	rxtxChanInfo(int r, int t) : rx_chan(r), tx_chan(t) {};
 };
 
 class paramData {
@@ -69,6 +70,7 @@ public:
 	vector<primType> getResultingPrimTypes(int rx_chan);
 	void distributeRXData(void *in_data, int num_bytes, int rx_chan, primType in_type);
 	void sendIQData(void *data, int num_bytes, int uid_port, primType in_type);
+	void setStreamDataType(streamType in_type); //TODO: Need to integrate this in
 
 protected:
 	//All possible get/set/check methods.  If they're not implemented, the virtual method will default to throwing an exception
@@ -95,8 +97,6 @@ protected:
 	virtual bool checkRXRate(paramData in_param){throw invalidCommandException("");};
 	virtual bool checkTXRate(paramData in_param){throw invalidCommandException("");};
 	virtual void setCustomSDRParameter(std::string name, std::string val, int in_chan) = 0;
-	//virtual std::string getCustomSDRParameter(std::string name) = 0;
-	virtual void setStreamDataType(streamType in_type) = 0; //TODO: Need to integrate this in
 	virtual void txIQData(void *data, int num_bytes, int tx_chan, primType in_type) = 0;
 	virtual cPrimType getStreamPrimType(cPrimType desired_type) = 0;
 	std::map<std::string, paramAccessor > param_accessors;

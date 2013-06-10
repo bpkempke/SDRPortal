@@ -53,12 +53,6 @@ uhdInterface::uhdInterface(string args, string tx_subdev, string rx_subdev, stri
 	//shared_uhd->set_tx_bandwidth(24e6);
 	//shared_uhd->set_rx_bandwidth(18e6);
 
-	//Set up the transmit and receive streamers (let's keep it to a float stream for now)
-	uhd::stream_args_t tx_stream_args("fc32");
-	tx_stream = shared_uhd->get_tx_stream(tx_stream_args);
-	uhd::stream_args_t rx_stream_args("sc16","sc16");//(application format, wire format)
-	rx_stream = shared_uhd->get_rx_stream(rx_stream_args);
-
 	if(codec_highspeed){
 		//Write all the regs we need if using this for demo build
 		printf("setting max2829 regs...\n");
@@ -114,16 +108,6 @@ uhdInterface::uhdInterface(string args, string tx_subdev, string rx_subdev, stri
 	}
 
 
-	//Other miscellaneous initialization stuff
-	tx_md.start_of_burst = false;
-	tx_md.end_of_burst = false;
-
-	//We likely want to be always receiving, so let's start that up
-	rxStart();
-	pthread_create(&rx_listener, NULL, uhdReadProxy, (void*)this);
-
-	//A tx thread is also instantiated which handles sending stuff from tx_queue out to the radio
-	pthread_create(&tx_thread, NULL, uhdWriteProxy, (void*)this);
 }
 
 void uhdInterface::writeMAX2829Reg(uint32_t value){
@@ -132,9 +116,142 @@ void uhdInterface::writeMAX2829Reg(uint32_t value){
 	iface_ptr->write_spi(uhd::usrp::dboard_iface::UNIT_RX, uhd::spi_config_t::EDGE_RISE, value, 24);
 }
 
-void uhdInterface::parseControlStream(string in_data){
-	
+void uhdInterface::setRXFreq(paramData in_param){
+	shared_uhd->set_rx_freq(in_param.getDouble(), in_param.getChannel().rx_chan);
 }
+
+void uhdInterface::setTXFreq(paramData in_param){
+	shared_uhd->set_tx_freq(in_param.getDouble(), in_param.getChannel().tx_chan);
+}
+
+void uhdInterface::setRXGain(paramData in_param){
+	shared_uhd->set_rx_gain(in_param.getDouble(), in_param.getChannel().rx_chan);
+}
+
+void uhdInterface::setTXGain(paramData in_param){
+	shared_uhd->set_tx_gain(in_param.getDouble(), in_param.getChannel().tx_chan);
+}
+
+void uhdInterface::setRXRate(paramData in_param){
+	shared_uhd->set_rx_rate(in_param.getDouble(), in_param.getChannel().rx_chan);
+}
+
+void uhdInterface::setTXRate(paramData in_param){
+	shared_uhd->set_tx_rate(in_param.getDouble(), in_param.getChannel().tx_chan);
+}
+
+paramData uhdInterface::getRXFreq(rxtxChanInfo in_chan){
+	double rx_freq = shared_uhd->get_rx_freq(in_chan.rx_chan);
+	return paramData(rx_freq, in_chan);
+}
+
+paramData uhdInterface::getTXFreq(rxtxChanInfo in_chan){
+	double tx_freq = shared_uhd->get_tx_freq(in_chan.tx_chan);
+	return paramData(tx_freq, in_chan);
+}
+
+paramData uhdInterface::getRXGain(rxtxChanInfo in_chan){
+	double rx_gain = shared_uhd->get_rx_gain(in_chan.rx_chan);
+	return paramData(rx_gain, in_chan);
+}
+
+paramData uhdInterface::getTXGain(rxtxChanInfo in_chan){
+	double tx_gain = shared_uhd->get_tx_gain(in_chan.tx_chan);
+	return paramData(tx_gain, in_chan);
+}
+
+paramData uhdInterface::getRXRate(rxtxChanInfo in_chan){
+	double rx_rate = shared_uhd->get_rx_rate(in_chan.rx_chan);
+	return paramData(rx_rate, in_chan);
+}
+
+paramData uhdInterface::getTXRate(rxtxChanInfo in_chan){
+	double tx_rate = shared_uhd->get_tx_rate(in_chan.tx_chan);
+	return paramData(tx_rate, in_chan);
+}
+
+bool uhdInterface::checkRXChannel(int in_chan){
+	size_t num_rx_chan = shared_uhd->get_rx_num_channels();
+	return (size_t)in_chan < num_rx_chan;
+}
+
+bool uhdInterface::checkTXChannel(int in_chan){
+	size_t num_tx_chan = shared_uhd->get_tx_num_channels();
+	return (size_t)in_chan < num_tx_chan;
+}
+
+bool uhdInterface::checkRXFreq(paramData in_param){
+	uhd::freq_range_t frange = shared_uhd->get_rx_freq_range(in_param.getChannel().rx_chan);
+	double clipped = frange.clip(in_param.getDouble());
+	return (clipped == in_param.getDouble());
+}
+
+bool uhdInterface::checkTXFreq(paramData in_param){
+	uhd::freq_range_t frange = shared_uhd->get_tx_freq_range(in_param.getChannel().tx_chan);
+	double clipped = frange.clip(in_param.getDouble());
+	return (clipped == in_param.getDouble());
+}
+
+bool uhdInterface::checkRXGain(paramData in_param){
+	uhd::gain_range_t grange = shared_uhd->get_rx_gain_range(in_param.getChannel().rx_chan);
+	double clipped = grange.clip(in_param.getDouble());
+	return (clipped == in_param.getDouble());
+}
+
+bool uhdInterface::checkTXGain(paramData in_param){
+	uhd::gain_range_t grange = shared_uhd->get_tx_gain_range(in_param.getChannel().tx_chan);
+	double clipped = grange.clip(in_param.getDouble());
+	return (clipped == in_param.getDouble());
+}
+
+bool uhdInterface::checkRXRate(paramData in_param){
+	uhd::meta_range_t rrange = shared_uhd->get_rx_rates(in_param.getChannel().rx_chan);
+	double clipped = rrange.clip(in_param.getDouble());
+	return (clipped == in_param.getDouble());
+}
+
+bool uhdInterface::checkTXRate(paramData in_param){
+	uhd::meta_range_t rrange = shared_uhd->get_tx_rates(in_param.getChannel().tx_chan);
+	double clipped = rrange.clip(in_param.getDouble());
+	return (clipped == in_param.getDouble());
+}
+
+void uhdInterface::openRXChannel(int in_chan){
+	//Set up the receive streamers (let's keep it to a float stream for now)
+	uhd::stream_args_t rx_stream_args("sc16","sc16");//(application format, wire format)
+	rx_stream = shared_uhd->get_rx_stream(rx_stream_args);
+
+	//We likely want to be always receiving, so let's start that up
+	rxStart();
+	//TODO: We need to include the rx port number in here somehwere...
+	pthread_create(&rx_listener, NULL, uhdReadProxy, (void*)this);
+
+}
+
+void uhdInterface::openTXChannel(int in_chan){
+	//Set up the transmit streamers (let's keep it to a float stream for now)
+	uhd::stream_args_t tx_stream_args("fc32");
+	tx_stream = shared_uhd->get_tx_stream(tx_stream_args);
+
+	//Other miscellaneous initialization stuff
+	tx_md[in_chan].start_of_burst = false;
+	tx_md[in_chan].end_of_burst = false;
+
+	//A tx thread is also instantiated which handles sending stuff from tx_queue out to the radio
+	//TODO: We need to include the tx port number in here somehwere...
+	pthread_create(&tx_thread, NULL, uhdWriteProxy, (void*)this);
+}
+
+void uhdInterface::setCustomSDRParameter(std::string name, std::string val, int in_chan){
+}
+
+void uhdInterface::txIQData(void *data, int num_bytes, int tx_chan, primType in_type){
+	tx_queue.insert(tx_queue.end(),in_samples,in_samples+num_samples);
+}
+
+cPrimType uhdInterface::getStreamPrimType(cPrimType desired_type){
+}
+
 
 void uhdInterface::registerDownstreamControlInterface(fdInterface *in_int, controlIntType in_int_type){
 	//Make a new uhdControlConnection instance and link to it
@@ -152,19 +269,13 @@ void uhdInterface::fdBytesReceived(char *buffer, int num_bytes, fdInterface *fro
 	}
 }
 
-void uhdInterface::txData(complex<float> *tx_data_iq, int num_samples){
-	//Simple function just passes all iq data out to the device
-	tx_md.end_of_burst = false;
-	tx_stream->send(tx_data_iq, num_samples, tx_md);
-}
-
 //This is a dummy function whose only job is to notify the uhddriver that we're done with the current tx burst
-void uhdInterface::txEnd(){
+void uhdInterface::txEnd(int in_chan){
 	//Send a sample of dummy data out to the device with the end_of_burst bit set
 	complex<float> dummy_sample;
-	tx_md.end_of_burst = true;
-	tx_stream->send(&dummy_sample, 1, tx_md);
-	tx_md.end_of_burst = false;
+	tx_md[in_chan].end_of_burst = true;
+	tx_stream->send(&dummy_sample, 1, tx_md[in_chan]);
+	tx_md[in_chan].end_of_burst = false;
 }
 
 void uhdInterface::rxStart(){
@@ -175,16 +286,16 @@ void uhdInterface::rxStart(){
 	shared_uhd->issue_stream_cmd(stream_cmd);
 }
 
-int uhdInterface::rxData(complex<int16_t> *rx_data_iq, int num_samples){
+int uhdInterface::rxData(complex<int16_t> *rx_data_iq, int num_samples, int in_chan){
 	//Simple call to stream->recv
-	int ret = rx_stream->recv(rx_data_iq, num_samples, rx_md, 1.0); //1.0 is the timeout time (in seconds)
+	int ret = rx_stream->recv(rx_data_iq, num_samples, rx_md[in_chan], 1.0); //1.0 is the timeout time (in seconds)
 
 	//Error checking
-	if(rx_md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
+	if(rx_md[in_chan].error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
 		cout << "rx error 1\n";
-	else if(rx_md.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW)
+	else if(rx_md[in_chan].error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW)
 		cout << "rx error 2\n";
-	else if(rx_md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE){
+	else if(rx_md[in_chan].error_code != uhd::rx_metadata_t::ERROR_CODE_NONE){
 		cout << "rx error 3\n";
 		ret = -1;
 	}
@@ -193,21 +304,21 @@ int uhdInterface::rxData(complex<int16_t> *rx_data_iq, int num_samples){
 }
 
 void uhdInterface::queueTXSamples(complex<float> *in_samples, int num_samples){
-	tx_queue.insert(tx_queue.end(),in_samples,in_samples+num_samples);
 }
 
 //Let's break this in to chunks of 256 samples for now.  Can go up or down, but let's try this for now
 #define RX_CHUNK_SIZE 512
 int tot_bytes = 0;
-void uhdInterface::rxThread(){
+void uhdInterface::rxThread(int rx_chan){
 	complex<int16_t> rx_data[RX_CHUNK_SIZE];
 	while(1){
-		rxData(rx_data, RX_CHUNK_SIZE);
+		rxData(rx_data, RX_CHUNK_SIZE, rx_chan);
 		//tot_bytes += RX_CHUNK_SIZE*sizeof(complex<int16_t>);
 		//printf("%d bytes so far...\n",tot_bytes);
 		log_file.write((char*)rx_data, RX_CHUNK_SIZE*sizeof(complex<int16_t>));
 	
 		//Now we have to push it down to all downstream interfaces
+		//TODO: This isn't correct...
 		map<fdInterface*,uhdControlConnection*>::iterator conn_it;
 		for(conn_it = control_connections.begin(); conn_it != control_connections.end(); conn_it++){
 			if((*conn_it).second->getIntType() == CONTROL_DATA){
@@ -219,11 +330,11 @@ void uhdInterface::rxThread(){
 
 //This thread waits until a theshold size is met in order to tx a constant stream of samples out to the USRP
 #define TX_THRESHOLD 2000
-void uhdInterface::txThread(){
+void uhdInterface::txThread(int tx_chan){
 	while(1){
 		usleep(5000);
 		if(tx_queue.size() > TX_THRESHOLD){
-			txStart();
+			txStart(tx_chan);
 			while(tx_queue.size() > TX_THRESHOLD){
 				//TODO: Lock here
 				vector<std::complex<float> > temp_tx_queue = tx_queue;
@@ -231,8 +342,11 @@ void uhdInterface::txThread(){
 				//TODO: Unlock here
 
 				txData(&temp_tx_queue[0], temp_tx_queue.size());
+				//Simple function just passes all iq data out to the device
+				tx_md[tx_chan].end_of_burst = false;
+				tx_stream->send((complex<float> *)data, num_bytes/sizeof(complex<float>), tx_md[tx_chan]);
 			}
-			txEnd();
+			txEnd(tx_chan);
 		}
 	}
 }
@@ -258,172 +372,3 @@ void uhdInterface::setCustomSDRParameter(string name, string val, int in_chan){
 		throw invalidCommandException(name);
 }
 
-/***************************
-  * uhdControlConnection class
-  **************************/
-uhdControlConnection::uhdControlConnection(uhdInterface *in_parent_int, fdInterface *in_int, controlIntType in_int_type){
-	//Just save the pointer for later use
-	downstream_int = in_int;
-	parent_int = in_parent_int;
-
-	//Remember what type of interpreter this connection should be using
-	int_type = in_int_type;
-	cur_secondary_id = 0;
-}
-
-controlIntType uhdControlConnection::getIntType(){
-	return int_type;
-}
-
-void uhdControlConnection::fdBytesReceived(char *buffer, int num_bytes, fdInterface *from_interface, int secondary_id){
-	//Check to see if we have an interpreter for this id yet
-	//TODO: Is this the correct syntax?!
-	if(interpreters[secondary_id]){
-	}
-
-	//Now send off the data that we were originally given
-	interpreters[secondary_id]->parse(buffer,num_bytes,from_interface, secondary_id);
-}
-
-void uhdControlConnection::dataFromUpstream(const char *data, int num_bytes, fdInterface *from_interface){
-	//This is essentially a broadcast, so we need to send it to _all_ downstream connections
-	map<int,connectionInterpreter*>::iterator conn_it;
-	for(conn_it = interpreters.begin(); conn_it != interpreters.end(); conn_it++){
-		(*conn_it).second->getUpstreamInt()->dataFromUpstream(data, num_bytes, from_interface);
-	}
-}
-
-void uhdControlConnection::registerDownstreamInterface(fdInterface *in_thread){
-	if(int_type == CONTROL_DATA)
-		interpreters[in_thread->secondary_id] = new dataConnectionInterpreter(parent_int, in_thread);
-	else if(int_type == CONTROL_CMD)
-		interpreters[in_thread->secondary_id] = new cmdConnectionInterpreter(parent_int, in_thread);
-	//TODO: Memory leak since we never really get rid of dead connections?
-}
-
-void dataConnectionInterpreter::parse(char *buffer, int num_bytes, fdInterface *from_interface, int secondary_id){
-	//Keep a static vector around which queues the last characters to come in so we don't have to worry about missing bytes that aren't multiples of sizeof(complex<float>)
-	static vector<char> in_data_queue;
-	in_data_queue.insert(in_data_queue.end(),buffer,buffer+num_bytes);
-
-	//Transfer over however many full complex<float>'s there are now
-	int num_full_samples = in_data_queue.size()/sizeof(std::complex<float>);
-	uhd_int->queueTXSamples((std::complex<float>*)(&in_data_queue[0]),num_full_samples);
-
-	//Then pop the stuff out of in_data_queue now that it's somewhere else
-	in_data_queue.erase(in_data_queue.begin(),in_data_queue.begin()+num_full_samples);
-}
-
-//This function parses all incoming text-based messaging
-//All commands are to be ended with a newline in order to be registered correctly
-//Examples of valid messages are as follows:
-//  RXFREQ 437000000
-//  TXFREQ 437000000
-//  RXGAIN 30
-//  TXGAIN 30
-//  RXRATE 1000000
-//  TXRATE 1000000
-//  RXANT 0
-//  TXANT 0
-//  RXCHANNEL 0
-//  TXCHANNEL 0
-//All of these can also be queried by following with a question mark
-//  RXFREQ?
-//  TXFREQ?
-//  etc...
-void cmdConnectionInterpreter::parse(char *in_data, int num_bytes, fdInterface *from_interface, int secondary_id){
-	//Insert historic messages into a string stream so as to easily extract lines
-	static stringstream command_stream;
-	string in_data_string(in_data,num_bytes);
-	command_stream << in_data_string;
-
-	cout << "in cmdConnectionInterpreter::parse" << endl;
-
-	//Now parse out incoming commands
-	string current_command;
-	if(!getline(command_stream, current_command).fail()){
-		stringstream arg_stream(current_command);
-		string command, arg1, arg2;
-
-		//Process the command, first argument, and second argument
-		arg_stream >> command;
-		arg_stream >> arg1;
-		arg_stream >> arg2;
-
-		cout << command << " " << arg1 << " " << arg2 << endl;
-
-		//Now do whatever we need to do based on the received command
-		//TODO: Put in some error checking here
-		try{
-			if(command == "CHANNEL"){
-				if(isInteger(arg1)){
-					int candidate_channel = strtol(arg1.c_str(), NULL, 0);
-					if(uhd_int->getNumAllocatedChannels() > candidate_channel)
-						cur_channel = candidate_channel;
-					else
-						throw badArgumentException(badArgumentException::OUT_OF_BOUNDS, 1, arg1);
-				} else
-					throw badArgumentException(badArgumentException::MALFORMED, 1, arg1);
-			} else if(command == "RXCHANNEL"){
-				if(isInteger(arg1))
-					if(isInteger(arg2))
-						cur_channel = uhd_int->getRXPortUID(strtol(arg1.c_str(), NULL, 0));
-						//TODO: Respond with UID
-					else
-						throw badArgumentException(badArgumentException::MALFORMED, 2, arg2);
-				else
-					throw badArgumentException(badArgumentException::MALFORMED, 1, arg1);
-			} else if(command == "TXCHANNEL"){
-				if(isInteger(arg1))
-					if(isInteger(arg2))
-						cur_channel = uhd_int->getTXPortUID(strtol(arg1.c_str(), NULL, 0));
-						//TODO: Respond with UID
-					else
-						throw badArgumentException(badArgumentException::MALFORMED, 2, arg2);
-				else
-					throw badArgumentException(badArgumentException::MALFORMED, 1, arg1);
-			} else {
-				uhd_int->setSDRParameter(command, arg1);
-			}
-			/*//TODO: This needs to be transferred to the UHD interface code 
-			if(command == "RXANT"){
-				uhd_int->getUHDObject()->set_rx_antenna(arg1);
-			} else if(command == "TXANT"){
-				uhd_int->getUHDObject()->set_tx_antenna(arg1);
-			} else {
-				throw invalidCommandException();
-			}*/
-		} catch(badArgumentException const& e){
-			stringstream response;
-			response << "?" << e.what() << endl;
-			upstream_int->dataFromUpstream(response.str().c_str(),response.gcount(),uhd_int);
-		} catch(invalidCommandException const& e){
-			stringstream response;
-			response << "?" << e.what() << endl;
-			upstream_int->dataFromUpstream(response.str().c_str(),response.gcount(),uhd_int);
-		}
-
-		//Query-based commands
-		char response[20];
-		int response_length;
-		if(command.substr(0,6) == "RXFREQ")
-			response_length = sprintf(response,"%d\r\n",(int)(uhd_int->getUHDObject()->get_rx_freq()+0.5));
-		else if(command.substr(0,6) == "TXFREQ")
-			response_length = sprintf(response,"%d\r\n",(int)(uhd_int->getUHDObject()->get_tx_freq()+0.5));
-		else if(command.substr(0,6) == "RXGAIN")
-			response_length = sprintf(response,"%f\r\n",uhd_int->getUHDObject()->get_rx_gain());
-		else if(command.substr(0,6) == "TXGAIN")
-			response_length = sprintf(response,"%f\r\n",uhd_int->getUHDObject()->get_tx_gain());
-		else if(command.substr(0,6) == "RXRATE")
-			response_length = sprintf(response,"%d\r\n",(int)(uhd_int->getUHDObject()->get_rx_rate()+0.5));
-		else if(command.substr(0,6) == "TXRATE")
-			response_length = sprintf(response,"%d\r\n",(int)(uhd_int->getUHDObject()->get_tx_rate()+0.5));
-		else if(command.substr(0,5) == "RXANT")
-			response_length = sprintf(response,"%s\r\n",uhd_int->getUHDObject()->get_rx_antenna().c_str());
-		else if(command.substr(0,5) == "TXANT")
-			response_length = sprintf(response,"%s\r\n",uhd_int->getUHDObject()->get_tx_antenna().c_str());
-
-		//Send off the response
-		upstream_int->dataFromUpstream(response,response_length,uhd_int);
-	}
-}
