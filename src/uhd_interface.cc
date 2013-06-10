@@ -5,11 +5,18 @@
 #include <fstream>
 using namespace std;
 
+struct argStruct{
+	int channel;
+	uhdInterface* uhd_int;
+};
+
 //Proxies in order to run a thread within a member function
-static void *uhdReadProxy(void *in_uhd_int){
-	static_cast<uhdInterface*>(in_uhd_int)->rxThread();
+static void *uhdReadProxy(void *in_args){
+	argStruct *arguments = static_cast<argStruct*>(in_args);
+	arguments->uhd_int->rxThread(arguments->channel);
 }
-static void *uhdWriteProxy(void *in_uhd_int){
+static void *uhdWriteProxy(void *in_args){
+	argStruct *arguments = static_cast<argStruct*>(in_args);
 	static_cast<uhdInterface*>(in_uhd_int)->txThread();
 }
 
@@ -223,8 +230,11 @@ void uhdInterface::openRXChannel(int in_chan){
 
 	//We likely want to be always receiving, so let's start that up
 	rxStart();
-	//TODO: We need to include the rx port number in here somehwere...
-	pthread_create(&rx_listener, NULL, uhdReadProxy, (void*)this);
+
+	argStruct arguments;
+	arguments.uhd_int = this;
+	arguments.channel = in_chan;
+	pthread_create(&rx_listener, NULL, uhdReadProxy, (void*)arguments);
 
 }
 
@@ -238,8 +248,10 @@ void uhdInterface::openTXChannel(int in_chan){
 	tx_md[in_chan].end_of_burst = false;
 
 	//A tx thread is also instantiated which handles sending stuff from tx_queue out to the radio
-	//TODO: We need to include the tx port number in here somehwere...
-	pthread_create(&tx_thread, NULL, uhdWriteProxy, (void*)this);
+	argStruct arguments;
+	arguments.uhd_int = this;
+	arguments.channel = in_chan;
+	pthread_create(&tx_thread, NULL, uhdWriteProxy, (void*)arguments);
 }
 
 void uhdInterface::setCustomSDRParameter(std::string name, std::string val, int in_chan){
@@ -308,14 +320,17 @@ void uhdInterface::queueTXSamples(complex<float> *in_samples, int num_samples){
 
 //Let's break this in to chunks of 256 samples for now.  Can go up or down, but let's try this for now
 #define RX_CHUNK_SIZE 512
-int tot_bytes = 0;
 void uhdInterface::rxThread(int rx_chan){
 	complex<int16_t> rx_data[RX_CHUNK_SIZE];
 	while(1){
 		rxData(rx_data, RX_CHUNK_SIZE, rx_chan);
-		//tot_bytes += RX_CHUNK_SIZE*sizeof(complex<int16_t>);
-		//printf("%d bytes so far...\n",tot_bytes);
-		log_file.write((char*)rx_data, RX_CHUNK_SIZE*sizeof(complex<int16_t>));
+		//log_file.write((char*)rx_data, RX_CHUNK_SIZE*sizeof(complex<int16_t>));
+
+		vector<primType> resulting_prim_types = getResultingPrimTypes(rx_chan);
+		for(int ii=0; ii < resulting_prim_types.size(); ii++){
+			int num_translated_bytes = str_converter.convertTo(rx_data, RX_CHUNK_SIZE*sizeof(complex<int16_t>), resulting_prim_types[ii]);
+			distributeRXData(, num_translated_bytes, rx_chan, resulting_prim_types[ii]);
+		}
 	
 		//Now we have to push it down to all downstream interfaces
 		//TODO: This isn't correct...
@@ -352,7 +367,6 @@ void uhdInterface::txThread(int tx_chan){
 }
 
 void uhdInterface::rxEnd(){
-	//TODO: Don't think there's anything we need to do here
 	log_file.close();
 }
 

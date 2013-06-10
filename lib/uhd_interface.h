@@ -22,9 +22,6 @@ public:
 	void rxThread(int rx_chan);
 	void txThread(int tx_chan);
 
-	//Accessor method for underlying uhd object
-	uhd::usrp::multi_usrp::sptr getUHDObject(){return shared_uhd;};
-
 	//Connection add/removal operations
 	void registerDownstreamControlInterface(fdInterface *in_int, controlIntType in_int_type);
 	
