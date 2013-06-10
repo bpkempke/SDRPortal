@@ -13,8 +13,6 @@ public:
 	void txStart(int in_chan){};
 	void txEnd(int in_chan);
 
-	void queueTXSamples(std::complex<float> *in_samples, int num_samples);
-
 	//Receive data methods
 	void rxStart();
 	int rxData(std::complex<int16_t> *rx_data_iq, int num_samples, int rx_chan);
