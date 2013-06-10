@@ -22,9 +22,6 @@ public:
 	void rxThread(int rx_chan);
 	void txThread(int tx_chan);
 
-	//Connection add/removal operations
-	void registerDownstreamControlInterface(fdInterface *in_int, controlIntType in_int_type);
-	
 protected:
 	//Certain functions inherited from genericSDRInterface class
 	virtual void setRXFreq(paramData in_param);
@@ -51,7 +48,6 @@ protected:
 	virtual bool checkTXRate(paramData in_param);
 	virtual void setCustomSDRParameter(std::string name, std::string val, int in_chan);
 	virtual void txIQData(void *data, int num_bytes, int tx_chan, primType in_type);
-	virtual cPrimType getStreamPrimType(cPrimType desired_type);
 
 
 private:
@@ -66,7 +62,7 @@ private:
 	vector<uhd::rx_metadata_t> rx_md;
 
 	//Queue of samples to transmit
-	std::vector<std::complex<float> > tx_queue;
+	std::vector<std::vector<std::complex<float> > > tx_queue;
 
 	//PThreads for rx and tx
 	pthread_t rx_listener, tx_thread;

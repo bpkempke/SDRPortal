@@ -98,7 +98,6 @@ protected:
 	virtual bool checkTXRate(paramData in_param){throw invalidCommandException("");};
 	virtual void setCustomSDRParameter(std::string name, std::string val, int in_chan) = 0;
 	virtual void txIQData(void *data, int num_bytes, int tx_chan, primType in_type) = 0;
-	virtual cPrimType getStreamPrimType(cPrimType desired_type) = 0;
 	std::map<std::string, paramAccessor > param_accessors;
 private:
 	int num_channels, cur_channel;

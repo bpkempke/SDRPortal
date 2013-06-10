@@ -254,31 +254,8 @@ void uhdInterface::openTXChannel(int in_chan){
 	pthread_create(&tx_thread, NULL, uhdWriteProxy, (void*)arguments);
 }
 
-void uhdInterface::setCustomSDRParameter(std::string name, std::string val, int in_chan){
-}
-
 void uhdInterface::txIQData(void *data, int num_bytes, int tx_chan, primType in_type){
-	tx_queue.insert(tx_queue.end(),in_samples,in_samples+num_samples);
-}
-
-cPrimType uhdInterface::getStreamPrimType(cPrimType desired_type){
-}
-
-
-void uhdInterface::registerDownstreamControlInterface(fdInterface *in_int, controlIntType in_int_type){
-	//Make a new uhdControlConnection instance and link to it
-	uhdControlConnection *new_connection = new uhdControlConnection(this, in_int, in_int_type);
-	control_connections[in_int] = new_connection;
-
-	//Connect the new uhdControlConnection with the downstream object as well
-	in_int->registerUpstreamInterface(new_connection);
-}
-
-void uhdInterface::fdBytesReceived(char *buffer, int num_bytes, fdInterface *from_interface, int secondary_id){
-	//Figure out where it needs to go and call that downstream fdBytesReceived method
-	if(control_connections.find(from_interface) != control_connections.end()){
-		control_connections[from_interface]->fdBytesReceived(buffer, num_bytes, from_interface, secondary_id);
-	}
+	tx_queue[tx_chan].insert(tx_queue[tx_chan].end(),in_samples,in_samples+num_samples);
 }
 
 //This is a dummy function whose only job is to notify the uhddriver that we're done with the current tx burst
@@ -315,9 +292,6 @@ int uhdInterface::rxData(complex<int16_t> *rx_data_iq, int num_samples, int in_c
 	return ret;
 }
 
-void uhdInterface::queueTXSamples(complex<float> *in_samples, int num_samples){
-}
-
 //Let's break this in to chunks of 256 samples for now.  Can go up or down, but let's try this for now
 #define RX_CHUNK_SIZE 512
 void uhdInterface::rxThread(int rx_chan){
@@ -348,12 +322,12 @@ void uhdInterface::rxThread(int rx_chan){
 void uhdInterface::txThread(int tx_chan){
 	while(1){
 		usleep(5000);
-		if(tx_queue.size() > TX_THRESHOLD){
+		if(tx_queue[tx_chan].size() > TX_THRESHOLD){
 			txStart(tx_chan);
-			while(tx_queue.size() > TX_THRESHOLD){
+			while(tx_queue[tx_chan].size() > TX_THRESHOLD){
 				//TODO: Lock here
-				vector<std::complex<float> > temp_tx_queue = tx_queue;
-				tx_queue.clear();
+				vector<std::complex<float> > temp_tx_queue = tx_queue[tx_chan];
+				tx_queue[tx_chan].clear();
 				//TODO: Unlock here
 
 				txData(&temp_tx_queue[0], temp_tx_queue.size());
