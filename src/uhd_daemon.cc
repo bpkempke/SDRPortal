@@ -1,6 +1,6 @@
 #include <getopt.h>
-#include "socketInterface.h"
-#include "uhd_interface.h"
+#include "uhdInterface.h"
+#include "portalCommandSocket.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <signal.h>
@@ -98,7 +98,8 @@ int main(int argc, char *argv[]){
 	//Instantiate a generic SDR interface and link in with the created ports
 	if(sdr_type == UHD){
 		//OLD: uhdInterface usrp_instance(uhd_arguments,"","A:0","J1","J1",tx_bandwidth,rx_bandwidth,2500000000.0,2500000000.0,20.0,40.0, codec_highspeed);
-		sdr_interface = new uhdInterface(sdr_arguments);
+		//TODOTODO: sdr_interface = new uhdInterface(sdr_arguments);
+		sdr_interface = new uhdInterface(sdr_arguments,"","A:0","J1","J1",1e6,1e6,2500000000.0,2500000000.0,20.0,40.0, false);
 	}
 
 	//Create command sockets which will spawn data sockets if requested

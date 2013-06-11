@@ -1,36 +1,38 @@
 
-hierarchicalDataflowBlock::hierarchicalDataflowBlock(int num_down_channels=1, int num_up_channels=1){
+#include "hierarchicalDataflowBlock.h"
+
+hierarchicalDataflowBlock::hierarchicalDataflowBlock(int num_down_channels, int num_up_channels){
 
 	//Initialize higher and lower-level links based on the number of channels passed in
-	higher_level_links.reserve(num_up_channels);
+	upper_level_links.reserve(num_up_channels);
 	lower_level_links.reserve(num_down_channels);
 }
 
-void hierarchicalDatflowBlock::addUpperLevel(hierarchicalDataflowBlock *in_block, int remote_up_channel=0, int local_up_channel=0){
+void hierarchicalDataflowBlock::addUpperLevel(hierarchicalDataflowBlock *in_block, int remote_up_channel, int local_up_channel){
 
-	//Add the requested hierarchy pointer to the higher_level_links matrix
-	hierarchicalDatacConnection new_connection;
+	//Add the requested hierarchy pointer to the upper_level_links matrix
+	hierarchicalDataConnection new_connection;
 	new_connection.local_channel = local_up_channel;
 	new_connection.remote_channel = remote_up_channel;
 	new_connection.remote = in_block;
 
-	higher_level_links[local_up_channel].push_back(new_connection);
+	upper_level_links[local_up_channel].push_back(new_connection);
 }
 
 
-void hierarchicalDataflowBlock::dataToUpperLevel(void *data, int num_bytes, int local_up_channel=0){
+void hierarchicalDataflowBlock::dataToUpperLevel(void *data, int num_bytes, int local_up_channel){
 
 	//Push the requested data to all of the higher-level blocks that reside on the requested channel
-	for(int ii=0; ii < higher_level_links[local_up_channel].size(); ii++){
+	for(int ii=0; ii < upper_level_links[local_up_channel].size(); ii++){
 		hierarchicalDataConnection cur_conn = upper_level_links[local_up_channel][ii];
 		cur_conn.remote->dataFromLowerLevel(data, num_bytes, cur_conn.remote_channel);
 	}
 }
 
-void hierarchicalDataflowBlock::addLowerLevel(hierarchicalDataflowBlock *in_block, int remote_down_channel=0, int local_down_channel=0){
+void hierarchicalDataflowBlock::addLowerLevel(hierarchicalDataflowBlock *in_block, int remote_down_channel, int local_down_channel){
 
 	//Add the requested hierarchy pointer to the lower_level_links matrix
-	hierarchicalDatacConnection new_connection;
+	hierarchicalDataConnection new_connection;
 	new_connection.local_channel = local_down_channel;
 	new_connection.remote_channel = remote_down_channel;
 	new_connection.remote = in_block;
@@ -38,7 +40,7 @@ void hierarchicalDataflowBlock::addLowerLevel(hierarchicalDataflowBlock *in_bloc
 	lower_level_links[local_down_channel].push_back(new_connection);
 }
 
-void hierarchicalDataflowBlock::dataToLowerLevel(void *data, int num_bytes, int local_down_channel=0){
+void hierarchicalDataflowBlock::dataToLowerLevel(void *data, int num_bytes, int local_down_channel){
 
 	//Push the requested data to all of the higher-level blocks that reside on the requested channel
 	for(int ii=0; ii < lower_level_links[local_down_channel].size(); ii++){
@@ -62,7 +64,7 @@ void hierarchicalDataflowBlock::removeUpperLevel(hierarchicalDataflowBlock *in_b
 	}
 }
 
-void hierarchicalDataflowBlock::removeLowerLevel(hierarchicalDatafloweBlock *in_block){
+void hierarchicalDataflowBlock::removeLowerLevel(hierarchicalDataflowBlock *in_block){
 
 	//Iterate over all of the different uplink channels
 	for(int ii=0; ii < lower_level_links.size(); ii++){

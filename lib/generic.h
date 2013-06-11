@@ -1,8 +1,8 @@
-#include <sstream>
-#include <stdlib.h>
-
 #ifndef GENERIC_H
 #define GENERIC_H
+
+#include <sstream>
+#include <stdlib.h>
 
 enum streamType {
 	COMPLEX_FLOAT,
@@ -10,6 +10,15 @@ enum streamType {
 	COMPLEX_INT8,
 	COMPLEX_INT16,
 	COMPLEX_INT32
+};
+
+enum primType {DOUBLE, INT, FLOAT, VOID, INT32, INT16, INT8};
+enum cPrimType {C_DOUBLE64, C_FLOAT32, C_INT32, C_INT16, C_INT8};
+
+enum socketType{
+	SOCKET_TCP,
+	SOCKET_UDP,
+	SOCKET_WS
 };
 
 bool isInteger(std::string in_string);

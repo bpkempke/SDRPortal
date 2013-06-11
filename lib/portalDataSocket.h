@@ -1,3 +1,11 @@
+#ifndef PORTAL_DATA_H
+#define PORTAL_DATA_H
+
+#include "hierarchicalDataflowBlock.h"
+#include "genericSocketInterface.h"
+#include "generic.h"
+
+class genericSDRInterface;
 
 class portalDataSocket : public hierarchicalDataflowBlock{
 public:
@@ -8,8 +16,8 @@ public:
 	void setUID(int in_uid);
 	int getUID();
 
-	primType getDataType(){return data_type};
-	void setDataType(primType in_data_type){data_type = in_data_type};
+	primType getDataType(){return data_type;};
+	void setDataType(primType in_data_type){data_type = in_data_type;};
 
 	//Methods inherited from hierarchicalDataflowBlock
 	virtual void dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0);
@@ -20,3 +28,6 @@ private:
 	genericSDRInterface *sdr_int;
 	primType data_type;
 };
+
+#endif
+

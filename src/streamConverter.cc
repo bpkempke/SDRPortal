@@ -1,8 +1,9 @@
+#include "streamConverter.h"
 
 template <typename T>
 streamConverter<T>::streamConverter(){
 	scratchspace = new int[512];
-	scratchsapce_size = 512*sizeof(int);
+	scratchspace_size = 512*sizeof(int);
 }
 
 template <typename T>
@@ -14,7 +15,7 @@ int streamConverter<T>::convertTo(T *in_data, int num_bytes, primType result_typ
 	
 	//TODO: Any suggestions on how to not do so much code duplication here?
 	switch(result_type){
-		case DOUBLE:
+		case DOUBLE:{
 			double *d_scratchspace = (double *)scratchspace;
 			if(num_elements*sizeof(double) > scratchspace_size){
 				d_scratchspace = new double[num_elements*2];
@@ -23,9 +24,10 @@ int streamConverter<T>::convertTo(T *in_data, int num_bytes, primType result_typ
 			for(int ii=0; ii < num_elements; ii++)
 				d_scratchspace[ii] = (double)(in_data[ii]);
 			resulting_bytes = num_elements*sizeof(double);
+			}
 			break;
 
-		case FLOAT:
+		case FLOAT:{
 			float *d_scratchspace = (float *)scratchspace;
 			if(num_elements*sizeof(float) > scratchspace_size){
 				d_scratchspace = new float[num_elements*2];
@@ -34,9 +36,10 @@ int streamConverter<T>::convertTo(T *in_data, int num_bytes, primType result_typ
 			for(int ii=0; ii < num_elements; ii++)
 				d_scratchspace[ii] = (float)(in_data[ii]);
 			resulting_bytes = num_elements*sizeof(float);
+			}
 			break;
 
-		case INT32:
+		case INT32:{
 			int32_t *d_scratchspace = (int32_t *)scratchspace;
 			if(num_elements*sizeof(int32_t) > scratchspace_size){
 				d_scratchspace = new int32_t[num_elements*2];
@@ -45,9 +48,10 @@ int streamConverter<T>::convertTo(T *in_data, int num_bytes, primType result_typ
 			for(int ii=0; ii < num_elements; ii++)
 				d_scratchspace[ii] = (int32_t)(in_data[ii]);
 			resulting_bytes = num_elements*sizeof(int32_t);
+			}
 			break;
 
-		case INT16:
+		case INT16:{
 			int16_t *d_scratchspace = (int16_t *)scratchspace;
 			if(num_elements*sizeof(int16_t) > scratchspace_size){
 				d_scratchspace = new int16_t[num_elements*2];
@@ -56,9 +60,10 @@ int streamConverter<T>::convertTo(T *in_data, int num_bytes, primType result_typ
 			for(int ii=0; ii < num_elements; ii++)
 				d_scratchspace[ii] = (int16_t)(in_data[ii]);
 			resulting_bytes = num_elements*sizeof(int16_t);
+			}
 			break;
 
-		case INT8:
+		case INT8:{
 			int8_t *d_scratchspace = (int8_t *)scratchspace;
 			if(num_elements*sizeof(int8_t) > scratchspace_size){
 				d_scratchspace = new int8_t[num_elements*2];
@@ -67,6 +72,7 @@ int streamConverter<T>::convertTo(T *in_data, int num_bytes, primType result_typ
 			for(int ii=0; ii < num_elements; ii++)
 				d_scratchspace[ii] = (int8_t)(in_data[ii]);
 			resulting_bytes = num_elements*sizeof(int8_t);
+			}
 			break;
 	}
 
@@ -80,7 +86,7 @@ int streamConverter<T>::convertFrom(void *in_data, int num_bytes, primType start
 
 	int resulting_bytes = num_elements*sizeof(T);
 	if(resulting_bytes > scratchspace_size){
-		d_scratchspace = new T[num_elements*2];
+		scratchspace = new T[num_elements*2];
 		scratchspace_size = sizeof(T)*num_elements*2;
 	}
 

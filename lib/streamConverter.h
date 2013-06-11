@@ -1,3 +1,7 @@
+#ifndef STREAM_CONVERTER_H
+#define STREAM_CONVERTER_H
+
+#include "generic.h"
 
 template <typename T>
 class streamConverter {
@@ -11,3 +15,6 @@ private:
 	void *scratchspace;
 	int scratchspace_size;
 };
+
+#endif
+

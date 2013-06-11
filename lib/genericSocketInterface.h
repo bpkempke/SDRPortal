@@ -6,38 +6,12 @@
 #include <vector>
 #include <string>
 #include <netinet/in.h>
+#include "generic.h"
+#include "hierarchicalDataflowBlock.h"
 
-enum socketIntType{
-	SOCKET_TCP,
-	SOCKET_UDP,
-	SOCKET_WS
-};
-
-class genericSocketInterface: public hierarchicalDataflowBlock{
-public:
-	genericSocketInterface(socketIntType in_socket_type, int portnum, int max_connections=0);
-	~genericSocketInterface();
-	void dispatchMessages(std::vector<messageType> in_message, int client_idx);
-	socketIntType getSocketType(){return socket_type;};
-	void *connectionListenerThread();
-
-	//Virtual functions inherited from abstract base class fdInterface
-	virtual void dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0);
-	virtual void dataFromLowerLevel(void *data, int num_bytes, int local_down_channel=0);
-
-protected:
-	socketIntType socket_type;
-	int socket_fp;
-	std::vector<socketThread*> clients;
-	fdInterface *this_uplink;
-
-private:
-	int socket_portnum;
-	int max_connections;
-	void initSocket();
-	std::vector<socketInterpreter*> client_parsers;
-	pthread_t conn_listener;
-	pthread_mutex_t mutex;
+struct messageType{
+	char *buffer;
+	int num_bytes;
 };
 
 class socketInterpreter{
@@ -48,6 +22,48 @@ public:
 	virtual std::vector<messageType> parseUpstreamMessage(messageType in_message){
 		return std::vector<messageType>(1,in_message);	
 	};
+};
+
+class socketThread : public hierarchicalDataflowBlock{
+public:
+	socketThread(int in_fp, pthread_mutex_t *in_mutex, socketInterpreter *in_interp);
+	void *socketReader();
+	void socketWriter(char *buffer, int buffer_length);
+
+	//Methods inherited from hierarchicalDataflowBlock
+	virtual void dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0);
+	virtual void dataFromLowerLevel(void *data, int num_bytes, int local_down_channel=0){};
+private:
+	socketInterpreter *interp;
+	pthread_mutex_t *shared_mutex;
+	int socket_fp;
+};
+
+class genericSocketInterface: public hierarchicalDataflowBlock{
+public:
+	genericSocketInterface(socketType in_socket_type, int portnum, int max_connections=0);
+	~genericSocketInterface();
+	socketType getSocketType(){return socket_type;};
+	void *connectionListenerThread();
+	int getPortNum();
+
+	//Virtual functions inherited from abstract base class fdInterface
+	virtual void dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0);
+	virtual void dataFromLowerLevel(void *data, int num_bytes, int local_down_channel=0);
+
+protected:
+	socketType socket_type;
+	int socket_fp;
+	std::vector<socketThread*> clients;
+	//TODO: Delete: fdInterface *this_uplink;
+
+private:
+	int socket_portnum;
+	int max_connections;
+	int initSocket(int portnum);
+	std::vector<socketInterpreter*> client_parsers;
+	pthread_t conn_listener;
+	pthread_mutex_t mutex;
 };
 
 class tcpSocketInterpreter : public socketInterpreter{
@@ -72,21 +88,6 @@ public:
 private:
 	bool connection_established;
 	std::string message_parser;
-};
-
-class socketThread : public hierarchicalDataflowBlock{
-public:
-	socketThread(int in_fp, pthread_mutex_t *in_mutex, socketInterpreter *in_interp);
-	void *socketReader();
-	void socketWriter(unsigned char *buffer, int buffer_length);
-
-	//Methods inherited from hierarchicalDataflowBlock
-	virtual void dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0);
-	virtual void dataFromLowerLevel(void *data, int num_bytes, int local_down_channel=0){};
-private:
-	socketInterpreter *interp;
-	pthread_mutex_t *shared_mutex;
-	int socket_fp;
 };
 
 #endif

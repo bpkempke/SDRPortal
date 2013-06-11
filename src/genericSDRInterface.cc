@@ -1,4 +1,7 @@
-#include <generic_sdr_interface.h>
+#include <sstream>
+#include <algorithm>
+#include "portalDataSocket.h"
+#include "genericSDRInterface.h"
 
 genericSDRInterface::genericSDRInterface(){
 	num_channels = 0;
@@ -17,7 +20,7 @@ genericSDRInterface::genericSDRInterface(){
 int genericSDRInterface::addChannel(portalDataSocket *in_channel){
 	
 	//Also create a sequential UID for this port as well
-	uid_map[in_channel] = num_channels;
+	uid_map[num_channels] = in_channel;
 	in_channel->setUID(num_channels++);
 
 	return num_channels;
@@ -68,10 +71,12 @@ void genericSDRInterface::bindRXChannel(int rx_chan, int in_uid){
 	if(checkRXChannel(rx_chan)){
 		//Open the RX channel since it's valid (don't care if it's been opened before)
 		openRXChannel(rx_chan);
-		rx_chan_to_streams[rx_chan].push_back(uid_map.find(in_uid));
+		rx_chan_to_streams[rx_chan].push_back(uid_map[in_uid]);
 		uid_to_chaninfo[in_uid].rx_chan = rx_chan;
 	} else {
-		throw badArgumentException(badArgumentException::MALFORMED, 1, val); //TODO: is this the correct exception to throw?
+		std::stringstream res;
+		res << rx_chan;
+		throw badArgumentException(badArgumentException::MALFORMED, 1, res.str());
 	}
 }
 
@@ -80,10 +85,12 @@ void genericSDRInterface::bindTXChannel(int tx_chan, int in_uid){
 	if(checkTXChannel(tx_chan)){
 		//Open the RX channel since it's valid (don't care if it's been opened before)
 		openTXChannel(tx_chan);
-		tx_chan_to_streams[tx_chan].push_back(uid_map.find(in_uid));
+		tx_chan_to_streams[tx_chan].push_back(uid_map[in_uid]);
 		uid_to_chaninfo[in_uid].tx_chan = tx_chan;
 	} else {
-		throw badArgumentException(badArgumentException::MALFORMED, 1, val); //TODO: is this the correct exception to throw?
+		std::stringstream res;
+		res << tx_chan;
+		throw badArgumentException(badArgumentException::MALFORMED, 1, res.str());
 	}
 }
 
@@ -91,12 +98,12 @@ int genericSDRInterface::getNumAllocatedChannels(){
 	return num_channels;
 }
 
-vector<primType> genericSDRInterface::getResultingPrimTypes(int rx_chan){
-	vector<primType> resulting_prim_types;
-	vector<portalDataSocket*> rx_streams = rx_chan_to_streams[rx_chan];
+std::vector<primType> genericSDRInterface::getResultingPrimTypes(int rx_chan){
+	std::vector<primType> resulting_prim_types;
+	std::vector<portalDataSocket*> rx_streams = rx_chan_to_streams[rx_chan];
 	for(int ii=0; ii < rx_streams.size(); ii++){
 		primType cur_prim_type = rx_streams[ii]->getDataType();
-		vector<primType>::iterator it = find(resulting_prim_types.begin(), resulting_prim_types.end(), cur_prim_type);
+		std::vector<primType>::iterator it = std::find(resulting_prim_types.begin(), resulting_prim_types.end(), cur_prim_type);
 		if(it == resulting_prim_types.end())
 			resulting_prim_types.push_back(cur_prim_type);
 	}
@@ -105,7 +112,7 @@ vector<primType> genericSDRInterface::getResultingPrimTypes(int rx_chan){
 
 void genericSDRInterface::distributeRXData(void *in_data, int num_bytes, int rx_chan, primType in_type){
 	//Data coming from SDR RX for distribution to sockets
-	vector<portalDataSocket*> streams = rx_chan_to_streams[rx_chan];
+	std::vector<portalDataSocket*> streams = rx_chan_to_streams[rx_chan];
 	for(int ii=0; ii < streams.size(); ii++)
 		if(streams[ii]->getDataType() == in_type)
 			streams[ii]->dataFromUpperLevel(in_data, num_bytes);
@@ -116,4 +123,8 @@ void genericSDRInterface::sendIQData(void *in_data, int num_bytes, int uid_port,
 	//Data coming from socket for TX
 	int tx_chan = uid_to_chaninfo[uid_port].tx_chan;
 	txIQData(in_data, num_bytes, tx_chan, in_type);
+}
+
+rxtxChanInfo genericSDRInterface::getChanInfo(int in_uid){
+	return uid_to_chaninfo[in_uid];
 }

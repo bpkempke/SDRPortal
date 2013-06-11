@@ -1,4 +1,4 @@
-#include "uhd_interface.h"
+#include "uhdInterface.h"
 #include "generic.h"
 #include <cstdio>
 #include <iostream>
@@ -17,7 +17,7 @@ static void *uhdReadProxy(void *in_args){
 }
 static void *uhdWriteProxy(void *in_args){
 	argStruct *arguments = static_cast<argStruct*>(in_args);
-	static_cast<uhdInterface*>(in_uhd_int)->txThread();
+	arguments->uhd_int->txThread(arguments->channel);
 }
 
 ofstream log_file;
@@ -234,7 +234,7 @@ void uhdInterface::openRXChannel(int in_chan){
 	argStruct arguments;
 	arguments.uhd_int = this;
 	arguments.channel = in_chan;
-	pthread_create(&rx_listener, NULL, uhdReadProxy, (void*)arguments);
+	pthread_create(&rx_listener, NULL, uhdReadProxy, (void*)&arguments);
 
 }
 
@@ -251,11 +251,12 @@ void uhdInterface::openTXChannel(int in_chan){
 	argStruct arguments;
 	arguments.uhd_int = this;
 	arguments.channel = in_chan;
-	pthread_create(&tx_thread, NULL, uhdWriteProxy, (void*)arguments);
+	pthread_create(&tx_thread, NULL, uhdWriteProxy, (void*)&arguments);
 }
 
 void uhdInterface::txIQData(void *data, int num_bytes, int tx_chan, primType in_type){
-	tx_queue[tx_chan].insert(tx_queue[tx_chan].end(),in_samples,in_samples+num_samples);
+	std::complex<float> *in_samples = (std::complex<float>*)data;
+	tx_queue[tx_chan].insert(tx_queue[tx_chan].end(),in_samples,in_samples+num_bytes/sizeof(std::complex<float>));
 }
 
 //This is a dummy function whose only job is to notify the uhddriver that we're done with the current tx burst
@@ -302,17 +303,8 @@ void uhdInterface::rxThread(int rx_chan){
 
 		vector<primType> resulting_prim_types = getResultingPrimTypes(rx_chan);
 		for(int ii=0; ii < resulting_prim_types.size(); ii++){
-			int num_translated_bytes = str_converter.convertTo(rx_data, RX_CHUNK_SIZE*sizeof(complex<int16_t>), resulting_prim_types[ii]);
-			distributeRXData(, num_translated_bytes, rx_chan, resulting_prim_types[ii]);
-		}
-	
-		//Now we have to push it down to all downstream interfaces
-		//TODO: This isn't correct...
-		map<fdInterface*,uhdControlConnection*>::iterator conn_it;
-		for(conn_it = control_connections.begin(); conn_it != control_connections.end(); conn_it++){
-			if((*conn_it).second->getIntType() == CONTROL_DATA){
-				(*conn_it).second->dataFromUpstream((char*)rx_data, RX_CHUNK_SIZE*sizeof(complex<int16_t>), this);
-			}
+			int num_translated_bytes = str_converter.convertTo((int16_t*)rx_data, RX_CHUNK_SIZE*sizeof(complex<int16_t>), resulting_prim_types[ii]);
+			distributeRXData(str_converter.getResult(), num_translated_bytes, rx_chan, resulting_prim_types[ii]);
 		}
 	}
 }
@@ -330,10 +322,9 @@ void uhdInterface::txThread(int tx_chan){
 				tx_queue[tx_chan].clear();
 				//TODO: Unlock here
 
-				txData(&temp_tx_queue[0], temp_tx_queue.size());
 				//Simple function just passes all iq data out to the device
 				tx_md[tx_chan].end_of_burst = false;
-				tx_stream->send((complex<float> *)data, num_bytes/sizeof(complex<float>), tx_md[tx_chan]);
+				tx_stream->send((complex<float> *)(&temp_tx_queue[0]), temp_tx_queue.size(), tx_md[tx_chan]);
 			}
 			txEnd(tx_chan);
 		}

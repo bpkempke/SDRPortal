@@ -1,10 +1,15 @@
-#include "socketInterface.h"
+#ifndef UHD_INTERFACE_H
+#define UHD_INTERFACE_H
+
 #include "genericSDRInterface.h"
+#include "hierarchicalDataflowBlock.h"
+#include "streamConverter.h"
 #include <uhd/usrp/multi_usrp.hpp>
 #include <map>
+#include <vector>
 
 //This is utilizing the 'Curiously Recurring Template Pattern'
-class uhdInterface : public hierarchicalDataflowBlock, public genericSDRInterface{
+class uhdInterface : public genericSDRInterface{
 public:
 	//Constructor
 	uhdInterface(std::string args, std::string tx_subdev, std::string rx_subdev, std::string tx_ant, std::string rx_ant, double tx_rate, double rx_rate, double tx_freq, double rx_freq, double tx_gain, double rx_gain, bool codec_highspeed);
@@ -20,7 +25,6 @@ public:
 	void rxThread(int rx_chan);
 	void txThread(int tx_chan);
 
-protected:
 	//Certain functions inherited from genericSDRInterface class
 	virtual void setRXFreq(paramData in_param);
 	virtual void setTXFreq(paramData in_param);
@@ -56,8 +60,8 @@ private:
 	//Pointers to the tx and rx streams
 	uhd::tx_streamer::sptr tx_stream;
 	uhd::rx_streamer::sptr rx_stream;
-	vector<uhd::tx_metadata_t> tx_md;
-	vector<uhd::rx_metadata_t> rx_md;
+	std::vector<uhd::tx_metadata_t> tx_md;
+	std::vector<uhd::rx_metadata_t> rx_md;
 
 	//Queue of samples to transmit
 	std::vector<std::vector<std::complex<float> > > tx_queue;
@@ -65,38 +69,16 @@ private:
 	//PThreads for rx and tx
 	pthread_t rx_listener, tx_thread;
 
-	//maps used to identify the pointers coming up from downstream
-	std::map<fdInterface*,uhdControlConnection*> control_connections;
-
 	//Current RX/TX Channel configurations
 	streamType cur_stream_type;
 
-	//Special parameters just for the USRP series
+	//Stream converter to easily switch back and forth between primitive streaming types...
+	streamConverter<int16_t> str_converter;
 
-//Virtual memembers inherited from genericSDRInterface
-protected:
-	void setRXFreq(paramData in_param){shared_uhd->set_rx_freq(in_param.getDouble(), in_param.getChannel());};
-	void setTXFreq(paramData in_param){shared_uhd->set_tx_freq(in_param.getDouble(), in_param.getChannel());};
-	void setRXGain(paramData in_param){shared_uhd->set_rx_gain(in_param.getDouble(), in_param.getChannel());};
-	void setTXGain(paramData in_param){shared_uhd->set_tx_gain(in_param.getDouble(), in_param.getChannel());};
-	void setRXRate(paramData in_param){shared_uhd->set_rx_rate(in_param.getDouble(), in_param.getChannel());};
-	void setTXRate(paramData in_param){shared_uhd->set_tx_rate(in_param.getDouble(), in_param.getChannel());};
-	paramData getRXFreq(int in_chan){return shared_uhd->get_rx_freq(in_chan);};
-	paramData getTXFreq(int in_chan){return shared_uhd->get_tx_freq(in_chan);};
-	paramData getRXGain(int in_chan){return shared_uhd->get_rx_gain(in_chan);};
-	paramData getTXGain(int in_chan){return shared_uhd->get_tx_gain(in_chan);};
-	paramData getRXRate(int in_chan){return shared_uhd->get_rx_rate(in_chan);};
-	paramData getTXRate(int in_chan){return shared_uhd->get_tx_rate(in_chan);};
-	bool checkRXChannel(int in_chan){return (in_chan < shared_uhd->get_rx_num_channels());};
-	bool checkTXChannel(int in_chan){return (in_chan < shared_uhd->get_tx_num_channels());};
-	bool checkRXFreq(paramData in_param){return (in_param.getDouble() == shared_uhd->get_rx_freq_range(in_param.getChannel()).clip(in_param.getDouble()));};
-	bool checkTXFreq(paramData in_param){return (in_param.getDouble() == shared_uhd->get_tx_freq_range(in_param.getChannel()).clip(in_param.getDouble()));};
-	bool checkRXGain(paramData in_param){return (in_param.getDouble() == shared_uhd->get_rx_gain_range(in_param.getChannel()).clip(in_param.getDouble()));};
-	bool checkTXGain(paramData in_param){return (in_param.getDouble() == shared_uhd->get_tx_gain_range(in_param.getChannel()).clip(in_param.getDouble()));};
-	bool checkRXRate(paramData in_param){return (in_param.getDouble() == shared_uhd->get_rx_rates(in_param.getChannel()).clip(in_param.getDouble()));};
-	bool checkTXRate(paramData in_param){return (in_param.getDouble() == shared_uhd->get_tx_rates(in_param.getChannel()).clip(in_param.getDouble()));};
-	void setCustomSDRParameter(std::string name, std::string val, int port);
-	std::string getCustomSDRParameter(std::string name);
-	void setStreamDataType(streamType in_type){cur_stream_type = in_type;};
+	//Special parameters just for the USRP series
+	//TODO: This...
+
 };
+
+#endif
 

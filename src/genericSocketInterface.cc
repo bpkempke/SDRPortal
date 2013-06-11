@@ -2,6 +2,7 @@
 #include "base64.h"
 #include "sha1.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
 #include <iostream>
@@ -23,8 +24,7 @@ static void *listeningThreadProxy(void *in_ptr){
 	static_cast<genericSocketInterface*>(in_ptr)->connectionListenerThread();
 }
 
-genericSocketInterface::genericSocketInterface(socketIntType in_socket_type, int portnum, int in_max_connections=0) : hierarchicalDataflowBlock(0, 1){
-	this_uplink = NULL;
+genericSocketInterface::genericSocketInterface(socketType in_socket_type, int portnum, int in_max_connections) : hierarchicalDataflowBlock(0, 1){
 	socket_type = in_socket_type;
 	max_connections = in_max_connections;
 
@@ -80,11 +80,11 @@ void *genericSocketInterface::connectionListenerThread(){
 
 	while(1){
 		data_cli_len = sizeof(data_cli);
-		datasock_fd = accept(socket_fid, (struct sockaddr *) &data_cli, &data_cli_len);
+		datasock_fd = accept(socket_fp, (struct sockaddr *) &data_cli, &data_cli_len);
 
 		//TODO: put some sort of error checking here....
 		if(datasock_fd < 0)
-			printf("ERROR on accept, socket_fid = %d\n", socket_fid);
+			printf("ERROR on accept, socket_fid = %d\n", socket_fp);
 			
 		//TODO: Put a check for number of connections here...
 		socketInterpreter *new_interpreter;
@@ -95,7 +95,7 @@ void *genericSocketInterface::connectionListenerThread(){
 		else if(socket_type == SOCKET_WS)
 			new_interpreter = new wsSocketInterpreter();
 
-		socketThread *new_socket_thread = new socketThread(datasock_fd, this, &this.mutex, new_interpreter);
+		socketThread *new_socket_thread = new socketThread(datasock_fd, &mutex, new_interpreter);
 		new_socket_thread->addUpperLevel(this);
 		this->addLowerLevel(new_socket_thread);
 	}
@@ -104,95 +104,21 @@ void *genericSocketInterface::connectionListenerThread(){
 
 int genericSocketInterface::getPortNum(){
 	struct sockaddr_in addr;
-	getsockname(socket_fp, (struct sockaddr *)&addr, sizeof(addr));
+	unsigned int addr_len = sizeof(addr);
+	getsockname(socket_fp, (struct sockaddr *)&addr, &addr_len);
 
 	return addr.sin_port;
 }
 
-void genericSocketInterface::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0){
-	messageType in_message = {message, num_bytes, DOWNSTREAM};
-	for(int ii = 0; ii < clients.size(); ii++){
-		//FROM THE USRP
-		vector<messageType> new_messages = client_parsers[ii]->parseUpstreamMessage(in_message);
-		dispatchMessages(new_messages, ii);
-	}
+void genericSocketInterface::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel){
+	//FROM THE USRP
+	dataToLowerLevel(data, num_bytes);
 }
 
-void genericSocketInterface::dataFromLowerLevel(void *data, int num_bytes, int local_down_channel=0){
-	//This function packetizes and then distributes incoming bytes
-	//TODO: this should probably be done faster than a linear search, but with only a few clients, it should be fine
-	int client_index = 0;
-	for(int i = 0; i < clients.size(); i++){
-		if(from_interface == clients[i]){
-			client_index = i;
-			break;
-		}
-	}
-	messageType new_message = {buffer, num_bytes, UPSTREAM};
+void genericSocketInterface::dataFromLowerLevel(void *data, int num_bytes, int local_down_channel){
 	//FROM THE SOCKET
-	vector<messageType> new_packets = client_parsers[client_index]->parseDownstreamMessage(new_message);
-	dispatchMessages(new_packets, client_index);
+	dataToUpperLevel(data, num_bytes);
 }
-
-void genericSocketInterface::registerDownstreamInterface(fdInterface *in_thread){
-
-	//Add this client id to the table in order to keep track of it for packetization
-	clients.push_back(in_thread);
-	if(socket_type == SOCKET_TCP)
-		client_parsers.push_back(new tcpSocketInterpreter());
-	else if(socket_type == SOCKET_UDP)
-		client_parsers.push_back(new udpSocketInterpreter());
-	else if(socket_type == SOCKET_WS)
-		client_parsers.push_back(new wsSocketInterpreter());
-}
-
-void genericSocketInterface::deleteDownstreamInterface(fdInterface *in_thread){
-	for(int i = 0; i < clients.size(); i++){
-		if(clients[i] == in_thread){
-			clients.erase(clients.begin() + i);
-			client_parsers.erase(client_parsers.begin() + i);
-			printf("deleted client\n");
-			//delete in_thread;
-	        }
-	}
-}
-
-void genericSocketInterface::registerUpstreamInterface(fdInterface *up_int){
-	this_uplink = up_int;
-	this_uplink->registerDownstreamInterface(this);
-}
-
-void genericSocketInterface::dispatchMessages(vector<messageType> in_messages, int client_idx){
-	for(int i = 0; i < in_messages.size(); i++)
-	{
-		if(in_messages[i].message_dest == DOWNSTREAM){
-			clients[client_idx]->dataFromUpstream(in_messages[i].buffer, in_messages[i].num_bytes, this);
-		} else if(in_messages[i].message_dest == UPSTREAM){
-			this_uplink->fdBytesReceived(in_messages[i].buffer, in_messages[i].num_bytes, this, client_idx);
-		}
-	}
-}
-/*
- * Function definitions for the tcpSocketInterpreter class
- */
-
-//tcpSocketInterpreter::tcpSocketInterpreter(){
-//
-//}
-//
-//void tcpSocketInterpreter::serviceIncomingPacket(lithiumPacket in_packet){
-//}
-
-/*
- * Function definitions for the udpSocketInterpreter class
- */
-
-//udpSocketInterpreter::udpSocketInterpreter(){
-//
-//}
-//
-//void udpSocketInterpreter::serviceIncomingPacket(lithiumPacket in_packet){
-//}
 
 /*
  * Function definitions for the wsSocketInterpreter class
@@ -273,7 +199,6 @@ vector<messageType> wsSocketInterpreter::parseDownstreamMessage(messageType in_m
 			//Send the reply
 			new_out_message.buffer = (char*)reply_string.c_str();
 			new_out_message.num_bytes = reply_string.length();
-			new_out_message.message_dest = DOWNSTREAM;
 			out_messages.push_back(new_out_message);
 
 			connection_established = true;
@@ -325,7 +250,6 @@ vector<messageType> wsSocketInterpreter::parseDownstreamMessage(messageType in_m
 		//If so, then let's extract the message...
 		new_out_message.buffer = &message_parser[message_start_idx];
 		new_out_message.num_bytes = payload_len;
-		new_out_message.message_dest = UPSTREAM;
 		out_messages.push_back(new_out_message);
 		//cout << "RECEIVED WS MESSAGE: " << message_parser << endl;
 
@@ -370,7 +294,7 @@ vector<messageType> wsSocketInterpreter::parseUpstreamMessage(messageType in_mes
 			memcpy(&message[10],in_message.buffer,in_message.num_bytes);
 		}
 
-		messageType new_message = {message, message_length, DOWNSTREAM};
+		messageType new_message = {message, message_length};
 		ret_vector.push_back(new_message);
 	}
 	return ret_vector;
@@ -421,10 +345,9 @@ void *socketThread::socketReader(){
 	}
 
 	close(socket_fp);
-	sock_int->deleteDownstreamInterface(this);
 }
 
-void socketThread::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0){
+void socketThread::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel){
 	vector<messageType> *in_message_vec = static_cast<vector<messageType> *>(data);
 	for(int ii=0; ii < in_message_vec->size(); ii++){
 		//First format everything correctly for the corresponding socket
@@ -437,14 +360,11 @@ void socketThread::dataFromUpperLevel(void *data, int num_bytes, int local_up_ch
 	}
 }
 
-void socketThread::socketWriter(unsigned char *buffer, int buffer_length){
+void socketThread::socketWriter(char *buffer, int buffer_length){
 	if(socket_fp){
 		//TODO: this needs to go to a UDP socket sometimes!
 		int n;
-		if(is_datagram_socket)
-			n = sendto(socket_fp, buffer, buffer_length, 0, (struct sockaddr *)&udp_addr, sizeof(struct sockaddr_in));
-		else
-	        	n = write(socket_fp, buffer, buffer_length);
+	        n = write(socket_fp, buffer, buffer_length);
 		if(n <= 0){
 			//TODO: What should we do here?
 			printf("socket not open anymore...tried writing %s bytes...\n",buffer);

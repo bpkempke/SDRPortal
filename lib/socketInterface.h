@@ -6,7 +6,6 @@
 #include <vector>
 #include <string>
 #include <netinet/in.h>
-#include "clientInterface.h"
 
 class socketThread;
 class lithiumInterface;

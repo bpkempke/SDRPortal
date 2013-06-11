@@ -1,36 +1,38 @@
-#include <map>
-#include <string>
-#include <string.h>
-#include <generic.h>
-
 #ifndef GENERIC_SDR_INT_H
 #define GENERIC_SDR_INT_H
 
-enum primEnum {DOUBLE, INT, VOID};
-enum cPrimType {C_DOUBLE64, C_FLOAT32, C_INT32, C_INT16, C_INT8};
+#include <map>
+#include <string>
+#include <string.h>
+#include <vector>
+#include "generic.h"
 
-struct rxtxChanInfo{
+class portalDataSocket;
+
+class rxtxChanInfo{
+public:
 	int rx_chan;
 	int tx_chan;
 	rxtxChanInfo(int r, int t) : rx_chan(r), tx_chan(t) {};
+	rxtxChanInfo(){rx_chan = 0; tx_chan = 0;};//TODO: Is this really the best way to make this 'struct'?
 };
 
 class paramData {
 public:
-	paramData(double in_data, rxtxChanInfo in_channel=0){data_type = DOUBLE; scratch = new double(in_data); channel = in_channel;};
-	paramData(int in_data, rxtxChanInfo in_channel=0){data_type = INT; scratch = new int(in_data); channel = in_channel;};
-	paramData(){data_type = VOID;};
+	paramData(double in_data, rxtxChanInfo in_channel=rxtxChanInfo(0,0)) : channel(in_channel) {data_type = DOUBLE; scratch = new double(in_data);};
+	paramData(int in_data, rxtxChanInfo in_channel=rxtxChanInfo(0,0)) : channel(in_channel) {data_type = INT; scratch = new int(in_data);};
+	paramData(rxtxChanInfo in_channel=rxtxChanInfo(0,0)) : channel(in_channel) {data_type = VOID;};
 	~paramData(){
 		if(data_type == DOUBLE) delete (double*)scratch;
 		else if(data_type == INT) delete (int*)scratch;};
 
 	//Accessor methods
 	int getInt(){int ret_val; memcpy(&ret_val, scratch, sizeof(int)); return ret_val;};
-	int getDouble(){double ret_val; memcpy(&ret_val, scratch, sizeof(double)); return ret_val;};
-	int getChannel(){return channel;};
+	double getDouble(){double ret_val; memcpy(&ret_val, scratch, sizeof(double)); return ret_val;};
+	rxtxChanInfo getChannel(){return channel;};
 private:
 	void *scratch;
-	primEnum data_type;
+	primType data_type;
 	rxtxChanInfo channel;
 };
 
@@ -40,20 +42,22 @@ struct iqData {
 	int channel_uid;
 };
 
+class genericSDRInterface;
+
 struct paramAccessor {
 	//typdefs to make things prettier later on...
 	typedef void (genericSDRInterface::*setMethodType)(paramData);
-	typedef paramData (genericSDRInterface::*getMethodType)(int);
+	typedef paramData (genericSDRInterface::*getMethodType)(rxtxChanInfo);
 	typedef bool (genericSDRInterface::*checkMethodType)(paramData);
 
 	//actual struct members (using camel-caps so that the use of these function pointers later-on looks cleaner)
-	primEnum arg_type;
+	primType arg_type;
 	setMethodType setMethod;
 	getMethodType getMethod;
 	checkMethodType checkMethod;
 
 	//struct constructor
-	paramAccessor(primEnum in_prim, setMethodType in_set, getMethodType in_get, checkMethodType in_check) : arg_type(in_prim), setMethod(in_set), getMethod(in_get), checkMethod(in_check) {};
+	paramAccessor(primType in_prim, setMethodType in_set, getMethodType in_get, checkMethodType in_check) : arg_type(in_prim), setMethod(in_set), getMethod(in_get), checkMethod(in_check) {};
 	paramAccessor(){};
 };
 
@@ -62,17 +66,17 @@ public:
 	genericSDRInterface();
 	void setSDRParameter(int in_uid, std::string name, std::string val);
 	int getNumAllocatedChannels();
+	rxtxChanInfo getChanInfo(int uid);
 
 	int addChannel(portalDataSocket *in_channel);
 	void bindRXChannel(int rx_chan, int in_uid);
 	void bindTXChannel(int tx_chan, int in_uid);
 
-	vector<primType> getResultingPrimTypes(int rx_chan);
+	std::vector<primType> getResultingPrimTypes(int rx_chan);
 	void distributeRXData(void *in_data, int num_bytes, int rx_chan, primType in_type);
 	void sendIQData(void *data, int num_bytes, int uid_port, primType in_type);
 	void setStreamDataType(streamType in_type); //TODO: Need to integrate this in
 
-protected:
 	//All possible get/set/check methods.  If they're not implemented, the virtual method will default to throwing an exception
 	virtual void setRXFreq(paramData in_param){throw invalidCommandException("");};
 	virtual void setTXFreq(paramData in_param){throw invalidCommandException("");};
@@ -101,9 +105,9 @@ protected:
 	std::map<std::string, paramAccessor > param_accessors;
 private:
 	int num_channels, cur_channel;
-	map<portalDataSocket*,int> uid_map;
-	map<int,vector<portalDataSocket*> > rx_chan_to_streams, tx_chan_to_streams;
-	map<int,rxtxChanInfo> uid_to_chaninfo;
+	std::map<int,portalDataSocket*> uid_map;
+	std::map<int,std::vector<portalDataSocket*> > rx_chan_to_streams, tx_chan_to_streams;
+	std::map<int,rxtxChanInfo> uid_to_chaninfo;
 };
 
 #endif
