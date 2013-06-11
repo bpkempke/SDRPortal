@@ -14,6 +14,7 @@ portalCommandSocket::portalCommandSocket(socketType in_socket_type, int socket_n
 	//Link upper and lower 
 	//TODO: Not sure if this is needed at all...
 	//  in_sdr_int->addLowerLevel(this);
+	this->addLowerLevel(socket_int);
 	socket_int->addUpperLevel(this);
 }
 
@@ -34,16 +35,16 @@ void portalCommandSocket::dataFromUpperLevel(void *data, int num_bytes, int loca
 	socket_int->dataFromUpperLevel(&transmit_messages, num_bytes);
 }
 
-void portalCommandSocket::dataFromLowerLevel(void *data, int num_bytes, int local_down_channel){
+void portalCommandSocket::dataFromLowerLevel(void *data, int num_messages, int local_down_channel){
 	//Data coming in from the socket
 
 	//First, we need to make sure data is casted correctly (data is a pointer to a vector of messages)
-	std::vector<messageType> *in_messages = static_cast<std::vector<messageType>*>(data);
+	messageType *in_messages = static_cast<messageType *>(data);
 
 	//Insert historic messages into a string stream so as to easily extract lines
 	static std::stringstream command_stream;
-	for(unsigned int ii=0; ii < in_messages->size(); ii++){
-		std::string in_data_string((*in_messages)[ii].buffer,(*in_messages)[ii].num_bytes);
+	for(int ii=0; ii < num_messages; ii++){
+		std::string in_data_string(in_messages[ii].buffer,in_messages[ii].num_bytes);
 		command_stream << in_data_string;
 	}
 
@@ -63,7 +64,8 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_bytes, int loca
 		//Now do whatever we need to do based on the received command
 		//TODO: Put in some error checking here
 		char response[20];
-		int response_length;
+		messageType response_message;
+		response_message.buffer = response;
 		try{
 			if(command == "NEWCHANNEL"){
 				//The client wants to add a data channel connection...
@@ -72,8 +74,8 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_bytes, int loca
 				data_socket->addLowerLevel(socket_int);
 
 				int new_channel = sdr_int->addChannel(data_socket);
-				response_length = sprintf(response,"%d\r\n", new_channel);
-				dataToLowerLevel(response, response_length);
+				response_message.num_bytes = sprintf(response_message.buffer,"%d\r\n", new_channel);
+				dataToLowerLevel(&response_message, 1);
 			} else if(command == "CHANNEL"){
 				if(isInteger(arg1)){
 					int candidate_channel = strtol(arg1.c_str(), NULL, 0);
@@ -117,22 +119,24 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_bytes, int loca
 		}
 
 		//Query-based commands
+		response_message.num_bytes = 0;
 		rxtxChanInfo cur_chan_info = sdr_int->getChanInfo(cur_channel);
 		if(command.substr(0,6) == "RXFREQ")
-			response_length = sprintf(response,"%d\r\n",(int)(sdr_int->getRXFreq(cur_chan_info).getDouble()+0.5));
+			response_message.num_bytes = sprintf(response_message.buffer,"%f\r\n",sdr_int->getRXFreq(cur_chan_info).getDouble());
 		else if(command.substr(0,6) == "TXFREQ")
-			response_length = sprintf(response,"%d\r\n",(int)(sdr_int->getTXFreq(cur_chan_info).getDouble()+0.5));
+			response_message.num_bytes = sprintf(response_message.buffer,"%f\r\n",sdr_int->getTXFreq(cur_chan_info).getDouble());
 		else if(command.substr(0,6) == "RXGAIN")
-			response_length = sprintf(response,"%f\r\n",sdr_int->getRXGain(cur_chan_info).getDouble());
+			response_message.num_bytes = sprintf(response_message.buffer,"%f\r\n",sdr_int->getRXGain(cur_chan_info).getDouble());
 		else if(command.substr(0,6) == "TXGAIN")
-			response_length = sprintf(response,"%f\r\n",sdr_int->getTXGain(cur_chan_info).getDouble());
+			response_message.num_bytes = sprintf(response_message.buffer,"%f\r\n",sdr_int->getTXGain(cur_chan_info).getDouble());
 		else if(command.substr(0,6) == "RXRATE")
-			response_length = sprintf(response,"%d\r\n",(int)(sdr_int->getRXRate(cur_chan_info).getDouble()+0.5));
+			response_message.num_bytes = sprintf(response_message.buffer,"%d\r\n",(int)(sdr_int->getRXRate(cur_chan_info).getDouble()+0.5));
 		else if(command.substr(0,6) == "TXRATE")
-			response_length = sprintf(response,"%d\r\n",(int)(sdr_int->getTXRate(cur_chan_info).getDouble()+0.5));
+			response_message.num_bytes = sprintf(response_message.buffer,"%d\r\n",(int)(sdr_int->getTXRate(cur_chan_info).getDouble()+0.5));
 
 		//Send off the response
-		dataToLowerLevel(response,response_length);
+		if(response_message.num_bytes > 0)
+			dataToLowerLevel(&response_message,1);
 	}
 
 }

@@ -1,11 +1,11 @@
-
+#include <iostream>
 #include "hierarchicalDataflowBlock.h"
 
 hierarchicalDataflowBlock::hierarchicalDataflowBlock(int num_down_channels, int num_up_channels){
 
 	//Initialize higher and lower-level links based on the number of channels passed in
-	upper_level_links.reserve(num_up_channels);
-	lower_level_links.reserve(num_down_channels);
+	upper_level_links.resize(num_up_channels);
+	lower_level_links.resize(num_down_channels);
 }
 
 void hierarchicalDataflowBlock::addUpperLevel(hierarchicalDataflowBlock *in_block, int remote_up_channel, int local_up_channel){
@@ -16,6 +16,9 @@ void hierarchicalDataflowBlock::addUpperLevel(hierarchicalDataflowBlock *in_bloc
 	new_connection.remote_channel = remote_up_channel;
 	new_connection.remote = in_block;
 
+	//Make sure there's space reserved first
+	if((unsigned int)local_up_channel >= upper_level_links.size())
+		upper_level_links.resize(local_up_channel+1);
 	upper_level_links[local_up_channel].push_back(new_connection);
 }
 
@@ -37,6 +40,9 @@ void hierarchicalDataflowBlock::addLowerLevel(hierarchicalDataflowBlock *in_bloc
 	new_connection.remote_channel = remote_down_channel;
 	new_connection.remote = in_block;
 
+	//Make sure there's space reserved first
+	if((unsigned int)local_down_channel >= lower_level_links.size())
+		lower_level_links.resize(local_down_channel+1);
 	lower_level_links[local_down_channel].push_back(new_connection);
 }
 

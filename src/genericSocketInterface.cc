@@ -272,6 +272,7 @@ vector<messageType> wsSocketInterpreter::parseUpstreamMessage(messageType in_mes
 		int message_length = in_message.num_bytes+2;
 		if(ml_16) message_length += 2;
 		else if(ml_64) message_length += 8;
+		cout << "GOT HERE1" << endl;
 		char *message = new char[message_length];
 
 		//First byte: FIN (always true in our case) and opcode (0x02 = binary)
@@ -339,7 +340,7 @@ void *socketThread::socketReader(){
 		//new_message.message_dest = DOWNSTREAM;
 		vector<messageType> result_messages = interp->parseDownstreamMessage(new_message);
 		if(result_messages.size())
-			dataToUpperLevel(&result_messages, n);
+			dataToUpperLevel(&result_messages[0], result_messages.size());
 		if(shared_mutex)
 			pthread_mutex_unlock(shared_mutex);
 	}
@@ -349,11 +350,11 @@ void *socketThread::socketReader(){
 	return NULL;
 }
 
-void socketThread::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel){
-	vector<messageType> *in_message_vec = static_cast<vector<messageType> *>(data);
-	for(unsigned int ii=0; ii < in_message_vec->size(); ii++){
+void socketThread::dataFromUpperLevel(void *data, int num_messages, int local_up_channel){
+	messageType *in_message_vec = static_cast<messageType *>(data);
+	for(int ii=0; ii < num_messages; ii++){
 		//First format everything correctly for the corresponding socket
-		vector<messageType> resulting_messages = interp->parseUpstreamMessage((*in_message_vec)[ii]);
+		vector<messageType> resulting_messages = interp->parseUpstreamMessage(in_message_vec[ii]);
 		
 		for(unsigned int jj=0; jj < resulting_messages.size(); jj++){
 			//Then write the raw data out to the corresponding socket

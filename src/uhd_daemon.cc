@@ -66,6 +66,7 @@ int main(int argc, char *argv[]){
 		{NULL, 0, NULL, 0}
 	};
 
+
 	//Open up two separate sockets, one for commands, and one for data
 	int tcp_cmd_portnum = 12500;
 	int ws_cmd_portnum = 12600;
