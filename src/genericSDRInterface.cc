@@ -101,7 +101,7 @@ int genericSDRInterface::getNumAllocatedChannels(){
 std::vector<primType> genericSDRInterface::getResultingPrimTypes(int rx_chan){
 	std::vector<primType> resulting_prim_types;
 	std::vector<portalDataSocket*> rx_streams = rx_chan_to_streams[rx_chan];
-	for(int ii=0; ii < rx_streams.size(); ii++){
+	for(unsigned int ii=0; ii < rx_streams.size(); ii++){
 		primType cur_prim_type = rx_streams[ii]->getDataType();
 		std::vector<primType>::iterator it = std::find(resulting_prim_types.begin(), resulting_prim_types.end(), cur_prim_type);
 		if(it == resulting_prim_types.end())
@@ -113,7 +113,7 @@ std::vector<primType> genericSDRInterface::getResultingPrimTypes(int rx_chan){
 void genericSDRInterface::distributeRXData(void *in_data, int num_bytes, int rx_chan, primType in_type){
 	//Data coming from SDR RX for distribution to sockets
 	std::vector<portalDataSocket*> streams = rx_chan_to_streams[rx_chan];
-	for(int ii=0; ii < streams.size(); ii++)
+	for(unsigned int ii=0; ii < streams.size(); ii++)
 		if(streams[ii]->getDataType() == in_type)
 			streams[ii]->dataFromUpperLevel(in_data, num_bytes);
 }

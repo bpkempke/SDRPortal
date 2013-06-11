@@ -13,7 +13,7 @@ public:
 private:
 	int sizeOfType(primType in_type);
 	void *scratchspace;
-	int scratchspace_size;
+	unsigned int scratchspace_size;
 };
 
 template <typename T>
@@ -89,6 +89,10 @@ int streamConverter<T>::convertTo(T *in_data, int num_bytes, primType result_typ
 				d_scratchspace[ii] = (int8_t)(in_data[ii]);
 			resulting_bytes = num_elements*sizeof(int8_t);
 			}
+			break;
+
+		default:
+			//SHOULD NOT GET HERE!
 			break;
 	}
 

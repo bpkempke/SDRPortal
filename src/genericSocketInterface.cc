@@ -21,7 +21,8 @@ using namespace std;
  */
 
 static void *listeningThreadProxy(void *in_ptr){
-	static_cast<genericSocketInterface*>(in_ptr)->connectionListenerThread();
+	void *return_pointer = static_cast<genericSocketInterface*>(in_ptr)->connectionListenerThread();
+	return return_pointer;
 }
 
 genericSocketInterface::genericSocketInterface(socketType in_socket_type, int portnum, int in_max_connections) : hierarchicalDataflowBlock(0, 1){
@@ -100,6 +101,7 @@ void *genericSocketInterface::connectionListenerThread(){
 		this->addLowerLevel(new_socket_thread);
 	}
 
+	return NULL;
 }
 
 int genericSocketInterface::getPortNum(){
@@ -149,7 +151,6 @@ vector<messageType> wsSocketInterpreter::parseDownstreamMessage(messageType in_m
 		//Parser
 		stringstream strstr(message_parser);
 		string temp_str, last_str;
-		int ii=0;
 		while(strstr >> temp_str){
 			//Process keys and values
 			if(last_str.compare("GET") == 0)
@@ -236,7 +237,7 @@ vector<messageType> wsSocketInterpreter::parseDownstreamMessage(messageType in_m
 		}
 
 		//Check to see if we have the whole message now!
-		if(message_parser.length() < message_start_idx + payload_len) return out_messages;
+		if((int)message_parser.length() < message_start_idx + payload_len) return out_messages;
 
 		//cout << "I think that payload_len=" << payload_len << " end message_start_idx=" << message_start_idx << endl;
 		//cout << "message_parser[0] = " << (unsigned int)(unsigned char)message_parser[1] << endl;
@@ -305,7 +306,8 @@ vector<messageType> wsSocketInterpreter::parseUpstreamMessage(messageType in_mes
 
 //This function just acts as a proxy in order to run POSIX threads through a member function
 static void *socketReaderProxy(void *in_socket_thread){
-	static_cast<socketThread*>(in_socket_thread)->socketReader();
+	void *return_pointer = static_cast<socketThread*>(in_socket_thread)->socketReader();
+	return return_pointer;
 }
 
 socketThread::socketThread(int in_fp, pthread_mutex_t *in_mutex, socketInterpreter *in_interp) : hierarchicalDataflowBlock(0, 1) {
@@ -321,8 +323,6 @@ socketThread::socketThread(int in_fp, pthread_mutex_t *in_mutex, socketInterpret
 }
 
 void *socketThread::socketReader(){
-	struct sockaddr_in from;
-	socklen_t fromlen;
 	char buffer[256];
 
 	while(1){
@@ -345,15 +345,17 @@ void *socketThread::socketReader(){
 	}
 
 	close(socket_fp);
+
+	return NULL;
 }
 
 void socketThread::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel){
 	vector<messageType> *in_message_vec = static_cast<vector<messageType> *>(data);
-	for(int ii=0; ii < in_message_vec->size(); ii++){
+	for(unsigned int ii=0; ii < in_message_vec->size(); ii++){
 		//First format everything correctly for the corresponding socket
 		vector<messageType> resulting_messages = interp->parseUpstreamMessage((*in_message_vec)[ii]);
 		
-		for(int jj=0; jj < resulting_messages.size(); jj++){
+		for(unsigned int jj=0; jj < resulting_messages.size(); jj++){
 			//Then write the raw data out to the corresponding socket
 			socketWriter(resulting_messages[jj].buffer, resulting_messages[jj].num_bytes);
 		}

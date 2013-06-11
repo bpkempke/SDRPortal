@@ -42,7 +42,7 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_bytes, int loca
 
 	//Insert historic messages into a string stream so as to easily extract lines
 	static std::stringstream command_stream;
-	for(int ii=0; ii < in_messages->size(); ii++){
+	for(unsigned int ii=0; ii < in_messages->size(); ii++){
 		std::string in_data_string((*in_messages)[ii].buffer,(*in_messages)[ii].num_bytes);
 		command_stream << in_data_string;
 	}

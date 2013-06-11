@@ -48,7 +48,7 @@ void portalDataSocket::dataFromLowerLevel(void *data, int num_bytes, int local_d
 	std::vector<messageType> *in_messages = static_cast<std::vector<messageType>*>(data);
 
 	//Traverse all incoming messages and forward all IQ data on to the SDR
-	for(int ii=0; ii < in_messages->size(); ii++){
+	for(unsigned int ii=0; ii < in_messages->size(); ii++){
 		sdr_int->sendIQData((*in_messages)[ii].buffer, (*in_messages)[ii].num_bytes, uid, data_type);
 	}
 }

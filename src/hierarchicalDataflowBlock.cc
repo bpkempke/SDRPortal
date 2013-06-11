@@ -23,7 +23,7 @@ void hierarchicalDataflowBlock::addUpperLevel(hierarchicalDataflowBlock *in_bloc
 void hierarchicalDataflowBlock::dataToUpperLevel(void *data, int num_bytes, int local_up_channel){
 
 	//Push the requested data to all of the higher-level blocks that reside on the requested channel
-	for(int ii=0; ii < upper_level_links[local_up_channel].size(); ii++){
+	for(unsigned int ii=0; ii < upper_level_links[local_up_channel].size(); ii++){
 		hierarchicalDataConnection cur_conn = upper_level_links[local_up_channel][ii];
 		cur_conn.remote->dataFromLowerLevel(data, num_bytes, cur_conn.remote_channel);
 	}
@@ -43,7 +43,7 @@ void hierarchicalDataflowBlock::addLowerLevel(hierarchicalDataflowBlock *in_bloc
 void hierarchicalDataflowBlock::dataToLowerLevel(void *data, int num_bytes, int local_down_channel){
 
 	//Push the requested data to all of the higher-level blocks that reside on the requested channel
-	for(int ii=0; ii < lower_level_links[local_down_channel].size(); ii++){
+	for(unsigned int ii=0; ii < lower_level_links[local_down_channel].size(); ii++){
 		hierarchicalDataConnection cur_conn = lower_level_links[local_down_channel][ii];
 		cur_conn.remote->dataFromUpperLevel(data, num_bytes, cur_conn.remote_channel);
 	}
@@ -52,10 +52,10 @@ void hierarchicalDataflowBlock::dataToLowerLevel(void *data, int num_bytes, int 
 void hierarchicalDataflowBlock::removeUpperLevel(hierarchicalDataflowBlock *in_block){
 
 	//Iterate over all of the different uplink channels
-	for(int ii=0; ii < upper_level_links.size(); ii++){
+	for(unsigned int ii=0; ii < upper_level_links.size(); ii++){
 
 		//Then just do a linear search for the block to delete, since this shouldn't happen often
-		for(int jj=0; jj < upper_level_links[ii].size(); jj++){
+		for(unsigned int jj=0; jj < upper_level_links[ii].size(); jj++){
 			if(upper_level_links[ii][jj].remote == in_block){
 				upper_level_links[ii].erase(upper_level_links[ii].begin()+jj);
 				jj--;
@@ -67,10 +67,10 @@ void hierarchicalDataflowBlock::removeUpperLevel(hierarchicalDataflowBlock *in_b
 void hierarchicalDataflowBlock::removeLowerLevel(hierarchicalDataflowBlock *in_block){
 
 	//Iterate over all of the different uplink channels
-	for(int ii=0; ii < lower_level_links.size(); ii++){
+	for(unsigned int ii=0; ii < lower_level_links.size(); ii++){
 
 		//Then just do a linear search for the block to delete, since this shouldn't happen often
-		for(int jj=0; jj < lower_level_links[ii].size(); jj++){
+		for(unsigned int jj=0; jj < lower_level_links[ii].size(); jj++){
 			if(lower_level_links[ii][jj].remote == in_block){
 				lower_level_links[ii].erase(lower_level_links[ii].begin()+jj);
 				jj--;

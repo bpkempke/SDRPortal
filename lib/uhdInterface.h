@@ -22,8 +22,8 @@ public:
 	void rxStart();
 	int rxData(std::complex<int16_t> *rx_data_iq, int num_samples, int rx_chan);
 	void rxEnd();
-	void rxThread(int rx_chan);
-	void txThread(int tx_chan);
+	void *rxThread(int rx_chan);
+	void *txThread(int tx_chan);
 
 	//Certain functions inherited from genericSDRInterface class
 	virtual void setRXFreq(paramData in_param);

@@ -13,11 +13,13 @@ struct argStruct{
 //Proxies in order to run a thread within a member function
 static void *uhdReadProxy(void *in_args){
 	argStruct *arguments = static_cast<argStruct*>(in_args);
-	arguments->uhd_int->rxThread(arguments->channel);
+	void *return_pointer = arguments->uhd_int->rxThread(arguments->channel);
+	return return_pointer;
 }
 static void *uhdWriteProxy(void *in_args){
 	argStruct *arguments = static_cast<argStruct*>(in_args);
-	arguments->uhd_int->txThread(arguments->channel);
+	void *return_pointer = arguments->uhd_int->txThread(arguments->channel);
+	return return_pointer;
 }
 
 ofstream log_file;
@@ -295,23 +297,24 @@ int uhdInterface::rxData(complex<int16_t> *rx_data_iq, int num_samples, int in_c
 
 //Let's break this in to chunks of 256 samples for now.  Can go up or down, but let's try this for now
 #define RX_CHUNK_SIZE 512
-void uhdInterface::rxThread(int rx_chan){
+void *uhdInterface::rxThread(int rx_chan){
 	complex<int16_t> rx_data[RX_CHUNK_SIZE];
 	while(1){
 		rxData(rx_data, RX_CHUNK_SIZE, rx_chan);
 		//log_file.write((char*)rx_data, RX_CHUNK_SIZE*sizeof(complex<int16_t>));
 
 		vector<primType> resulting_prim_types = getResultingPrimTypes(rx_chan);
-		for(int ii=0; ii < resulting_prim_types.size(); ii++){
+		for(unsigned int ii=0; ii < resulting_prim_types.size(); ii++){
 			int num_translated_bytes = str_converter.convertTo((int16_t*)rx_data, RX_CHUNK_SIZE*sizeof(complex<int16_t>), resulting_prim_types[ii]);
 			distributeRXData(str_converter.getResult(), num_translated_bytes, rx_chan, resulting_prim_types[ii]);
 		}
 	}
+	return NULL;
 }
 
 //This thread waits until a theshold size is met in order to tx a constant stream of samples out to the USRP
 #define TX_THRESHOLD 2000
-void uhdInterface::txThread(int tx_chan){
+void *uhdInterface::txThread(int tx_chan){
 	while(1){
 		usleep(5000);
 		if(tx_queue[tx_chan].size() > TX_THRESHOLD){
@@ -329,6 +332,7 @@ void uhdInterface::txThread(int tx_chan){
 			txEnd(tx_chan);
 		}
 	}
+	return NULL;
 }
 
 void uhdInterface::rxEnd(){

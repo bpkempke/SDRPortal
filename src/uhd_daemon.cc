@@ -67,13 +67,13 @@ int main(int argc, char *argv[]){
 	};
 
 	//Open up two separate sockets, one for commands, and one for data
-	int tcp_cmd_portnum = 0;
-	int ws_cmd_portnum = 0;
+	int tcp_cmd_portnum = 12500;
+	int ws_cmd_portnum = 12600;
 	SDRType sdr_type = UHD;
 	string sdr_arguments = "";
 
 	//Parse out the arguments using getopt_long
-	int option_index, next_option;
+	int next_option;
 	while((next_option = getopt_long(argc, argv, short_options, long_options, NULL)) != -1){
 		switch(next_option){
 		case 's':

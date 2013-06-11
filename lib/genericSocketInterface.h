@@ -69,6 +69,7 @@ private:
 class tcpSocketInterpreter : public socketInterpreter{
 public:
 	//For now, should be ok to just inherit the default socketInterpreter functionality
+	tcpSocketInterpreter(){};
 	//std::vector<messageType> parseDownstreamMessage(messageType in_message);
 	//std::vector<messageType> parseUpstreamMessage(messageType in_message);
 };
@@ -76,6 +77,7 @@ public:
 class udpSocketInterpreter : public socketInterpreter{
 public:
 	//For now, should be ok to just inherit the default socketInterpreter functionality
+	udpSocketInterpreter(){};
 	//std::vector<messageType> parseDownstreamMessage(messageType in_message);
 	//std::vector<messageType> parseUpstreamMessage(messageType in_message);
 };
