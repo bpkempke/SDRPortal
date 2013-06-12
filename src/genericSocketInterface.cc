@@ -32,6 +32,9 @@ genericSocketInterface::genericSocketInterface(socketType in_socket_type, int po
 	//Open up a socket, but first initialize
 	socket_fp = initSocket(portnum);
 
+	//Set up the mutex to lock shared access
+	pthread_mutex_init(&mutex, NULL);
+
 	//Start up a thread to listen for incoming connections
 	pthread_create(&conn_listener, NULL, listeningThreadProxy, (void*)this);
 }

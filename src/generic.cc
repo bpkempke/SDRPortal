@@ -1,6 +1,7 @@
 #include <string>
 #include <generic.h>
 
+//TODO: These error checkers aren't doing their job...
 bool isInteger(std::string in_string){
 	return true;
 }

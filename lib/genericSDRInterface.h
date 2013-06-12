@@ -19,19 +19,18 @@ public:
 
 class paramData {
 public:
-	paramData(double in_data, rxtxChanInfo in_channel=rxtxChanInfo(0,0)) : channel(in_channel) {data_type = DOUBLE; scratch = new double(in_data);};
-	paramData(int in_data, rxtxChanInfo in_channel=rxtxChanInfo(0,0)) : channel(in_channel) {data_type = INT; scratch = new int(in_data);};
+	paramData(double in_data, rxtxChanInfo in_channel=rxtxChanInfo(0,0)) : channel(in_channel) {data_type = DOUBLE; param_double = in_data;};
+	paramData(int in_data, rxtxChanInfo in_channel=rxtxChanInfo(0,0)) : channel(in_channel) {data_type = INT; param_int = in_data;};
 	paramData(rxtxChanInfo in_channel=rxtxChanInfo(0,0)) : channel(in_channel) {data_type = VOID;};
-	~paramData(){
-		if(data_type == DOUBLE) delete (double*)scratch;
-		else if(data_type == INT) delete (int*)scratch;};
+	~paramData(){};
 
 	//Accessor methods
-	int getInt(){int ret_val; memcpy(&ret_val, scratch, sizeof(int)); return ret_val;};
-	double getDouble(){double ret_val; memcpy(&ret_val, scratch, sizeof(double)); return ret_val;};
+	int getInt(){return param_int;};
+	double getDouble(){return param_double;};
 	rxtxChanInfo getChannel(){return channel;};
 private:
-	void *scratch;
+	double param_double;
+	int param_int;
 	primType data_type;
 	rxtxChanInfo channel;
 };

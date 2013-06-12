@@ -1,3 +1,4 @@
+#include <iostream>
 #include <sstream>
 #include <algorithm>
 #include "portalDataSocket.h"
@@ -21,9 +22,10 @@ int genericSDRInterface::addChannel(portalDataSocket *in_channel){
 	
 	//Also create a sequential UID for this port as well
 	uid_map[num_channels] = in_channel;
+	uid_to_chaninfo[num_channels] = rxtxChanInfo(-1, -1);
 	in_channel->setUID(num_channels++);
 
-	return num_channels;
+	return num_channels-1;
 }
 
 void genericSDRInterface::setSDRParameter(int in_uid, std::string name, std::string val){
@@ -49,17 +51,16 @@ void genericSDRInterface::setSDRParameter(int in_uid, std::string name, std::str
 
 			(this->*cur_param_details.setMethod)(val_int);
 		} else if(cur_param_details.arg_type == DOUBLE){
-			paramData val_double;
-			if(isInteger(val))
-				val_double = paramData(strtod(val.c_str(), NULL), uid_to_chaninfo[in_uid]);
-			else
+			if(isInteger(val)){
+				paramData val_double(strtod(val.c_str(), NULL), uid_to_chaninfo[in_uid]);
+				//Check to make sure the value is within bounds
+				//if(!(this->*(cur_param_details.checkMethod))(val_double))
+				//	throw badArgumentException(badArgumentException::OUT_OF_BOUNDS, 1, val);
+
+				(this->*(cur_param_details.setMethod))(val_double);
+			} else
 				throw badArgumentException(badArgumentException::MALFORMED, 1, val);
 
-			//Check to make sure the value is within bounds
-			if(!(this->*(cur_param_details.checkMethod))(val_double))
-				throw badArgumentException(badArgumentException::OUT_OF_BOUNDS, 1, val);
-
-			(this->*(cur_param_details.setMethod))(val_double);
 		} else {
 			//TODO: Any other parameter types we want to support?
 		}

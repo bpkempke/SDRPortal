@@ -1,3 +1,4 @@
+#include <iostream>
 #include <vector>
 #include <sstream>
 #include <stdio.h>
@@ -40,6 +41,7 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_messages, int l
 
 	//First, we need to make sure data is casted correctly (data is a pointer to a vector of messages)
 	messageType *in_messages = static_cast<messageType *>(data);
+	std::cout << "GOT HERE" << std::endl;
 
 	//Insert historic messages into a string stream so as to easily extract lines
 	static std::stringstream command_stream;
@@ -73,8 +75,8 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_messages, int l
 				portalDataSocket *data_socket = new portalDataSocket(socket_type, 0, sdr_int);
 				data_socket->addLowerLevel(socket_int);
 
-				int new_channel = sdr_int->addChannel(data_socket);
-				response_message.num_bytes = sprintf(response_message.buffer,"%d\r\n", new_channel);
+				cur_channel = sdr_int->addChannel(data_socket);
+				response_message.num_bytes = sprintf(response_message.buffer,"%d: %d\r\n", cur_channel, data_socket->getPortNum());
 				dataToLowerLevel(&response_message, 1);
 			} else if(command == "CHANNEL"){
 				if(isInteger(arg1)){
