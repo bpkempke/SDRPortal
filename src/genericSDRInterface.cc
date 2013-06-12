@@ -72,6 +72,8 @@ void genericSDRInterface::bindRXChannel(int rx_chan, int in_uid){
 	if(checkRXChannel(rx_chan)){
 		//Open the RX channel since it's valid (don't care if it's been opened before)
 		openRXChannel(rx_chan);
+		if(rx_chan_to_streams.count(rx_chan) == 0)
+			rx_chan_to_streams[rx_chan] = std::vector<portalDataSocket*>();
 		rx_chan_to_streams[rx_chan].push_back(uid_map[in_uid]);
 		uid_to_chaninfo[in_uid].rx_chan = rx_chan;
 	} else {

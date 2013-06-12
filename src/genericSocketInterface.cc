@@ -85,6 +85,7 @@ void *genericSocketInterface::connectionListenerThread(){
 	while(1){
 		data_cli_len = sizeof(data_cli);
 		datasock_fd = accept(socket_fp, (struct sockaddr *) &data_cli, &data_cli_len);
+		std::cout << "ACCEPTED CONNECTION" << std::endl;
 
 		//TODO: put some sort of error checking here....
 		if(datasock_fd < 0)

@@ -14,11 +14,13 @@ struct argStruct{
 static void *uhdReadProxy(void *in_args){
 	argStruct *arguments = static_cast<argStruct*>(in_args);
 	void *return_pointer = arguments->uhd_int->rxThread(arguments->channel);
+	delete arguments;
 	return return_pointer;
 }
 static void *uhdWriteProxy(void *in_args){
 	argStruct *arguments = static_cast<argStruct*>(in_args);
 	void *return_pointer = arguments->uhd_int->txThread(arguments->channel);
+	delete arguments;
 	return return_pointer;
 }
 
@@ -28,6 +30,7 @@ ofstream log_file;
   * uhdInterface class
   *********************/
 uhdInterface::uhdInterface(string args, string tx_subdev, string rx_subdev, string tx_ant, string rx_ant, double tx_rate, double rx_rate, double tx_freq, double rx_freq, double tx_gain, double rx_gain, bool codec_highspeed) : genericSDRInterface(){
+
 	//Open a log file
 	log_file.open("log.out", ios::out | ios::trunc | ios::binary);
 
@@ -228,22 +231,28 @@ bool uhdInterface::checkTXRate(paramData in_param){
 void uhdInterface::openRXChannel(int in_chan){
 	//Set up the receive streamers (let's keep it to a float stream for now)
 	uhd::stream_args_t rx_stream_args("sc16","sc16");//(application format, wire format)
-	rx_stream = shared_uhd->get_rx_stream(rx_stream_args);
+	rx_stream_args.channels.resize(1);
+	rx_stream_args.channels[0] = in_chan;
+	if((int)rx_streams.size() <= in_chan){
+		rx_streams.resize(in_chan+1);
+		rx_md.resize(in_chan+1);
+	}
+	rx_streams[in_chan] = shared_uhd->get_rx_stream(rx_stream_args);
 
 	//We likely want to be always receiving, so let's start that up
-	rxStart();
+	rxStart(in_chan);
 
-	argStruct arguments;
-	arguments.uhd_int = this;
-	arguments.channel = in_chan;
-	pthread_create(&rx_listener, NULL, uhdReadProxy, (void*)&arguments);
+	argStruct *arguments = new argStruct();
+	arguments->uhd_int = this;
+	arguments->channel = in_chan;
+	pthread_create(&rx_listener, NULL, uhdReadProxy, (void*)arguments);
 
 }
 
 void uhdInterface::openTXChannel(int in_chan){
 	//Set up the transmit streamers (let's keep it to a float stream for now)
 	uhd::stream_args_t tx_stream_args("fc32");
-	tx_stream = shared_uhd->get_tx_stream(tx_stream_args);
+	tx_streams[in_chan] = shared_uhd->get_tx_stream(tx_stream_args);
 
 	//Other miscellaneous initialization stuff
 	tx_md[in_chan].start_of_burst = false;
@@ -266,21 +275,22 @@ void uhdInterface::txEnd(int in_chan){
 	//Send a sample of dummy data out to the device with the end_of_burst bit set
 	complex<float> dummy_sample;
 	tx_md[in_chan].end_of_burst = true;
-	tx_stream->send(&dummy_sample, 1, tx_md[in_chan]);
+	tx_streams[in_chan]->send(&dummy_sample, 1, tx_md[in_chan]);
 	tx_md[in_chan].end_of_burst = false;
 }
 
-void uhdInterface::rxStart(){
+void uhdInterface::rxStart(int in_chan){
 	uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
 	stream_cmd.num_samps = 0;
 	stream_cmd.stream_now = true;
 	stream_cmd.time_spec = uhd::time_spec_t();
-	shared_uhd->issue_stream_cmd(stream_cmd);
+	shared_uhd->issue_stream_cmd(stream_cmd, in_chan);
 }
 
 int uhdInterface::rxData(complex<int16_t> *rx_data_iq, int num_samples, int in_chan){
+	uhd::ref_vector<void *> buffers(rx_data_iq);
 	//Simple call to stream->recv
-	int ret = rx_stream->recv(rx_data_iq, num_samples, rx_md[in_chan], 1.0); //1.0 is the timeout time (in seconds)
+	int ret = rx_streams[in_chan]->recv(buffers, num_samples, rx_md[in_chan], 1.0); //1.0 is the timeout time (in seconds)
 
 	//Error checking
 	if(rx_md[in_chan].error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
@@ -327,7 +337,7 @@ void *uhdInterface::txThread(int tx_chan){
 
 				//Simple function just passes all iq data out to the device
 				tx_md[tx_chan].end_of_burst = false;
-				tx_stream->send((complex<float> *)(&temp_tx_queue[0]), temp_tx_queue.size(), tx_md[tx_chan]);
+				tx_streams[tx_chan]->send((complex<float> *)(&temp_tx_queue[0]), temp_tx_queue.size(), tx_md[tx_chan]);
 			}
 			txEnd(tx_chan);
 		}

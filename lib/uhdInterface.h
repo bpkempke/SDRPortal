@@ -5,6 +5,7 @@
 #include "hierarchicalDataflowBlock.h"
 #include "streamConverter.h"
 #include <uhd/usrp/multi_usrp.hpp>
+#include <uhd/utils/thread_priority.hpp>
 #include <map>
 #include <vector>
 
@@ -19,7 +20,7 @@ public:
 	void txEnd(int in_chan);
 
 	//Receive data methods
-	void rxStart();
+	void rxStart(int in_chan);
 	int rxData(std::complex<int16_t> *rx_data_iq, int num_samples, int rx_chan);
 	void rxEnd();
 	void *rxThread(int rx_chan);
@@ -58,8 +59,8 @@ private:
 	uhd::usrp::multi_usrp::sptr shared_uhd;
 
 	//Pointers to the tx and rx streams
-	uhd::tx_streamer::sptr tx_stream;
-	uhd::rx_streamer::sptr rx_stream;
+	std::vector<uhd::tx_streamer::sptr> tx_streams;
+	std::vector<uhd::rx_streamer::sptr> rx_streams;
 	std::vector<uhd::tx_metadata_t> tx_md;
 	std::vector<uhd::rx_metadata_t> rx_md;
 
