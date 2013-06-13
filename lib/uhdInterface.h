@@ -9,7 +9,6 @@
 #include <map>
 #include <vector>
 
-//This is utilizing the 'Curiously Recurring Template Pattern'
 class uhdInterface : public genericSDRInterface{
 public:
 	//Constructor

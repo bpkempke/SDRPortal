@@ -20,17 +20,18 @@ public:
 class paramData {
 public:
 	paramData(double in_data, rxtxChanInfo in_channel=rxtxChanInfo(0,0)) : channel(in_channel) {data_type = DOUBLE; param_double = in_data;};
-	paramData(int in_data, rxtxChanInfo in_channel=rxtxChanInfo(0,0)) : channel(in_channel) {data_type = INT; param_int = in_data;};
+	paramData(int in_data, rxtxChanInfo in_channel=rxtxChanInfo(0,0)) : channel(in_channel) {data_type = INT; param_double = (double)in_data;};
+	paramData(uint32_t in_data, rxtxChanInfo in_channel=rxtxChanInfo(0,0)) : channel(in_channel) {data_type = UINT32; param_double = (double)in_data;};
 	paramData(rxtxChanInfo in_channel=rxtxChanInfo(0,0)) : channel(in_channel) {data_type = VOID;};
 	~paramData(){};
 
 	//Accessor methods
-	int getInt(){return param_int;};
+	int getInt(){return (int)param_double;};
 	double getDouble(){return param_double;};
+	uint32_t getUInt32(){return (uint32_t)param_double;};
 	rxtxChanInfo getChannel(){return channel;};
 private:
 	double param_double;
-	int param_int;
 	primType data_type;
 	rxtxChanInfo channel;
 };
@@ -100,7 +101,7 @@ public:
 	virtual bool checkRXRate(paramData in_param){throw invalidCommandException("");};
 	virtual bool checkTXRate(paramData in_param){throw invalidCommandException("");};
 	virtual void setCustomSDRParameter(std::string name, std::string val, int in_chan) = 0;
-	virtual void txIQData(void *data, int num_bytes, int tx_chan, primType in_type) = 0;
+	virtual void txIQData(void *data, int num_bytes, int tx_chan, primType in_type){};
 	std::map<std::string, paramAccessor > param_accessors;
 private:
 	int num_channels, cur_channel;

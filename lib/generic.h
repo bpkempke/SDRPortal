@@ -12,7 +12,7 @@ enum streamType {
 	COMPLEX_INT32
 };
 
-enum primType {DOUBLE, INT, FLOAT, VOID, INT32, INT16, INT8};
+enum primType {DOUBLE, INT, FLOAT, VOID, INT32, INT16, INT8, UINT32};
 enum cPrimType {C_DOUBLE64, C_FLOAT32, C_INT32, C_INT16, C_INT8};
 
 enum socketType{
