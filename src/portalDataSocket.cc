@@ -11,6 +11,7 @@ portalDataSocket::portalDataSocket(socketType in_socket_type, int socket_num, ge
 
 	//Link upper and lower 
 	socket_int->addUpperLevel(this);
+	this->addLowerLevel(socket_int);
 }
 
 portalDataSocket::~portalDataSocket(){
@@ -36,10 +37,7 @@ void portalDataSocket::dataFromUpperLevel(void *data, int num_bytes, int local_u
 	new_message.buffer = (char*)data;
 	new_message.num_bytes = num_bytes;
 
-	std::vector<messageType> transmit_messages;
-	transmit_messages.push_back(new_message);
-
-	dataToLowerLevel(&transmit_messages, num_bytes);
+	dataToLowerLevel(&new_message, 1);
 }
 
 void portalDataSocket::dataFromLowerLevel(void *data, int num_bytes, int local_down_channel){

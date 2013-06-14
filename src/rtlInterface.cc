@@ -47,7 +47,7 @@ void rtlInterface::setRXGain(paramData in_param){
 	rtlsdr_set_tuner_gain_mode(rtl_dev, 1);
 	rtlsdr_set_tuner_gain(rtl_dev, gains[resulting_gain]);
 
-	delete gains;
+	delete [] gains;
 }
 
 void rtlInterface::setRXRate(paramData in_param){
@@ -100,7 +100,7 @@ bool rtlInterface::checkRXGain(paramData in_param){
 	if(desired_gain >= (double)(gains[0])/10 && desired_gain <= (double)(gains[num_gains-1])/10)
 		ret = true;
 
-	delete gains;
+	delete [] gains;
 	return ret;
 }
 

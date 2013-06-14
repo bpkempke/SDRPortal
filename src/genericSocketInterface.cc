@@ -84,6 +84,7 @@ void *genericSocketInterface::connectionListenerThread(){
 
 	while(1){
 		data_cli_len = sizeof(data_cli);
+		std::cout << "Accepting connections on port " << getPortNum() << std::endl;
 		datasock_fd = accept(socket_fp, (struct sockaddr *) &data_cli, &data_cli_len);
 		std::cout << "ACCEPTED CONNECTION" << std::endl;
 
@@ -113,7 +114,7 @@ int genericSocketInterface::getPortNum(){
 	unsigned int addr_len = sizeof(addr);
 	getsockname(socket_fp, (struct sockaddr *)&addr, &addr_len);
 
-	return addr.sin_port;
+	return ntohs(addr.sin_port);
 }
 
 void genericSocketInterface::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel){

@@ -117,8 +117,10 @@ void genericSDRInterface::distributeRXData(void *in_data, int num_bytes, int rx_
 	//Data coming from SDR RX for distribution to sockets
 	std::vector<portalDataSocket*> streams = rx_chan_to_streams[rx_chan];
 	for(unsigned int ii=0; ii < streams.size(); ii++)
-		if(streams[ii]->getDataType() == in_type)
+		if(streams[ii]->getDataType() == in_type){
+//			std::cout << "Distributing data to streams..." << std::endl;
 			streams[ii]->dataFromUpperLevel(in_data, num_bytes);
+		}
 }
 
 //TODO: How does this get integrate in?  Should genericSDRInterface be implementing hierarchicalDataflowBlock instead?
