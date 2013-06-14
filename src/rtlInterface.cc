@@ -1,4 +1,5 @@
 #include "rtlInterface.h"
+#include <iostream>
 
 static void *rtlReadProxy(void *in_args){
 	rtlInterface *rtl_int = (rtlInterface*)in_args;
@@ -16,7 +17,7 @@ rtlInterface::rtlInterface(int index){
 rtlInterface::~rtlInterface(){
 	if(is_receiving)
 		rtlsdr_cancel_async(rtl_dev);
-	rtlsdr_close(rtl_dev):
+	rtlsdr_close(rtl_dev);
 }
 
 void rtlInterface::setRXFreq(paramData in_param){
@@ -29,7 +30,7 @@ void rtlInterface::setRXGain(paramData in_param){
 
 	//Then figure out what gain value it's closest to
 	int num_gains = rtlsdr_get_tuner_gains(rtl_dev, NULL);
-	int gains = new int[num_gains];
+	int *gains = new int[num_gains];
 	rtlsdr_get_tuner_gains(rtl_dev, gains);
 	int resulting_gain;
 	for(resulting_gain=0; resulting_gain < num_gains; resulting_gain++){
@@ -86,7 +87,7 @@ bool rtlInterface::checkRXGain(paramData in_param){
 
 	//Then figure out what gain value it's closest to
 	int num_gains = rtlsdr_get_tuner_gains(rtl_dev, NULL);
-	int gains = new int[num_gains];
+	int *gains = new int[num_gains];
 	rtlsdr_get_tuner_gains(rtl_dev, gains);
 
 	//Now check to see if the gain is within the gain range of the device
@@ -100,6 +101,7 @@ bool rtlInterface::checkRXGain(paramData in_param){
 
 bool rtlInterface::checkRXRate(paramData in_param){
 	//No associated method to do this...
+	return true;
 }
 
 void rtlInterface::setCustomSDRParameter(std::string name, std::string val, int in_chan){
@@ -107,16 +109,16 @@ void rtlInterface::setCustomSDRParameter(std::string name, std::string val, int 
 	//int rtlsdr_set_agc_mode(rtlsdr_dev_t *dev, int on);
 }
 
-#define RTL_BUFF_LEN
+#define RTL_BUFF_LEN 512
 void *rtlInterface::rxThread(){
 	unsigned char read_buffer[RTL_BUFF_LEN];
 	char read_translate_buffer[RTL_BUFF_LEN];
 	int n_read;
 	while(1){
 		//Read data synchronously from the RTL device
-		r = rtlsdr_read_sync(rtl_dev, read_buffer, RTL_BUFF_LEN, &n_read);
+		int r = rtlsdr_read_sync(rtl_dev, read_buffer, RTL_BUFF_LEN, &n_read);
 		if (r < 0) {
-			fprintf(stderr, "WARNING: sync read failed.\n");
+			std::cerr << "WARNING: sync read failed." << std::endl;
 			break;
 		}
 
@@ -125,10 +127,11 @@ void *rtlInterface::rxThread(){
 			read_translate_buffer[ii] = (char)(read_buffer[ii])-127;
 
 		//Now figure out what we need to change the data to
-		vector<primType> resulting_prim_types = getResultingPrimTypes(rx_chan);
+		std::vector<primType> resulting_prim_types = getResultingPrimTypes(0);
 		for(unsigned int ii=0; ii < resulting_prim_types.size(); ii++){
-			int num_translated_bytes = str_converter.convertTo(read_buffer, RTL_BUFF_LEN, resulting_prim_types[ii]);
-			distributeRXData(str_converter.getResult(), num_translated_bytes, rx_chan, resulting_prim_types[ii]);
+			int num_translated_bytes = str_converter.convertTo(read_translate_buffer, RTL_BUFF_LEN, resulting_prim_types[ii]);
+			distributeRXData(str_converter.getResult(), num_translated_bytes, 0, resulting_prim_types[ii]);
 		}
 	}
+	return NULL;
 }

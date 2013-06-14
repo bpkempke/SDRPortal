@@ -5,6 +5,7 @@
 #include <string>
 #include <string.h>
 #include <vector>
+#include <stdint.h>
 #include "generic.h"
 
 class portalDataSocket;

@@ -1,5 +1,6 @@
 #include <getopt.h>
 #include "uhdInterface.h"
+#include "rtlInterface.h"
 #include "portalCommandSocket.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -13,7 +14,7 @@
 
 using namespace std;
 
-enum SDRType {UHD};
+enum SDRType {UHD,RTL};
 
 //GLOBALS
 genericSDRInterface *sdr_interface = NULL;
@@ -80,6 +81,8 @@ int main(int argc, char *argv[]){
 		case 's':
 			if(!strcmp("UHD",optarg))
 				sdr_type = UHD;
+			else if(!strcmp("RTL",optarg))
+				sdr_type = RTL;
 			break;
 		case 'T':
 			tcp_cmd_portnum = atoi(optarg);
@@ -101,6 +104,11 @@ int main(int argc, char *argv[]){
 		//OLD: uhdInterface usrp_instance(uhd_arguments,"","A:0","J1","J1",tx_bandwidth,rx_bandwidth,2500000000.0,2500000000.0,20.0,40.0, codec_highspeed);
 		//TODOTODO: sdr_interface = new uhdInterface(sdr_arguments);
 		sdr_interface = new uhdInterface(sdr_arguments,"","A:0","J1","J1",1e6,1e6,2500000000.0,2500000000.0,20.0,40.0, false);
+	} else if(sdr_type == RTL){
+		if(sdr_arguments.length() > 0)
+			sdr_interface = new rtlInterface(atoi(sdr_arguments.c_str()));
+		else
+			sdr_interface = new rtlInterface(0);
 	}
 
 	//Create command sockets which will spawn data sockets if requested

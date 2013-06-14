@@ -1,14 +1,16 @@
 #ifndef RTL_INTERFACE_H
 #define RTL_INTERFACE_H
 
+#include <vector>
 #include "genericSDRInterface.h"
 #include "hierarchicalDataflowBlock.h"
 #include "streamConverter.h"
-#include "rtl-sdr.h"
+#include <rtl-sdr.h>
 
 class rtlInterface : public genericSDRInterface{
 public:
 	rtlInterface(int index);
+	~rtlInterface();
 
 	void *rxThread();
 

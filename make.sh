@@ -1,3 +1,3 @@
 #!/bin/bash
 
-g++ -Wall -g -pthread -Ilib src/*.cc -luhd -o ./bin/uhdd
+g++ -Wall -g -pthread -Ilib src/*.cc -luhd -lrtlsdr -o ./bin/uhdd
