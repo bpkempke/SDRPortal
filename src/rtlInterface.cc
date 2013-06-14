@@ -1,6 +1,8 @@
 #include "rtlInterface.h"
 #include <iostream>
 
+//NOTE: In order to get this to work correctly under a VM, librtlsdr.c requires a longer CONTROL_TIMEOUT value than provided by default
+
 static void *rtlReadProxy(void *in_args){
 	rtlInterface *rtl_int = (rtlInterface*)in_args;
 	void *return_pointer = rtl_int->rxThread();
@@ -8,6 +10,8 @@ static void *rtlReadProxy(void *in_args){
 }
 
 rtlInterface::rtlInterface(int index){
+	rtl_dev = NULL;
+
 	//TODO: Maybe some error checking with the return values?
 	rtlsdr_open(&rtl_dev, (uint32_t)index);
 
@@ -21,6 +25,7 @@ rtlInterface::~rtlInterface(){
 }
 
 void rtlInterface::setRXFreq(paramData in_param){
+	std::cout << "setting frequency of " << (int)rtl_dev << " to " << in_param.getUInt32() << std::endl;
 	rtlsdr_set_center_freq(rtl_dev, in_param.getUInt32());
 }
 
@@ -114,6 +119,8 @@ void *rtlInterface::rxThread(){
 	unsigned char read_buffer[RTL_BUFF_LEN];
 	char read_translate_buffer[RTL_BUFF_LEN];
 	int n_read;
+	bool first_time = true;
+	rtlsdr_reset_buffer(rtl_dev);
 	while(1){
 		//Read data synchronously from the RTL device
 		int r = rtlsdr_read_sync(rtl_dev, read_buffer, RTL_BUFF_LEN, &n_read);
@@ -121,6 +128,9 @@ void *rtlInterface::rxThread(){
 			std::cerr << "WARNING: sync read failed." << std::endl;
 			break;
 		}
+		if(first_time)
+			std::cout << "GOT SOME SAMPLES!" << std::endl;
+		first_time = false;
 
 		//Translate to normal signed bytes by subtracting 127 from the data stream
 		for(int ii=0; ii < n_read; ii++)
