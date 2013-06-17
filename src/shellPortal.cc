@@ -1,0 +1,76 @@
+#include <sstream>
+#include <vector>
+#include <stdio.h>
+#include <stdlib.h>
+#include "shellPortal.h"
+
+shellPortal::shellPortal(socketType in_socket_type, int socket_num) : hierarchicalDataflowBlock(1, 1){
+	socket_type = in_socket_type;
+
+	//Create the socket that we'll be listening on...
+	socket_int = new genericSocketInterface(in_socket_type, socket_num);
+
+	//Link upper and lower 
+	//TODO: Not sure if this is needed at all...
+	//  in_sdr_int->addLowerLevel(this);
+	this->addLowerLevel(socket_int);
+	socket_int->addUpperLevel(this);
+}
+
+shellPortal::~shellPortal(){
+	delete socket_int;
+}
+
+void shellPortal::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel){
+	//TODO: Fill this in...
+}
+
+#define MAX_BUFFER 2048
+static void *commandListener(void *in_args){
+	cmdListenerArgs *cmd_args = (cmdListenerArgs*)in_args;
+	char buffer[MAX_BUFFER];
+	while(!feof(cmd_args->command_fp)){
+		if(fgets(buffer, MAX_BUFFER, cmd_args->command_fp) != NULL){
+			shell_portal_ptr->dataFromUpperLevel(buffer, strlen(buffer));
+		}
+	}
+	shell_portal_ptr->deleteListener(cmd_args);
+}
+
+void shellPortal::dataFromLowerLevel(void *data, int num_messages, int local_down_channel){
+	//Data coming in from the socket
+
+	//First, we need to make sure data is casted correctly (data is a pointer to a vector of messages)
+	messageType *in_messages = static_cast<messageType *>(data);
+	std::cout << "GOT HERE" << std::endl;
+
+	//Insert historic messages into a string stream so as to easily extract lines
+	static std::stringstream command_stream;
+	for(int ii=0; ii < num_messages; ii++){
+		std::string in_data_string(in_messages[ii].buffer,in_messages[ii].num_bytes);
+		command_stream << in_data_string;
+	}
+
+	//Now parse out incoming commands
+	std::string current_command;
+	if(!getline(command_stream, current_command).fail()){
+		//Now we have a command that we should execute, execute it and create a thread to listen to stdout and pipe it to the upper level
+		FILE *new_shell_output = new FILE;
+
+		//Run the command
+		new_shell_output = popen(current_command.c_str(), "R");
+
+		//Set up the arguments and the pthread to serve as listener to the output
+		pthread_t *new_thread = new pthread_t;
+		cmdListenerArgs *listener_args = new cmdListenerArgs;
+		listener_args->shell_portal_ptr = this;
+		listener_args->down_channel = local_down_channel;
+		listener_args->command_fp = new_shell_output;
+		listener_args->thread_ptr = new_thread;
+
+		pthread_create(new_thread, NULL, commandListener, (void*)listener_args);
+		command_threads.push_back(listener_args);
+	}
+
+}
+

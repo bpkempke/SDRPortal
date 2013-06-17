@@ -40,7 +40,7 @@ ws_sink_c::sptr	ws_sink_c::make(bool is_server, int portnum, std::string otw_for
 ws_sink_c_impl::ws_sink_c_impl(bool is_server, int portnum, std::string otw_format, std::string address)
 	: gr::sync_block("ws_sink_c",
 			gr::io_signature::make(1, 1, sizeof(gr_complex)),
-			gr::io_signature::make(0, 0, 0)){
+			gr::io_signature::make(0, 0, 0)), hierarchicalDataflowBlock(1,1){
 	if(is_server){
 		sock_int = new genericSocketInterface(SOCKET_WS, portnum);
 		sock_int->addUpperLevel(this);
