@@ -1,0 +1,89 @@
+﻿<!DOCTYPE HTML> 
+<html lang="en"> 
+<head>
+<title>RDS/FM Decoding Demonstration using SDRPortal+GNURadio+WS</title>
+<meta charset="utf-8"> 
+
+<style type="text/css">
+        *
+        {
+        margin: 0px;
+        padding: 0px;
+        }
+        
+        html
+        {
+        margin: 0 auto;
+        height: 100%;
+         width: 100%
+        }
+        
+        body
+        {
+        margin: 0 auto;
+        height: 100%;
+        width: 100%
+        }
+</style>
+
+<script type="text/javascript">
+var range_ws;
+function newRangeMessage(evt){
+
+}
+
+function rangeClose(evt){
+
+}
+
+function rangeOpen(evt){
+    var host_addr = document.getElementById('ws-host');
+    var host_port = document.getElementById('ws-port');
+  
+    host_addr.style.background = "#00ff00";
+    host_port.style.background = "#00ff00";
+
+}
+
+function open_range_socket(){
+    var host_addr = document.getElementById('ws-host').value;
+    var host_port = document.getElementById('ws-port').value;
+    range_ws = new WebSocket("ws://" + host_addr + ":" + host_port + "/range_ws","range_ws");
+    range_ws.binaryType = "arraybuffer";
+    range_ws.onmessage = newRangeMessage;
+    range_ws.onclose = rangeClose;
+    range_ws.onopen = rangeOpen;
+}
+
+function init(){
+    calculateBitRevIndices();
+}
+
+function resize(){
+        var width = document.body.offsetWidth;
+        var height = document.body.offsetHeight;
+
+}
+</script>
+
+</head>
+
+<body bgcolor="black" text="#FFFFFF" style="width:100%; height:100%" onload="resize();webgl_plot3d_startup();init();" onresize="resize();">
+<div style="position:absolute; top:0%; left:0%; width:100%; height:100%; text-align:center; vertical-align:middle;">
+<p/>
+<span id="rds_feed">RDS Feed</span>
+<p/>
+SDRPortal Node: <input type="text" id="ws-host" value="localhost" style="background:#ff0000;"/>
+<input type="text" id="ws-port" value="12000" style="background:#ff0000;"/>
+<input type="submit" id="ws-submit" value="Connect" onclick="open_range_socket()"/>
+<br/>
+Frequency: <input type="text" id="freq" value="107.1e6"/>
+<input type="submit" id="freq-submit" value="Set Freq" onclick="set_sdr_freq()"/>
+<br/>
+Processing Node: <input type="text" id="proc-host" value="localhost" style="background:#ff0000;"/>
+<input type="text" id="proc-port" value="12000" style="background:#ff0000;"/>
+<input type="submit" id="proc-submit" value="Start Flowgraph" onclick="run_shell_socket()"/>
+</div>
+</body>
+
+</html>

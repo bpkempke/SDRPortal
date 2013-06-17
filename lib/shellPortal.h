@@ -4,6 +4,9 @@
 #include "generic.h"
 #include "hierarchicalDataflowBlock.h"
 #include "genericSocketInterface.h"
+#include <vector>
+
+class shellPortal;
 
 struct cmdListenerArgs{
 	shellPortal *shell_portal_ptr;
@@ -26,7 +29,7 @@ private:
 	int cur_channel;
 	socketType socket_type;
 	genericSocketInterface *socket_int;
-	genericSDRInterface *sdr_int;
+	std::vector<cmdListenerArgs*> command_threads;
 };
 
 #endif

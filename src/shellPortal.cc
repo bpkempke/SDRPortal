@@ -1,5 +1,6 @@
 #include <sstream>
-#include <vector>
+#include <string.h>
+#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include "shellPortal.h"
@@ -25,7 +26,7 @@ void shellPortal::dataFromUpperLevel(void *data, int num_bytes, int local_up_cha
 	messageType out_message;
 	out_message.buffer = (char*)data;
 	out_message.num_bytes = num_bytes;
-	dataToLowerLevel((void*)out_message, 1);
+	dataToLowerLevel((void*)&out_message, 1);
 }
 
 #define MAX_BUFFER 2048
@@ -34,10 +35,15 @@ static void *commandListener(void *in_args){
 	char buffer[MAX_BUFFER];
 	while(!feof(cmd_args->command_fp)){
 		if(fgets(buffer, MAX_BUFFER, cmd_args->command_fp) != NULL){
-			shell_portal_ptr->dataFromUpperLevel(buffer, strlen(buffer));
+			cmd_args->shell_portal_ptr->dataFromUpperLevel(buffer, strlen(buffer));
 		}
 	}
-	shell_portal_ptr->deleteListener(cmd_args);
+	cmd_args->shell_portal_ptr->deleteListener(cmd_args);
+	return NULL;
+}
+
+void shellPortal::deleteListener(cmdListenerArgs *in_arg){
+	fclose(in_arg->command_fp);
 }
 
 void shellPortal::dataFromLowerLevel(void *data, int num_messages, int local_down_channel){
