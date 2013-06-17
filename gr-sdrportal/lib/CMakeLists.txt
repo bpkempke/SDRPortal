@@ -31,6 +31,7 @@ list(APPEND sdrportal_sources
     genericSocketInterface.cc
     hierarchicalDataflowBlock.cc
     base64.cc
+    sha1.cc
 )
 
 add_library(gnuradio-sdrportal SHARED ${sdrportal_sources})
