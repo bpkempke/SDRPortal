@@ -22,7 +22,10 @@ shellPortal::~shellPortal(){
 }
 
 void shellPortal::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel){
-	//TODO: Fill this in...
+	messageType out_message;
+	out_message.buffer = (char*)data;
+	out_message.num_bytes = num_bytes;
+	dataToLowerLevel((void*)out_message, 1);
 }
 
 #define MAX_BUFFER 2048
@@ -70,6 +73,8 @@ void shellPortal::dataFromLowerLevel(void *data, int num_messages, int local_dow
 
 		pthread_create(new_thread, NULL, commandListener, (void*)listener_args);
 		command_threads.push_back(listener_args);
+
+		//TODO: Add logic to kill sockets if Ctrl-C codes are experienced
 	}
 
 }

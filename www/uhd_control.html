@@ -1,0 +1,89 @@
+﻿<!DOCTYPE HTML> 
+<html lang="en"> 
+<head>
+<title>UHD Control Example</title>
+<meta charset="utf-8"> 
+<script type="text/javascript" src="glMatrix-0.9.5.min.js"></script>
+<script type="text/javascript" src="webgl-utils.js"></script>
+<script src="webgl-debug.js"></script>
+
+<script type="text/javascript">
+var range_ws;
+var range_connected = false;
+var freq_label;
+function newRangeMessage(evt){
+
+  //This all assumes that the data is coming in as an arraybuffer
+  var view = new Uint8Array(evt.data);
+  var evtd_string = "";//Array.prototype.join.call(view, ",");
+  for(var ii=0; ii < view.length; ii++){
+    evtd_string = evtd_string.concat(String.fromCharCode(view[ii]));
+    //alert(String.fromCharCode(view[ii]));
+  }
+
+  //alert("message received: " + evtd_string);
+  freq_label.innerHTML = evtd_string;
+}
+
+function rangeClose(evt){
+  var host_addr = document.getElementById('ws-host');
+  var host_port = document.getElementById('ws-port');
+  var host_rxfreq = document.getElementById('ws-rxfreq');
+
+  host_addr.style.background = "#ff0000";
+  host_port.style.background = "#ff0000";
+  host_rxfreq.style.background = "#ff0000";
+  range_connected = false;
+}
+
+function rangeOpen(evt){
+  var host_addr = document.getElementById('ws-host');
+  var host_port = document.getElementById('ws-port');
+  var host_rxfreq = document.getElementById('ws-rxfreq');
+
+  host_addr.style.background = "#00ff00";
+  host_port.style.background = "#00ff00";
+  host_rxfreq.style.background = "#00ff00";
+  range_connected = true;
+}
+
+function open_range_socket(){
+  var host_addr = document.getElementById('ws-host').value;
+  var host_port = document.getElementById('ws-port').value;
+  range_ws = new WebSocket("ws://" + host_addr + ":" + host_port + "/range_ws","range_ws");
+  range_ws.binaryType = "arraybuffer";
+  range_ws.onmessage = newRangeMessage;
+  range_ws.onclose = rangeClose;
+  range_ws.onopen = rangeOpen;
+  freq_label = document.getElementById("freq-label");
+}
+
+function send_rx_retune(){
+  var rxfreq = document.getElementById('ws-rxfreq').value;
+  if(range_connected){
+    range_ws.send("RXFREQ " + rxfreq + "\r\n");
+  }
+}
+
+function get_rx_freq(){
+  if(range_connected){
+    range_ws.send("RXFREQ?\r\n");
+  }
+}
+</script>
+
+</head>
+
+<body bgcolor="black" text="#FFFFFF" onload="">
+  <input type="text" id="ws-host" value="localhost" style="background:#ff0000;"/>
+  <input type="text" id="ws-port" value="20002" style="background:#ff0000;"/>
+  <input type="submit" id="ws-open" value="open" onclick="open_range_socket()"/>
+  <br/>
+  <input type="text" id="ws-rxfreq" value="500000000" style="background:#ff0000;"/>
+  <input type="submit" id="ws-set-rxfreq" value="set rxfreq" onclick="send_rx_retune()"/>
+  <br/>
+  <input type="submit" id="ws-get-rxfreq" value="get rxfreq" onclick="get_rx_freq()"/>
+  <span id="freq-label">???</span>
+</body>
+
+</html>

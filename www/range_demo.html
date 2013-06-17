@@ -1,0 +1,252 @@
+﻿<!DOCTYPE HTML> 
+<html lang="en"> 
+<head>
+<title>WebGL Waterfall</title>
+<meta charset="utf-8"> 
+<script type="text/javascript" src="glMatrix-0.9.5.min.js"></script>
+<script type="text/javascript" src="webgl-utils.js"></script>
+<script src="webgl-debug.js"></script>
+
+<!--#include virtual="webgl_plot3d_shaders.html" -->
+<script type="text/javascript" src="webgl_plot3d.js"></script>
+
+<style type="text/css">
+        *
+        {
+        margin: 0px;
+        padding: 0px;
+        }
+        
+        html
+        {
+        margin: 0 auto;
+        height: 100%;
+         width: 100%
+        }
+        
+        body
+        {
+        margin: 0 auto;
+        height: 100%;
+        width: 100%
+        }
+</style>
+
+<script type="text/javascript">
+var new_data = new Array(mesh_width);
+function tick(new_data){
+    shiftInRow(new_data);
+    fountain2DShift(new_data);
+    plot2DUpdate(new_data);
+    webgl_plot3d_draw();
+} 
+
+var IMP_LENGTH = 1024;
+var LOG2_IMP_LENGTH = 10;
+var LOG2_FFT_LENGTH = (8-1);
+var FFT_LENGTH = (256/2);
+var bit_rev_indices = new Array(IMP_LENGTH);
+function calculateBitRevIndices(){
+    for(var i = 0; i < IMP_LENGTH; i++){
+        var v = i;
+        var cur_rev_index = 0;
+        for(var j = 0; j < LOG2_FFT_LENGTH; j++){
+            if(v & (1 << j))
+                cur_rev_index += 1 << (LOG2_IMP_LENGTH-j-1);
+        }
+        //cur_rev_index <<= (LOG2_IMP_LENGTH-LOG2_FFT_LENGTH);
+        cur_rev_index -= v>>LOG2_FFT_LENGTH;
+        cur_rev_index += 1<<(LOG2_IMP_LENGTH-LOG2_FFT_LENGTH);
+        cur_rev_index--;
+        bit_rev_indices[i] = cur_rev_index;
+    }
+
+}
+
+var range_ws;
+var temp_data_array = new Array();
+var range_vector = new Array();
+var unsynchronized = true;
+var num_range_estimates = 0;
+var data_so_far = 0;
+var temp_data_idx = 0;
+var cur_offset;
+var cur_toa_rx, cur_toa_tx, cur_toa_tx_first;
+var temp_data = new Array();
+function newRangeMessage(evt){
+    //var incoming_data = new ArrayBuffer(evt.data);
+    var incoming_data = new Int16Array(evt.data);
+
+    for(var ii=0; ii < incoming_data.length; ii+=2){
+        var cur_sample_real = incoming_data[ii];
+        var cur_sample_imag = incoming_data[ii+1];
+
+        if(cur_sample_imag == 32767)
+            temp_data_idx = 0;
+        if(temp_data_idx == 0)
+            cur_offset = cur_sample_real;
+        else if(temp_data_idx == 2)
+            cur_toa_rx = cur_sample_imag; 
+        else if(temp_data_idx == 3){
+            cur_toa_tx_first = cur_sample_imag;
+            cur_toa_tx = cur_sample_real;
+            if(cur_toa_rx){
+                var this_range = cur_toa_tx_first + cur_toa_rx + ((cur_toa_tx - cur_toa_tx_first) % 1024) - 0.0008513*cur_offset-719.7;
+                this_range = Math.floor(this_range) % 1024;
+                this_range = this_range-(0.0007811*(cur_offset*2) + 811.67 - 12.5);
+                this_range = this_range*.293/2;
+                if(this_range < 0) this_range = 0;
+                range_vector = range_vector.concat(this_range);
+                
+                num_range_estimates++;
+                if(num_range_estimates % 10 == 0){
+                    //Plot the impulse response...
+                    var plotted_data = new Array(200);
+                    var max = 0;
+                    for(var ii=0; ii < IMP_LENGTH; ii++){
+                        var current_index = Math.floor((bit_rev_indices[ii]-cur_toa_tx_first/2)) % IMP_LENGTH;
+                        if(current_index < 200){
+                            var current_datapoint = temp_data[ii];
+                            max = (max < current_datapoint) ? current_datapoint : max;
+                            plotted_data[current_index] = temp_data[ii]; //TODO: arbitrary scaling factor
+                        }
+                    }
+                    for(var ii=0; ii < 200; ii++)
+                        plotted_data[ii] /= max;
+                    tick(plotted_data, max);
+                }
+                if(num_range_estimates == 100){
+                    //Calculate the median
+                    range_vector.sort();
+                    var median_range = range_vector[50];
+                    range_vector = Array();
+
+                    //Display the median range...
+                    var range_estimate_span = document.getElementById("range_estimate");
+                    var median_range_str = "" + median_range;
+                    median_range_str = median_range_str.substr(0,5);
+                    range_estimate_span.innerHTML = "" + median_range_str + "m";
+                    num_range_estimates = 0;
+                }
+
+            }
+        } else {
+            temp_data[temp_data_idx-4] = cur_sample_real;
+        }
+        temp_data_idx++;
+    }
+    data_so_far += incoming_data.length;
+    //Now push onto the end of the array from before
+    var prev_len = temp_data_array.length;
+    temp_data_array.length += incoming_data.length;
+    for(var ii=0; ii < incoming_data.length; ii++)
+        temp_data_array[ii+prev_len] = incoming_data[ii];
+
+    /*    //Dump out to display the first 200 samples
+          num_range_estimates++;
+    //  if(num_range_estimates % 100 == 0){
+    var new_data = new Array(200);
+    for(var ii=0; ii < 400; ii+=2){
+    new_data[ii/2] = incoming_data[ii+624]/800;
+    }
+    tick(new_data);
+    //  }*/
+
+    //Find any synchronization values received (assuming imag is odd numbered-indices)
+    if(unsynchronized){
+        for(var ii=1; ii < temp_data_array.length; ii += 2){
+            if(temp_data_array[ii] != 0){
+                unsynchronized = false;
+                temp_data_array = temp_data_array.slice(ii+7,temp_data_array.length);
+            }
+        }
+    }
+
+    //Draw or do whatever if we have enough data and we're synchronized
+    if(~unsynchronized && temp_data_array.length > (IMP_LENGTH+5)*2){
+        if(temp_data_array[(IMP_LENGTH+4)*2+1] == 0) {
+            unsynchronized = true;
+            //var range_estimate_span = document.getElementById("range_estimate");
+            //range_estimate_span.innerHTML = "ARGH";
+            //Extract current sequence and display it
+        }else{
+            var cur_offset = temp_data_array[IMP_LENGTH*2];
+            var cur_toa_tx = temp_data_array[(IMP_LENGTH+2)*2+1];
+            var cur_toa_rx = temp_data_array[(IMP_LENGTH+3)*2+1];
+            var cur_toa_tx_first = temp_data_array[(IMP_LENGTH+3)*2];
+            /*var range_estimate_span = document.getElementById("range_estimate");
+            range_estimate_span.innerHTML = "" + cur_offset + "m";*/
+
+
+                    }
+        temp_data_array = temp_data_array.slice((IMP_LENGTH+4)*2,temp_data_array.length);
+    }
+
+}
+
+function rangeClose(evt){
+
+}
+
+function rangeOpen(evt){
+    var host_addr = document.getElementById('ws-host');
+    var host_port = document.getElementById('ws-port');
+  
+    host_addr.style.background = "#00ff00";
+    host_port.style.background = "#00ff00";
+
+}
+
+function open_range_socket(){
+    var host_addr = document.getElementById('ws-host').value;
+    var host_port = document.getElementById('ws-port').value;
+    range_ws = new WebSocket("ws://" + host_addr + ":" + host_port + "/range_ws","range_ws");
+    //range_ws = new WebSocket("ws://172.16.15.203:10002/range_ws","range_ws");
+    range_ws.binaryType = "arraybuffer";
+    range_ws.onmessage = newRangeMessage;
+    range_ws.onclose = rangeClose;
+    range_ws.onopen = rangeOpen;
+}
+
+function init(){
+    calculateBitRevIndices();
+}
+
+function resize(){
+        var width = document.body.offsetWidth;
+        var height = document.body.offsetHeight;
+
+        document.getElementById('myGLCanvas').style.width = width/2 + "px";
+        document.getElementById('myGLCanvas').getContext("experimental-webgl").canvas.width = width/2;
+        document.getElementById('my2DWaterfallCanvas').style.width = width/2 + "px";
+        document.getElementById('my2DWaterfallCanvas').getContext("2d").canvas.width = width/2;
+        document.getElementById('my2DPlotCanvas').style.width = width/2 + "px";
+        document.getElementById('my2DPlotCanvas').getContext("2d").canvas.width = width/2;
+
+        document.getElementById('myGLCanvas').style.height = height/2 + "px";
+        document.getElementById('myGLCanvas').getContext("experimental-webgl").canvas.height = height/2;
+        document.getElementById('my2DWaterfallCanvas').style.height = height/2 + "px";
+        document.getElementById('my2DWaterfallCanvas').getContext("2d").canvas.height = height/2;
+        document.getElementById('my2DPlotCanvas').style.height = height/2 + "px";
+        document.getElementById('my2DPlotCanvas').getContext("2d").canvas.height = height/2;
+}
+</script>
+
+</head>
+
+<body bgcolor="black" text="#FFFFFF" style="width:100%; height:100%" onload="resize();webgl_plot3d_startup();init();" onresize="resize();">
+<canvas id="myGLCanvas" style="position:absolute; top:0%; left:0%;"></canvas>
+<canvas id="my2DWaterfallCanvas" style="position:absolute; top:0%; left:50%;"></canvas>
+<canvas id="my2DPlotCanvas" style="position:absolute; top:50%; left:0%;"></canvas>
+<div style="position:absolute; top:50%; left:50%; width:50%; height::50%; text-align:center; vertical-align:middle;">
+FPS: <span id="fps">--</span>
+<p/>
+<span id="range_estimate" style="font-size:100px">9.0m</span>
+<p/>
+<input type="text" id="ws-host" value="localhost" style="background:#ff0000;"/>
+<input type="text" id="ws-port" value="12000" style="background:#ff0000;"/>
+<input type="submit" id="ws-submit" value="connect" onclick="open_range_socket()"/>
+</div>
+</body>
+
+</html>

@@ -1,0 +1,32 @@
+<script id="shader-vs" type="x-shader/x-vertex">
+  attribute vec2 aVertexPosition;
+  attribute float aVertexColor;
+  varying float vColor;
+
+  uniform mat4 uMVMatrix;
+  uniform mat4 uPMatrix;
+  uniform float uOffset;
+  
+  float temp;
+  void main() {
+    vColor = aVertexColor;//vec4(aVertexColor, aVertexColor, aVertexColor, 1.0);
+    temp = -(aVertexPosition.y-uOffset);
+    if(temp<=0.5){
+      temp=temp+1.0;
+    }
+    gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition.x, temp, aVertexColor*0.1, 1.0); 
+  }                
+</script>
+
+<script id="shader-fs" type="x-shader/x-fragment">
+  precision mediump float;
+  
+  varying float vColor;
+  uniform sampler2D uSampler; //The texture containing the color palette
+  void main() {
+    gl_FragColor = texture2D(uSampler, vec2(0.1,1.0-vColor));
+    //gl_FragColor = vec4(vColor,vColor,vColor,1.0);   
+  } 
+</script>
+
+
