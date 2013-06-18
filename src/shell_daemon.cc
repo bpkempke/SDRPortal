@@ -60,8 +60,8 @@ int main(int argc, char *argv[]){
 
 
 	//Open up two separate sockets, one websocket, one tcp
-	int tcp_portnum = 12500;
-	int ws_portnum = 12600;
+	int tcp_portnum = 12700;
+	int ws_portnum = 12800;
 
 	//Parse out the arguments using getopt_long
 	int next_option;

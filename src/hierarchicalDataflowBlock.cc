@@ -25,10 +25,12 @@ void hierarchicalDataflowBlock::addUpperLevel(hierarchicalDataflowBlock *in_bloc
 
 void hierarchicalDataflowBlock::dataToUpperLevel(void *data, int num_bytes, int local_up_channel){
 
-	//Push the requested data to all of the higher-level blocks that reside on the requested channel
-	for(unsigned int ii=0; ii < upper_level_links[local_up_channel].size(); ii++){
-		hierarchicalDataConnection cur_conn = upper_level_links[local_up_channel][ii];
-		cur_conn.remote->dataFromLowerLevel(data, num_bytes, cur_conn.remote_channel);
+	if(upper_level_links.size() > 0){
+		//Push the requested data to all of the higher-level blocks that reside on the requested channel
+		for(unsigned int ii=0; ii < upper_level_links[local_up_channel].size(); ii++){
+			hierarchicalDataConnection cur_conn = upper_level_links[local_up_channel][ii];
+			cur_conn.remote->dataFromLowerLevel(data, num_bytes, cur_conn.remote_channel);
+		}
 	}
 }
 
@@ -48,10 +50,12 @@ void hierarchicalDataflowBlock::addLowerLevel(hierarchicalDataflowBlock *in_bloc
 
 void hierarchicalDataflowBlock::dataToLowerLevel(void *data, int num_bytes, int local_down_channel){
 
-	//Push the requested data to all of the higher-level blocks that reside on the requested channel
-	for(unsigned int ii=0; ii < lower_level_links[local_down_channel].size(); ii++){
-		hierarchicalDataConnection cur_conn = lower_level_links[local_down_channel][ii];
-		cur_conn.remote->dataFromUpperLevel(data, num_bytes, cur_conn.remote_channel);
+	if(lower_level_links.size() > 0){
+		//Push the requested data to all of the higher-level blocks that reside on the requested channel
+		for(unsigned int ii=0; ii < lower_level_links[local_down_channel].size(); ii++){
+			hierarchicalDataConnection cur_conn = lower_level_links[local_down_channel][ii];
+			cur_conn.remote->dataFromUpperLevel(data, num_bytes, cur_conn.remote_channel);
+		}
 	}
 }
 

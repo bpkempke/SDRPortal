@@ -33,10 +33,8 @@ void shellPortal::dataFromUpperLevel(void *data, int num_bytes, int local_up_cha
 static void *commandListener(void *in_args){
 	cmdListenerArgs *cmd_args = (cmdListenerArgs*)in_args;
 	char buffer[MAX_BUFFER];
-	while(!feof(cmd_args->command_fp)){
-		if(fgets(buffer, MAX_BUFFER, cmd_args->command_fp) != NULL){
-			cmd_args->shell_portal_ptr->dataFromUpperLevel(buffer, strlen(buffer));
-		}
+	while(fgets(buffer, MAX_BUFFER, cmd_args->command_fp) != NULL){
+		cmd_args->shell_portal_ptr->dataFromUpperLevel(buffer, strlen(buffer));
 	}
 	cmd_args->shell_portal_ptr->deleteListener(cmd_args);
 	return NULL;
@@ -66,8 +64,14 @@ void shellPortal::dataFromLowerLevel(void *data, int num_messages, int local_dow
 		//Now we have a command that we should execute, execute it and create a thread to listen to stdout and pipe it to the upper level
 		FILE *new_shell_output = new FILE;
 
+		//Look for the first line break (if there is one) and turn into null termination
+		for(unsigned int ii=0; ii < current_command.length(); ii++)
+			if(current_command[ii] == '\r' || current_command[ii] == '\n')
+				current_command[ii] = 0;
+
 		//Run the command
-		new_shell_output = popen(current_command.c_str(), "R");
+		new_shell_output = popen(current_command.c_str(), "r");
+		//new_shell_output = popen("ls", "r");
 
 		//Set up the arguments and the pthread to serve as listener to the output
 		pthread_t *new_thread = new pthread_t;
