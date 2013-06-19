@@ -44,8 +44,8 @@ void rtlInterface::setRXGain(paramData in_param){
 	}
 
 	//Then set it
-	rtlsdr_set_tuner_gain_mode(rtl_dev, 1);
-	rtlsdr_set_tuner_gain(rtl_dev, gains[resulting_gain]);
+	rtlsdr_set_tuner_gain_mode(rtl_dev, 0);
+	//rtlsdr_set_tuner_gain(rtl_dev, gains[resulting_gain]);
 
 	delete [] gains;
 }

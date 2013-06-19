@@ -4,7 +4,7 @@
 
 portalDataSocket::portalDataSocket(socketType in_socket_type, int socket_num, genericSDRInterface *in_sdr_int) : hierarchicalDataflowBlock(1, 1){
 	sdr_int = in_sdr_int;
-	data_type = FLOAT;
+	data_type = INT8;
 
 	//Create the socket that we'll be listening on...
 	socket_int = new genericSocketInterface(in_socket_type, socket_num);

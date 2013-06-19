@@ -17,6 +17,17 @@
  */
 using namespace std;
 /*
+ * Exception classes
+ */
+class socketClosedException{
+public:
+	socketClosedException(hierarchicalDataflowBlock *in_block) : block(in_block){};
+	hierarchicalDataflowBlock *getSocket(){return block;};
+private:
+	hierarchicalDataflowBlock *block;
+};
+
+/*
  * Function definitions for the genericSocketInterface class
  */
 
@@ -119,12 +130,16 @@ int genericSocketInterface::getPortNum(){
 
 void genericSocketInterface::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel){
 	//FROM THE USRP
-	dataToLowerLevel(data, num_bytes);
+	try{
+		dataToLowerLevel(data, num_bytes, local_up_channel);
+	} catch(socketClosedException e){
+		removeLowerLevel(e.getSocket());
+	}
 }
 
 void genericSocketInterface::dataFromLowerLevel(void *data, int num_bytes, int local_down_channel){
 	//FROM THE SOCKET
-	dataToUpperLevel(data, num_bytes);
+	dataToUpperLevel(data, num_bytes, local_down_channel);
 }
 
 /*
@@ -373,10 +388,8 @@ void socketThread::socketWriter(char *buffer, int buffer_length){
 		//TODO: this needs to go to a UDP socket sometimes!
 		int n;
 	        n = write(socket_fp, buffer, buffer_length);
-		if(n <= 0){
-			//TODO: What should we do here?
-			printf("socket not open anymore...tried writing %s bytes...\n",buffer);
-		}
+		if(n <= 0)
+			throw socketClosedException(this);
 	}
 }
 
