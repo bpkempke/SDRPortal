@@ -26,6 +26,7 @@ rtlInterface::~rtlInterface(){
 
 void rtlInterface::setRXFreq(paramData in_param){
 	std::cout << "setting frequency of " << (int)rtl_dev << " to " << in_param.getUInt32() << std::endl;
+	rtlsdr_set_freq_correction(rtl_dev, 50);
 	rtlsdr_set_center_freq(rtl_dev, in_param.getUInt32());
 }
 
@@ -44,8 +45,9 @@ void rtlInterface::setRXGain(paramData in_param){
 	}
 
 	//Then set it
+	rtlsdr_set_agc_mode(rtl_dev, 1);
 	rtlsdr_set_tuner_gain_mode(rtl_dev, 0);
-	//rtlsdr_set_tuner_gain(rtl_dev, gains[resulting_gain]);
+	rtlsdr_set_tuner_gain(rtl_dev, gains[resulting_gain]);
 
 	delete [] gains;
 }
@@ -114,7 +116,7 @@ void rtlInterface::setCustomSDRParameter(std::string name, std::string val, int 
 	//int rtlsdr_set_agc_mode(rtlsdr_dev_t *dev, int on);
 }
 
-#define RTL_BUFF_LEN 512
+#define RTL_BUFF_LEN 16384
 void *rtlInterface::rxThread(){
 	unsigned char read_buffer[RTL_BUFF_LEN];
 	char read_translate_buffer[RTL_BUFF_LEN];
