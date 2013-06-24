@@ -5,84 +5,153 @@
 <meta charset="utf-8"> 
 
 <style type="text/css">
-        *
-        {
-        margin: 0px;
-        padding: 0px;
-        }
-        
-        html
-        {
-        margin: 0 auto;
-        height: 100%;
-         width: 100%
-        }
-        
-        body
-        {
-        margin: 0 auto;
-        height: 100%;
-        width: 100%
-        }
+* {
+	margin: 0px;
+	padding: 0px;
+}
+
+html {
+	margin: 0 auto;
+	height: 100%;
+	width: 100%
+}
+
+body {
+	margin: 0 auto;
+	height: 100%;
+}
+
+div.frameT {
+	width: 100%;
+	padding: 0;
+	display: table;
+	height: 100%;
+	position: absolute;
+	top: 0;
+	left: 0;
+	margin: 0;
+}
+
+div.frameTC {
+	padding: 0;
+	vertical-align: middle;
+	display: table-cell;
+	margin: 0;
+}
+
+div.content {
+	width: 600px;
+	background-color: #fff;
+	margin: 0 auto;
+	text-align: center;
+	padding: 10px;
+}
+
 </style>
 
 <script type="text/javascript">
-var range_ws;
-function newRangeMessage(evt){
+var sdrp_ws;
+var title_div, app_div;
+var cur_freq;
+function SDRPMessage(evt){
 
 }
 
-function rangeClose(evt){
+function SDRPClose(evt){
 
 }
 
-function rangeOpen(evt){
-    var host_addr = document.getElementById('ws-host');
-    var host_port = document.getElementById('ws-port');
-  
-    host_addr.style.background = "#00ff00";
-    host_port.style.background = "#00ff00";
-
+function SDRPOpen(evt){
+	//Format messages to configure the generic SDR device
+	var resulting_portnum = SDRPSendCommand("NEWCHANNEL");
+	var resulting_rate = SDRPSendCommand("RXRATE 250000");
+	var resulting_freq = SDRPSendCommand("RXFREQ 107100000");
+	var resulting_gain = SDRPSendCommand("RXGAIN 20");
 }
 
-function open_range_socket(){
-    var host_addr = document.getElementById('ws-host').value;
-    var host_port = document.getElementById('ws-port').value;
-    range_ws = new WebSocket("ws://" + host_addr + ":" + host_port + "/range_ws","range_ws");
-    range_ws.binaryType = "arraybuffer";
-    range_ws.onmessage = newRangeMessage;
-    range_ws.onclose = rangeClose;
-    range_ws.onopen = rangeOpen;
+function SDRPSendCommand(in_command){
+	//TODO: How is this going to work?
+}
+
+function openConnection(){
+	showApp();
+	return;
+	
+    var host_addr = document.getElementById('sdrp_host').value;
+    sdrp_ws = new WebSocket("ws://" + host_addr + "/range_ws","range_ws");
+    sdrp_ws.binaryType = "arraybuffer";
+    sdrp_ws.onmessage = SDRPMessage;
+    sdrp_ws.onclose = SDRPClose;
+    sdrp_ws.onopen = SDRPOpen;
+}
+
+function closeConnection(){
+	showTitle();
+	return;
 }
 
 function init(){
-    calculateBitRevIndices();
+	title_div = document.getElementById('title_div');
+	app_div = document.getElementById('app_div');
+
+	cur_freq = 107.1;
+	displayFreq(cur_freq);
+	showTitle();
+}
+
+function showTitle(){
+	title_div.style.display = "block";
+	app_div.style.display = "none";
+}
+
+function showApp(){
+	title_div.style.display = "none";
+	app_div.style.display = "block";
 }
 
 function resize(){
         var width = document.body.offsetWidth;
         var height = document.body.offsetHeight;
+}
 
+function tuneLower(){
+	cur_freq = cur_freq - 0.2;
+	displayFreq(cur_freq);
+}
+
+function tuneHigher(){
+	cur_freq = cur_freq + 0.2;
+	displayFreq(cur_freq);
+}
+
+function displayFreq(in_freq){
+	var freq_div = document.getElementById('freq_div');
+	freq_div.innerHTML = "&nbsp " + in_freq.toFixed(1) + " MHz &nbsp";
 }
 </script>
 
 </head>
 
-<body bgcolor="black" text="#FFFFFF" style="width:100%; height:100%" onload="resize();webgl_plot3d_startup();init();" onresize="resize();">
-<div style="position:absolute; top:0%; left:0%; width:100%; height:100%; text-align:center; vertical-align:middle;">
-<p/>
-<span id="rds_feed">RDS Feed</span>
-<p/>
-SDRPortal Node: <input type="text" id="ws-host" value="localhost" style="background:#ff0000;"/>
-<input type="text" id="ws-port" value="12000" style="background:#ff0000;"/>
-<input type="submit" id="ws-submit" value="Connect" onclick="open_range_socket()"/>
+<body style="width:100%; height:100%" onload="resize();init();" onresize="resize();">
+<div class="frameT">
+<div class="frameTC">
+<div class="content" id="title_div">
+SDRPortal Server Address: <input type="text" id="sdrp_host" value="localhost:12500"/>
 <br/>
-Frequency: <input type="text" id="freq" value="107.1e6"/>
-<input type="submit" id="freq-submit" value="Set Freq" onclick="set_sdr_freq()"/>
+Processing Server Address: <input type="text" id="proc_host" value="localhost:12700"/>
 <br/>
-Processing Node: <input type="text" id="proc-host" value="localhost" style="background:#ff0000;"/>
-<input type="text" id="proc-port" value="12000" style="background:#ff0000;"/>
-<input type="submit" id="proc-submit" value="Start Flowgraph" onclick="run_shell_socket()"/>
+<input type="submit" id="ws-submit" value="Connect" onclick="openConnection()"/>
+<br/>
+</div>
+<div class="content" id="app_div">
+<input type="submit" id="tune_lower" value="<" onclick="tuneLower()" style="position:relative; top:-8px"/>
+<span style="font-size: 30px" id="freq_div">&nbsp 107.1 MHz &nbsp</span>
+<input type="submit" id="tune_higher" value=">" onclick="tuneHigher()" style="position:relative; top:-8px"/>
+<br/>
+<input type="submit" id="disconnect" value="Disconnect" onclick="closeConnection()"/>
+<br/>
+</div>
+</div>
 </div>
 </body>
 
