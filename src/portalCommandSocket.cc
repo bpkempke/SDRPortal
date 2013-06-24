@@ -5,9 +5,10 @@
 #include "portalDataSocket.h"
 #include "portalCommandSocket.h"
 
-portalCommandSocket::portalCommandSocket(socketType in_socket_type, int socket_num, genericSDRInterface *in_sdr_int) : hierarchicalDataflowBlock(1, 1){
+portalCommandSocket::portalCommandSocket(socketType in_socket_type, socketType in_data_socket_type, int socket_num, genericSDRInterface *in_sdr_int) : hierarchicalDataflowBlock(1, 1){
 	sdr_int = in_sdr_int;
-	socket_type = in_socket_type;
+	cmd_socket_type = in_socket_type;
+	data_socket_type = in_data_socket_type;
 
 	//Create the socket that we'll be listening on...
 	socket_int = new genericSocketInterface(in_socket_type, socket_num);
@@ -72,7 +73,7 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_messages, int l
 			if(command == "NEWCHANNEL"){
 				//The client wants to add a data channel connection...
 				// Better create one! (and pass the random port back to the client so that he can connect to it...)
-				portalDataSocket *data_socket = new portalDataSocket(socket_type, 0, sdr_int);
+				portalDataSocket *data_socket = new portalDataSocket(cmd_socket_type, 0, sdr_int);
 
 				cur_channel = sdr_int->addChannel(data_socket);
 				response_message.num_bytes = sprintf(response_message.buffer,"%d: %d\r\n", cur_channel, data_socket->getPortNum());

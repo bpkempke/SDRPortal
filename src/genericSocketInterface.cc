@@ -109,8 +109,10 @@ void *genericSocketInterface::connectionListenerThread(){
 			new_interpreter = new tcpSocketInterpreter();
 		else if(socket_type == SOCKET_UDP)
 			new_interpreter = new udpSocketInterpreter();
-		else if(socket_type == SOCKET_WS)
-			new_interpreter = new wsSocketInterpreter();
+		else if(socket_type == SOCKET_WS_TEXT)
+			new_interpreter = new wsSocketInterpreter(false);
+		else if(socket_type == SOCKET_WS_BINARY)
+			new_interpreter = new wsSocketInterpreter(true);
 
 		socketThread *new_socket_thread = new socketThread(datasock_fd, &mutex, new_interpreter);
 		new_socket_thread->addUpperLevel(this);
@@ -145,8 +147,9 @@ void genericSocketInterface::dataFromLowerLevel(void *data, int num_bytes, int l
 /*
  * Function definitions for the wsSocketInterpreter class
  */
-wsSocketInterpreter::wsSocketInterpreter(){
+wsSocketInterpreter::wsSocketInterpreter(bool in_binary){
 	connection_established = false;
+	is_binary = in_binary;
 	message_parser = "";
 }
 
@@ -220,6 +223,7 @@ vector<messageType> wsSocketInterpreter::parseDownstreamMessage(messageType in_m
 			//Send the reply
 			new_out_message.buffer = (char*)reply_string.c_str();
 			new_out_message.num_bytes = reply_string.length();
+			new_out_message.message_dest = DOWNSTREAM;
 			out_messages.push_back(new_out_message);
 
 			connection_established = true;
@@ -296,7 +300,10 @@ vector<messageType> wsSocketInterpreter::parseUpstreamMessage(messageType in_mes
 		char *message = new char[message_length];
 
 		//First byte: FIN (always true in our case) and opcode (0x02 = binary)
-		message[0] = 0x82;
+		if(is_binary)
+			message[0] = 0x82;
+		else
+			message[0] = 0x81;
 
 		//Next byte: payload length (0-125 if small message, 126 if length can fit in 16 bits, 127 if length can fit in 64 bits)
 		//Subsequent bytes: Length (if needed), then the actual message
@@ -357,10 +364,14 @@ void *socketThread::socketReader(){
 		messageType new_message;
 		new_message.buffer = buffer;
 		new_message.num_bytes = n;
-		//new_message.message_dest = DOWNSTREAM;
+		new_message.message_dest = UPSTREAM;
 		vector<messageType> result_messages = interp->parseDownstreamMessage(new_message);
-		if(result_messages.size())
-			dataToUpperLevel(&result_messages[0], result_messages.size());
+		for(unsigned int ii=0; ii < result_messages.size(); ii++){
+			if(result_messages[ii].message_dest == DOWNSTREAM)
+				socketWriter(result_messages[ii].buffer, result_messages[ii].num_bytes);
+			else
+				dataToUpperLevel(&result_messages[ii], 1);
+		}
 		if(shared_mutex)
 			pthread_mutex_unlock(shared_mutex);
 	}

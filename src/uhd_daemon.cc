@@ -113,9 +113,9 @@ int main(int argc, char *argv[]){
 
 	//Create command sockets which will spawn data sockets if requested
 	if(tcp_cmd_portnum)
-		tcp_cmd_socket = new portalCommandSocket(SOCKET_TCP, tcp_cmd_portnum, sdr_interface);
+		tcp_cmd_socket = new portalCommandSocket(SOCKET_TCP, SOCKET_TCP, tcp_cmd_portnum, sdr_interface);
 	if(ws_cmd_portnum)
-		ws_cmd_socket = new portalCommandSocket(SOCKET_WS, ws_cmd_portnum, sdr_interface);
+		ws_cmd_socket = new portalCommandSocket(SOCKET_WS_TEXT, SOCKET_WS_BINARY, ws_cmd_portnum, sdr_interface);
 
 	while(1){
 		sleep(30);

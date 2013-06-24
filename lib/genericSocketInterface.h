@@ -9,9 +9,12 @@
 #include "generic.h"
 #include "hierarchicalDataflowBlock.h"
 
+enum destType{UPSTREAM, DOWNSTREAM};
+
 struct messageType{
 	char *buffer;
 	int num_bytes;
+	destType message_dest;
 };
 
 class socketInterpreter{
@@ -84,11 +87,12 @@ public:
 
 class wsSocketInterpreter : public socketInterpreter{
 public:
-	wsSocketInterpreter();
+	wsSocketInterpreter(bool is_binary);
 	std::vector<messageType> parseDownstreamMessage(messageType in_message);
 	std::vector<messageType> parseUpstreamMessage(messageType in_message);
 private:
 	bool connection_established;
+	bool is_binary;
 	std::string message_parser;
 };
 

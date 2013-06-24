@@ -81,7 +81,7 @@ int main(int argc, char *argv[]){
 
 	//Instantiate a generic SDR interface and link in with the created ports
 	global_tcp_shell_portal = new shellPortal(SOCKET_TCP, tcp_portnum);
-	global_ws_shell_portal = new shellPortal(SOCKET_WS, ws_portnum);
+	global_ws_shell_portal = new shellPortal(SOCKET_WS_TEXT, ws_portnum);
 
 	//Now just wait while we accept commands!  Don't need to do anything in the main loop...
 	while(1){

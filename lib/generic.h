@@ -18,7 +18,8 @@ enum cPrimType {C_DOUBLE64, C_FLOAT32, C_INT32, C_INT16, C_INT8};
 enum socketType{
 	SOCKET_TCP,
 	SOCKET_UDP,
-	SOCKET_WS
+	SOCKET_WS_TEXT,
+	SOCKET_WS_BINARY
 };
 
 bool isInteger(std::string in_string);

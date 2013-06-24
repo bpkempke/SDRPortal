@@ -8,7 +8,7 @@
 
 class portalCommandSocket : public hierarchicalDataflowBlock{
 public:
-	portalCommandSocket(socketType in_socket_type, int socket_num, genericSDRInterface *in_sdr_int);
+	portalCommandSocket(socketType in_socket_type, socketType in_data_socket_type, int socket_num, genericSDRInterface *in_sdr_int);
 	~portalCommandSocket();
 
 	//Methods inherited from hierarchicalDataflowBlock
@@ -16,7 +16,7 @@ public:
 	virtual void dataFromLowerLevel(void *data, int num_bytes, int local_down_channel=0);
 private:
 	int cur_channel;
-	socketType socket_type;
+	socketType cmd_socket_type, data_socket_type;
 	genericSocketInterface *socket_int;
 	genericSDRInterface *sdr_int;
 };
