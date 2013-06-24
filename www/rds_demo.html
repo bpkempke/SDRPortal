@@ -49,40 +49,32 @@ div.content {
 
 </style>
 
+<script type="text/javascript" src="portalCMD.js"></script>
+<script type="text/javascript" src="shellCMD.js"></script>
 <script type="text/javascript">
 var sdrp_ws;
 var title_div, app_div;
+var progress_window, shell_progress_window;
 var cur_freq;
-function SDRPMessage(evt){
-
+var shell_handle, cmd_handle;
+function shellOpen(){
+	shell_handle.sendShellCommand("ls");
 }
 
-function SDRPClose(evt){
-
+function SDRPOpen(){
+	var host_addr = document.getElementById('proc_host').value;
+	shell_handle = new shellCMD(host_addr, shell_progress_window);
+	shell_handle.connect(shellOpen, connectionClosed);
 }
 
-function SDRPOpen(evt){
-	//Format messages to configure the generic SDR device
-	var resulting_portnum = SDRPSendCommand("NEWCHANNEL");
-	var resulting_rate = SDRPSendCommand("RXRATE 250000");
-	var resulting_freq = SDRPSendCommand("RXFREQ 107100000");
-	var resulting_gain = SDRPSendCommand("RXGAIN 20");
-}
-
-function SDRPSendCommand(in_command){
-	//TODO: How is this going to work?
+function connectionClosed(){
+	showTitle();
 }
 
 function openConnection(){
-	showApp();
-	return;
-	
-    var host_addr = document.getElementById('sdrp_host').value;
-    sdrp_ws = new WebSocket("ws://" + host_addr + "/range_ws","range_ws");
-    sdrp_ws.binaryType = "arraybuffer";
-    sdrp_ws.onmessage = SDRPMessage;
-    sdrp_ws.onclose = SDRPClose;
-    sdrp_ws.onopen = SDRPOpen;
+	var host_addr = document.getElementById('sdrp_host').value;
+	cmd_handle = new portalCMD(host_addr, progress_window);
+	cmd_handle.connect(SDRPOpen, connectionClosed);
 }
 
 function closeConnection(){
@@ -93,6 +85,8 @@ function closeConnection(){
 function init(){
 	title_div = document.getElementById('title_div');
 	app_div = document.getElementById('app_div');
+	progress_window = document.getElementById('progress_window');
+	shell_progress_window = document.getElementById('shell_progress_window');
 
 	cur_freq = 107.1;
 	displayFreq(cur_freq);
@@ -102,6 +96,8 @@ function init(){
 function showTitle(){
 	title_div.style.display = "block";
 	app_div.style.display = "none";
+	progress_window.style.visibility = "hidden";
+	shell_progress_window.style.visibility = "hidden";
 }
 
 function showApp(){
@@ -136,12 +132,15 @@ function displayFreq(in_freq){
 <div class="frameT">
 <div class="frameTC">
 <div class="content" id="title_div">
-SDRPortal Server Address: <input type="text" id="sdrp_host" value="localhost:12500"/>
+SDRPortal Server Address: <input type="text" id="sdrp_host" value="172.16.15.190:12600"/>
 <br/>
-Processing Server Address: <input type="text" id="proc_host" value="localhost:12700"/>
+Processing Server Address: <input type="text" id="proc_host" value="172.16.15.190:12800"/>
 <br/>
 <input type="submit" id="ws-submit" value="Connect" onclick="openConnection()"/>
 <br/>
+<span id="progress_window" style="visibility:hidden">.</span>
+<br/>
+<span id="shell_progress_window" style="visibility:hidden">.</span>
 </div>
 <div class="content" id="app_div">
 <input type="submit" id="tune_lower" value="<" onclick="tuneLower()" style="position:relative; top:-8px"/>
