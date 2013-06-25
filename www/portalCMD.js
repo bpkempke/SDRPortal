@@ -56,8 +56,8 @@ function portalCMD(host_addr, progress_window){
 	function sendCommand(in_command, in_value){
 		//First make sure the command isn't already queued up.  If so, smash it
 		for(var ii=0; ii < self.cmd_queue.length; ii++){
-			if(cmd_queue[ii].command == in_command)
-				cmd_queue.splice(ii,1);
+			if(self.cmd_queue[ii].command == in_command)
+				self.cmd_queue.splice(ii,1);
 		}
 		self.cmd_queue.push({command: in_command, value: in_value});
 		if(self.state != portalCMD.STATE.COMMANDING)

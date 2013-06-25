@@ -127,16 +127,31 @@ function showApp(){
 	app_div.style.display = "block";
 }
 
+var tune_int;
+var first_time = true;
+function stopTuneInterval(){
+	first_time = true;
+	window.clearTimeout(tune_int);
+}
+
 function tuneLower(){
 	cur_freq = cur_freq - 0.2;
 	displayFreq(cur_freq);
 	cmd_handle.setFreq(cur_freq*1000000);
+	if(first_time){
+		first_time = false;
+		tune_int = window.setTimeout(tuneLower, 250);
+	} else tune_int = window.setTimeout(tuneLower, 50);
 }
 
 function tuneHigher(){
 	cur_freq = cur_freq + 0.2;
 	displayFreq(cur_freq);
 	cmd_handle.setFreq(cur_freq*1000000);
+	if(first_time){
+		first_time = false;
+		tune_int = window.setTimeout(tuneHigher, 250);
+	} else tune_int = window.setTimeout(tuneHigher, 50);
 }
 
 function displayFreq(in_freq){
@@ -151,9 +166,9 @@ function displayFreq(in_freq){
 <div class="frameT">
 <div class="frameTC">
 <div class="content" id="title_div">
-SDRPortal Server Address: <input type="text" id="sdrp_host" value="172.16.15.191:12600"/>
+SDRPortal Server Address: <input type="text" id="sdrp_host" value="172.16.15.193:12600"/>
 <br/>
-Processing Server Address: <input type="text" id="proc_host" value="172.16.15.191:12800"/>
+Processing Server Address: <input type="text" id="proc_host" value="172.16.15.193:12800"/>
 <br/>
 <input type="submit" id="ws-submit" value="Connect" onclick="openConnection()"/>
 <br/>
@@ -162,9 +177,9 @@ Processing Server Address: <input type="text" id="proc_host" value="172.16.15.19
 <span id="shell_progress_window" style="visibility:hidden">.</span>
 </div>
 <div class="content" id="app_div">
-<input type="submit" id="tune_lower" value="<" onclick="tuneLower()" style="position:relative; top:-8px"/>
+<input type="submit" id="tune_lower" value="<" onmousedown="tuneLower()" onmouseup="stopTuneInterval()" style="position:relative; top:-8px"/>
 <span style="font-size: 30px" id="freq_div">&nbsp 107.1 MHz &nbsp</span>
-<input type="submit" id="tune_higher" value=">" onclick="tuneHigher()" style="position:relative; top:-8px"/>
+<input type="submit" id="tune_higher" value=">" onmousedown="tuneHigher()" onmouseup="stopTuneInterval()" style="position:relative; top:-8px"/>
 <br/>
 <input type="submit" id="disconnect" value="Disconnect" onclick="closeConnection()"/>
 <br/>
