@@ -57,8 +57,25 @@ var title_div, app_div;
 var progress_window, shell_progress_window;
 var cur_freq;
 var shell_handle, cmd_handle;
+var sdr_host_addr;
+
+var flowgraph_history;
+var flowgraph_running;
+function flowgraphCallback(data){
+	//Search for ***STARTED*** indicating that the flowgraph is executing
+	if(flowgraph_running == false){
+		flowgraph_history += data;
+		if(flowgraph_history.indexOf("***STARTED***") >= 0){
+			flowgraph_running = true;
+			showApp();
+			//TODO: Do more stuff here... like opening additional sockets!
+		}
+	}
+}
+
 function shellOpen(){
-	shell_handle.sendShellCommand("ls");
+	var command_string = "./gr-sdrportal/python/sdrp_rds_rx.py -H " + sdr_host_addr.split(':')[0] + " -P " + cmd_handle.port;
+	shell_handle.sendShellCommand(command_string,flowgraphCallback);
 }
 
 function SDRPOpen(){
@@ -72,14 +89,17 @@ function connectionClosed(){
 }
 
 function openConnection(){
-	var host_addr = document.getElementById('sdrp_host').value;
-	cmd_handle = new portalCMD(host_addr, progress_window);
+	sdr_host_addr = document.getElementById('sdrp_host').value;
+	cmd_handle = new portalCMD(sdr_host_addr, progress_window);
 	cmd_handle.connect(SDRPOpen, connectionClosed);
 }
 
 function closeConnection(){
+	cmd_handle.disconnect();
+	shell_handle.disconnect();
+	flowgraph_running = false;
+	flowgraph_history = "";
 	showTitle();
-	return;
 }
 
 function init(){
@@ -87,6 +107,8 @@ function init(){
 	app_div = document.getElementById('app_div');
 	progress_window = document.getElementById('progress_window');
 	shell_progress_window = document.getElementById('shell_progress_window');
+	flowgraph_running = false;
+	flowgraph_history = "";
 
 	cur_freq = 107.1;
 	displayFreq(cur_freq);
@@ -103,11 +125,6 @@ function showTitle(){
 function showApp(){
 	title_div.style.display = "none";
 	app_div.style.display = "block";
-}
-
-function resize(){
-        var width = document.body.offsetWidth;
-        var height = document.body.offsetHeight;
 }
 
 function tuneLower(){
@@ -128,13 +145,13 @@ function displayFreq(in_freq){
 
 </head>
 
-<body style="width:100%; height:100%" onload="resize();init();" onresize="resize();">
+<body style="width:100%; height:100%" onload="init();" >
 <div class="frameT">
 <div class="frameTC">
 <div class="content" id="title_div">
-SDRPortal Server Address: <input type="text" id="sdrp_host" value="172.16.15.190:12600"/>
+SDRPortal Server Address: <input type="text" id="sdrp_host" value="172.16.15.191:12600"/>
 <br/>
-Processing Server Address: <input type="text" id="proc_host" value="172.16.15.190:12800"/>
+Processing Server Address: <input type="text" id="proc_host" value="172.16.15.191:12800"/>
 <br/>
 <input type="submit" id="ws-submit" value="Connect" onclick="openConnection()"/>
 <br/>

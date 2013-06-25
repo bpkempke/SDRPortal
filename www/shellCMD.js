@@ -15,6 +15,11 @@ function shellCMD(host_addr, progress_window){
 		self.disconnect_callback = disconnect_callback;
 	}
 
+	this.disconnect = disconnect;
+	function disconnect(){
+		self.ws.close();
+	}
+
 	this.setStatus = setStatus;
 	function setStatus(in_status){
 		self.progress_window.style.visibility = "visible";
@@ -24,11 +29,13 @@ function shellCMD(host_addr, progress_window){
 	this.onMessage = onMessage;
 	function onMessage(evt){
 		var message = evt.data;
+		self.command_callback(message);
 	}
 
 	this.sendShellCommand = sendShellCommand;
-	function sendShellCommand(in_command){
+	function sendShellCommand(in_command, command_callback){
 		self.ws.send(in_command);
+		self.command_callback = command_callback;
 	}
 
 	this.onClose = onClose;
