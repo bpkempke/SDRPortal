@@ -22,21 +22,24 @@ shellPortal::~shellPortal(){
 	delete socket_int;
 }
 
-void shellPortal::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel){
-	messageType out_message;
-	out_message.buffer = (char*)data;
-	out_message.num_bytes = num_bytes;
-	out_message.socket_channel = -1; //TODO: Fix this...
-	dataToLowerLevel((void*)&out_message, 1);
+void shellPortal::dataFromUpperLevel(void *data, int num_messages, int local_up_channel){
+	messageType *out_messages = (messageType*)(data);
+	for(int ii=0; ii < num_messages; ii++){
+		dataToLowerLevel((void*)&out_messages[ii], 1);
+	}
 }
 
 #define MAX_BUFFER 2048
 static void *commandListener(void *in_args){
 	cmdListenerArgs *cmd_args = (cmdListenerArgs*)in_args;
+	int down_channel = cmd_args->down_channel;
 	char buffer[MAX_BUFFER];
 	while(fgets(buffer, MAX_BUFFER, cmd_args->command_fp) != NULL){
-		std::cout << "got a string..." << std::endl;
-		cmd_args->shell_portal_ptr->dataFromUpperLevel(buffer, strlen(buffer));
+		messageType out_message;
+		out_message.buffer = buffer;
+		out_message.num_bytes = strlen(buffer);
+		out_message.socket_channel = down_channel;
+		cmd_args->shell_portal_ptr->dataFromUpperLevel(&out_message, 1);
 	}
 	cmd_args->shell_portal_ptr->deleteListener(cmd_args);
 	return NULL;
@@ -51,7 +54,7 @@ void shellPortal::dataFromLowerLevel(void *data, int num_messages, int local_dow
 
 	//First, we need to make sure data is casted correctly (data is a pointer to a vector of messages)
 	messageType *in_messages = static_cast<messageType *>(data);
-	std::cout << "GOT HERE" << std::endl;
+	int down_channel = in_messages[0].socket_channel;
 
 	//Insert historic messages into a string stream so as to easily extract lines
 	static std::stringstream command_stream;
@@ -79,7 +82,7 @@ void shellPortal::dataFromLowerLevel(void *data, int num_messages, int local_dow
 		pthread_t *new_thread = new pthread_t;
 		cmdListenerArgs *listener_args = new cmdListenerArgs;
 		listener_args->shell_portal_ptr = this;
-		listener_args->down_channel = local_down_channel;
+		listener_args->down_channel = down_channel;
 		listener_args->command_fp = new_shell_output;
 		listener_args->thread_ptr = new_thread;
 
