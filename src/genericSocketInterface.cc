@@ -39,6 +39,7 @@ static void *listeningThreadProxy(void *in_ptr){
 genericSocketInterface::genericSocketInterface(socketType in_socket_type, int portnum, int in_max_connections) : hierarchicalDataflowBlock(0, 1){
 	socket_type = in_socket_type;
 	max_connections = in_max_connections;
+	cur_uid = 0;
 
 	//Open up a socket, but first initialize
 	socket_fp = initSocket(portnum);
@@ -114,9 +115,9 @@ void *genericSocketInterface::connectionListenerThread(){
 		else if(socket_type == SOCKET_WS_BINARY)
 			new_interpreter = new wsSocketInterpreter(true);
 
-		socketThread *new_socket_thread = new socketThread(datasock_fd, &mutex, new_interpreter);
+		socketThread *new_socket_thread = new socketThread(datasock_fd, &mutex, new_interpreter, cur_uid);
 		new_socket_thread->addUpperLevel(this);
-		this->addLowerLevel(new_socket_thread);
+		this->addLowerLevel(new_socket_thread, 0, cur_uid++);
 	}
 
 	return NULL;
@@ -130,10 +131,14 @@ int genericSocketInterface::getPortNum(){
 	return ntohs(addr.sin_port);
 }
 
-void genericSocketInterface::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel){
+void genericSocketInterface::dataFromUpperLevel(void *data, int num_messages, int local_up_channel){
 	//FROM THE USRP
 	try{
-		dataToLowerLevel(data, num_bytes, local_up_channel);
+		//TODO: This is where some logic needs to go to figure out which destination 
+		messageType *in_message_vec = static_cast<messageType *>(data);
+		for(int ii=0; ii < num_messages; ii++){
+			dataToLowerLevel(&in_message_vec[ii], 1, in_message_vec[ii].socket_channel);
+		}
 	} catch(socketClosedException e){
 		removeLowerLevel(e.getSocket());
 	}
@@ -141,7 +146,7 @@ void genericSocketInterface::dataFromUpperLevel(void *data, int num_bytes, int l
 
 void genericSocketInterface::dataFromLowerLevel(void *data, int num_bytes, int local_down_channel){
 	//FROM THE SOCKET
-	dataToUpperLevel(data, num_bytes, local_down_channel);
+	dataToUpperLevel(data, num_bytes);
 }
 
 /*
@@ -337,11 +342,12 @@ static void *socketReaderProxy(void *in_socket_thread){
 	return return_pointer;
 }
 
-socketThread::socketThread(int in_fp, pthread_mutex_t *in_mutex, socketInterpreter *in_interp) : hierarchicalDataflowBlock(0, 1) {
+socketThread::socketThread(int in_fp, pthread_mutex_t *in_mutex, socketInterpreter *in_interp, int in_uid) : hierarchicalDataflowBlock(0, 1) {
 
 	socket_fp = in_fp;
 	shared_mutex = in_mutex;
 	interp = in_interp;
+	uid = in_uid;
 
 	//Instantiate the thread which reads data from the socket
 	pthread_t new_socket_thread;	
@@ -363,6 +369,7 @@ void *socketThread::socketReader(){
 		messageType new_message;
 		new_message.buffer = buffer;
 		new_message.num_bytes = n;
+		new_message.socket_channel = uid;
 		new_message.message_dest = UPSTREAM;
 		vector<messageType> result_messages = interp->parseDownstreamMessage(new_message);
 		for(unsigned int ii=0; ii < result_messages.size(); ii++){
@@ -381,15 +388,14 @@ void *socketThread::socketReader(){
 }
 
 void socketThread::dataFromUpperLevel(void *data, int num_messages, int local_up_channel){
-	messageType *in_message_vec = static_cast<messageType *>(data);
-	for(int ii=0; ii < num_messages; ii++){
-		//First format everything correctly for the corresponding socket
-		vector<messageType> resulting_messages = interp->parseUpstreamMessage(in_message_vec[ii]);
-		
-		for(unsigned int jj=0; jj < resulting_messages.size(); jj++){
-			//Then write the raw data out to the corresponding socket
-			socketWriter(resulting_messages[jj].buffer, resulting_messages[jj].num_bytes);
-		}
+	messageType *in_message = static_cast<messageType*>(data);
+
+	//First format everything correctly for the corresponding socket
+	vector<messageType> resulting_messages = interp->parseUpstreamMessage(*in_message);
+	
+	for(unsigned int jj=0; jj < resulting_messages.size(); jj++){
+		//Then write the raw data out to the corresponding socket
+		socketWriter(resulting_messages[jj].buffer, resulting_messages[jj].num_bytes);
 	}
 }
 

@@ -29,6 +29,7 @@ void portalCommandSocket::dataFromUpperLevel(void *data, int num_bytes, int loca
 	messageType new_message;
 	new_message.buffer = (char*)data;
 	new_message.num_bytes = num_bytes;
+	new_message.socket_channel = 0; //TODO: This isn't right!
 
 	std::vector<messageType> transmit_messages;
 	transmit_messages.push_back(new_message);
@@ -67,6 +68,7 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_messages, int l
 		//TODO: Put in some error checking here
 		char response[20];
 		messageType response_message;
+		response_message.socket_channel = in_messages[0].socket_channel;
 		response_message.buffer = response;
 		try{
 			if(command == "NEWCHANNEL"){

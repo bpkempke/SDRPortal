@@ -36,6 +36,7 @@ void portalDataSocket::dataFromUpperLevel(void *data, int num_bytes, int local_u
 	messageType new_message;
 	new_message.buffer = (char*)data;
 	new_message.num_bytes = num_bytes;
+	new_message.socket_channel = -1;
 
 	dataToLowerLevel(&new_message, 1);
 }

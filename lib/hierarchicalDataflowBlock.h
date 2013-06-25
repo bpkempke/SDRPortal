@@ -33,6 +33,7 @@ private:
 		hierarchicalDataflowBlock *remote;
 	};
 
+	//TODO: These should be a map of vectors
 	std::vector<std::vector<hierarchicalDataConnection> > upper_level_links;
 	std::vector<std::vector<hierarchicalDataConnection> > lower_level_links;
 };

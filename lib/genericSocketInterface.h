@@ -14,6 +14,7 @@ enum destType{UPSTREAM, DOWNSTREAM};
 struct messageType{
 	char *buffer;
 	int num_bytes;
+	int socket_channel;
 	destType message_dest;
 };
 
@@ -29,7 +30,7 @@ public:
 
 class socketThread : public hierarchicalDataflowBlock{
 public:
-	socketThread(int in_fp, pthread_mutex_t *in_mutex, socketInterpreter *in_interp);
+	socketThread(int in_fp, pthread_mutex_t *in_mutex, socketInterpreter *in_interp, int in_uid);
 	void *socketReader();
 	void socketWriter(char *buffer, int buffer_length);
 
@@ -40,6 +41,7 @@ private:
 	socketInterpreter *interp;
 	pthread_mutex_t *shared_mutex;
 	int socket_fp;
+	int uid;
 };
 
 class genericSocketInterface: public hierarchicalDataflowBlock{
@@ -63,6 +65,7 @@ protected:
 private:
 	int socket_portnum;
 	int max_connections;
+	int cur_uid;
 	int initSocket(int portnum);
 	std::vector<socketInterpreter*> client_parsers;
 	pthread_t conn_listener;
