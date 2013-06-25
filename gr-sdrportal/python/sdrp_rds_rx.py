@@ -4,7 +4,6 @@ from gnuradio import gr, rds, audio, blks2
 from gnuradio.eng_option import eng_option
 from optparse import OptionParser
 from grc_gnuradio import blks2 as grc_blks2
-from rdspanel import rdsPanel
 import sys, math, wx, time
 
 class rds_rx_graph (gr.top_block):
@@ -61,7 +60,7 @@ class rds_rx_graph (gr.top_block):
 			35e3,			# transition width
 			gr.firdes.WIN_HAMMING)
 		self.chan_filter = gr.fir_filter_ccf(1, chan_filter_coeffs)
-		print "# channel filter:", len(chan_filter_coeffs), "taps"
+#		print "# channel filter:", len(chan_filter_coeffs), "taps"
 
 		# PLL-based WFM demod
 		fm_alpha = 0.25 * 250e3 * math.pi / sdr_rate		# 0.767
@@ -109,10 +108,10 @@ class rds_rx_graph (gr.top_block):
 			3e3,			# transition width
 			gr.firdes.WIN_HAMMING)
 		self.rds_filter = gr.fir_filter_fff(1, rds_filter_coeffs)
-		print "# lpr filter:", len(lpr_filter_coeffs), "taps"
-		print "# pilot filter:", len(pilot_filter_coeffs), "taps"
-		print "# dsbsc filter:", len(dsbsc_filter_coeffs), "taps"
-		print "# rds filter:", len(rds_filter_coeffs), "taps"
+#		print "# lpr filter:", len(lpr_filter_coeffs), "taps"
+#		print "# pilot filter:", len(pilot_filter_coeffs), "taps"
+#		print "# dsbsc filter:", len(dsbsc_filter_coeffs), "taps"
+#		print "# rds filter:", len(rds_filter_coeffs), "taps"
 		self.connect(self.fm_demod, self.lpr_filter)
 		self.connect(self.fm_demod, self.pilot_filter)
 		self.connect(self.fm_demod, self.dsbsc_filter)
@@ -174,7 +173,7 @@ class rds_rx_graph (gr.top_block):
 			2e3,			# transition width
 			gr.firdes.WIN_HAMMING)
 		self.rds_bb_filter = gr.fir_filter_fff(audio_decim, rds_bb_filter_coeffs)
-		print "# rds bb filter:", len(rds_bb_filter_coeffs), "taps"
+#		print "# rds bb filter:", len(rds_bb_filter_coeffs), "taps"
 		self.connect(self.rds_baseband, self.rds_bb_filter)
 
 		# 1187.5bps = 19kHz/16
@@ -186,7 +185,7 @@ class rds_rx_graph (gr.top_block):
 			1.5e3,			# transition width
 			gr.firdes.WIN_HAMMING)
 		self.rds_clock = gr.fir_filter_fff(audio_decim, rds_clock_taps)
-		print "# rds clock filter:", len(rds_clock_taps), "taps"
+#		print "# rds clock filter:", len(rds_clock_taps), "taps"
 		self.connect(self.pilot_filter, self.clock_divider, self.rds_clock)
 
 		# bpsk_demod, diff_decoder, rds_decoder
@@ -204,6 +203,8 @@ if __name__ == '__main__':
 	try:
 		tb = rds_rx_graph();
 		tb.start();
+		sys.stdout.write("***STARTED***\r\n");
+		sys.stdout.flush();
 		tb.wait();
 	except KeyboardInterrupt:
 		pass

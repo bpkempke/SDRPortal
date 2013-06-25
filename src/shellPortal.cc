@@ -34,6 +34,7 @@ static void *commandListener(void *in_args){
 	cmdListenerArgs *cmd_args = (cmdListenerArgs*)in_args;
 	char buffer[MAX_BUFFER];
 	while(fgets(buffer, MAX_BUFFER, cmd_args->command_fp) != NULL){
+		std::cout << "got a string..." << std::endl;
 		cmd_args->shell_portal_ptr->dataFromUpperLevel(buffer, strlen(buffer));
 	}
 	cmd_args->shell_portal_ptr->deleteListener(cmd_args);
@@ -41,7 +42,7 @@ static void *commandListener(void *in_args){
 }
 
 void shellPortal::deleteListener(cmdListenerArgs *in_arg){
-	fclose(in_arg->command_fp);
+	pclose(in_arg->command_fp);
 }
 
 void shellPortal::dataFromLowerLevel(void *data, int num_messages, int local_down_channel){

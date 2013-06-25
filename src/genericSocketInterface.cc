@@ -296,7 +296,6 @@ vector<messageType> wsSocketInterpreter::parseUpstreamMessage(messageType in_mes
 		int message_length = in_message.num_bytes+2;
 		if(ml_16) message_length += 2;
 		else if(ml_64) message_length += 8;
-		cout << "GOT HERE1" << endl;
 		char *message = new char[message_length];
 
 		//First byte: FIN (always true in our case) and opcode (0x02 = binary)
