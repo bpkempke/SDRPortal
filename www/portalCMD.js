@@ -14,6 +14,7 @@ function portalCMD(host_addr, progress_window){
 	this.host_addr = host_addr;
 	this.state = portalCMD.STATE.INIT;
 	this.uid = 0;
+	this.port = 0;
 	this.cmd_queue = [];
 	this.progress_window = progress_window;
 	var self = this;
@@ -28,6 +29,11 @@ function portalCMD(host_addr, progress_window){
 		self.state = portalCMD.STATE.INIT;
 		self.connect_callback = connect_callback;
 		self.disconnect_callback = disconnect_callback;
+	}
+
+	this.disconnect = disconnect;
+	function disconnect(){
+		self.ws.close();
 	}
 
 	this.setFreq = setFreq;
@@ -90,14 +96,15 @@ function portalCMD(host_addr, progress_window){
 			break;
 		case portalCMD.STATE.RXFREQ:
 			//Ignore respose for now
-			self.setStatus("Setting gain to 20 dB");
-			self.setGain(20);
+			self.setStatus("Setting gain to 30 dB");
+			self.setGain(30);
 			self.state = portalCMD.STATE.RXGAIN;
 			break;
 		case portalCMD.STATE.RXGAIN:
 			//Ignore response for now
 			self.ws.send("RXCHANNEL 0\n");
 			self.state = portalCMD.STATE.CONNECTED;
+			break;
 		case portalCMD.STATE.CONNECTED:
 			self.setStatus("SDRPortal server connected");
 			self.connect_callback();
@@ -119,7 +126,7 @@ function portalCMD(host_addr, progress_window){
 	this.onOpen = onOpen;
 	function onOpen(){
 		//First thing we want to do is send the "NEWCHANNEL" command
-		self.ws.send("NEWCHANNEL\n");
+		self.ws.send("NEWCHANNEL TCP\n");
 		self.state = portalCMD.STATE.OPEN;
 	}
 }
