@@ -4,7 +4,6 @@ from gnuradio import gr, rds, audio, blks2
 from gnuradio.eng_option import eng_option
 from optparse import OptionParser
 from grc_gnuradio import blks2 as grc_blks2
-from rdspanel import rdsPanel
 import sys, math, wx, time
 
 class rds_rx_graph (gr.top_block):
@@ -204,6 +203,7 @@ if __name__ == '__main__':
 	try:
 		tb = rds_rx_graph();
 		tb.start();
+		print "***STARTED***"
 		tb.wait();
 	except KeyboardInterrupt:
 		pass
