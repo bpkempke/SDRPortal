@@ -26,6 +26,7 @@ void shellPortal::dataFromUpperLevel(void *data, int num_bytes, int local_up_cha
 	messageType out_message;
 	out_message.buffer = (char*)data;
 	out_message.num_bytes = num_bytes;
+	out_message.socket_channel = -1; //TODO: Fix this...
 	dataToLowerLevel((void*)&out_message, 1);
 }
 

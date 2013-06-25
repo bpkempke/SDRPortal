@@ -31,6 +31,7 @@ void hierarchicalDataflowBlock::dataToUpperLevel(void *data, int num_bytes, int 
 		for(int cur_up_channel = start_channel; cur_up_channel <= end_channel; cur_up_channel++){
 			//Push the requested data to all of the higher-level blocks that reside on the requested channel
 			for(unsigned int ii=0; ii < upper_level_links[cur_up_channel].size(); ii++){
+				std::cout << ii << std::endl;
 				hierarchicalDataConnection cur_conn = upper_level_links[cur_up_channel][ii];
 				cur_conn.remote->dataFromLowerLevel(data, num_bytes, cur_conn.remote_channel);
 			}
@@ -69,6 +70,7 @@ void hierarchicalDataflowBlock::dataToLowerLevel(void *data, int num_bytes, int 
 }
 
 void hierarchicalDataflowBlock::removeUpperLevel(hierarchicalDataflowBlock *in_block){
+	std::cout << "removing upper level" << std::endl;
 
 	//Iterate over all of the different uplink channels
 	for(unsigned int ii=0; ii < upper_level_links.size(); ii++){
@@ -84,6 +86,7 @@ void hierarchicalDataflowBlock::removeUpperLevel(hierarchicalDataflowBlock *in_b
 }
 
 void hierarchicalDataflowBlock::removeLowerLevel(hierarchicalDataflowBlock *in_block){
+	std::cout << "removing lower level" << std::endl;
 
 	//Iterate over all of the different uplink channels
 	for(unsigned int ii=0; ii < lower_level_links.size(); ii++){

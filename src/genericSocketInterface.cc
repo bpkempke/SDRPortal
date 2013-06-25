@@ -140,6 +140,7 @@ void genericSocketInterface::dataFromUpperLevel(void *data, int num_messages, in
 			dataToLowerLevel(&in_message_vec[ii], 1, in_message_vec[ii].socket_channel);
 		}
 	} catch(socketClosedException e){
+		std::cout << "REMOVING SOCKET" << std::endl;
 		removeLowerLevel(e.getSocket());
 	}
 }
@@ -164,6 +165,7 @@ vector<messageType> wsSocketInterpreter::parseDownstreamMessage(messageType in_m
 	int num_bytes = in_message.num_bytes;
 	vector<messageType> out_messages;
 	messageType new_out_message;
+	new_out_message.socket_channel = in_message.socket_channel;
 	int end_idx;
 
 	//Keep track of historic data coming in from the socket
@@ -280,6 +282,7 @@ vector<messageType> wsSocketInterpreter::parseDownstreamMessage(messageType in_m
 		//If so, then let's extract the message...
 		new_out_message.buffer = &message_parser[message_start_idx];
 		new_out_message.num_bytes = payload_len;
+		new_out_message.message_dest = UPSTREAM;
 		out_messages.push_back(new_out_message);
 		//cout << "RECEIVED WS MESSAGE: " << message_parser << endl;
 
@@ -327,7 +330,11 @@ vector<messageType> wsSocketInterpreter::parseUpstreamMessage(messageType in_mes
 			memcpy(&message[10],in_message.buffer,in_message.num_bytes);
 		}
 
-		messageType new_message = {message, message_length};
+		messageType new_message;
+		new_message.buffer = message;
+		new_message.num_bytes = message_length;
+		new_message.socket_channel = in_message.socket_channel;
+		new_message.message_dest = DOWNSTREAM;
 		ret_vector.push_back(new_message);
 	}
 	return ret_vector;
@@ -401,7 +408,6 @@ void socketThread::dataFromUpperLevel(void *data, int num_messages, int local_up
 
 void socketThread::socketWriter(char *buffer, int buffer_length){
 	if(socket_fp){
-		//TODO: this needs to go to a UDP socket sometimes!
 		int n;
 	        n = write(socket_fp, buffer, buffer_length);
 		if(n <= 0)

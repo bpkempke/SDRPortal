@@ -12,14 +12,26 @@ public:
 	void *getResult();
 private:
 	int sizeOfType(primType in_type);
-	void *scratchspace;
-	unsigned int scratchspace_size;
+	T *scratchspace;
+	int scratchspace_size;
+	double *d_scratchspace;
+	float *f_scratchspace;
+	int32_t *i32_scratchspace;
+	int16_t *i16_scratchspace;
+	int8_t *i8_scratchspace;
+	void *cur_scratchspace;
+	int d_size, f_size, i32_size, i16_size, i8_size;
 };
 
 template <typename T>
 streamConverter<T>::streamConverter(){
-	scratchspace = new int[512];
-	scratchspace_size = 512*sizeof(int);
+	d_size = f_size = i32_size = i16_size = i8_size = scratchspace_size = 0;
+	scratchspace = NULL;
+	d_scratchspace = NULL;
+	f_scratchspace = NULL;
+	i32_scratchspace = NULL;
+	i16_scratchspace = NULL;
+	i8_scratchspace = NULL;
 }
 
 template <typename T>
@@ -32,62 +44,67 @@ int streamConverter<T>::convertTo(T *in_data, int num_bytes, primType result_typ
 	//TODO: Any suggestions on how to not do so much code duplication here?
 	switch(result_type){
 		case DOUBLE:{
-			double *d_scratchspace = (double *)scratchspace;
-			if(num_elements*sizeof(double) > scratchspace_size){
+			if(num_elements > d_size){
+				delete [] d_scratchspace;
 				d_scratchspace = new double[num_elements*2];
-				scratchspace_size = num_elements*2*sizeof(double);
+				d_size = num_elements*2;
 			}
 			for(int ii=0; ii < num_elements; ii++)
 				d_scratchspace[ii] = (double)(in_data[ii]);
 			resulting_bytes = num_elements*sizeof(double);
+			cur_scratchspace = d_scratchspace;
 			}
 			break;
 
 		case FLOAT:{
-			float *d_scratchspace = (float *)scratchspace;
-			if(num_elements*sizeof(float) > scratchspace_size){
-				d_scratchspace = new float[num_elements*2];
-				scratchspace_size = num_elements*2*sizeof(float);
+			if(num_elements > f_size){
+				delete [] f_scratchspace;
+				f_scratchspace = new float[num_elements*2];
+				f_size = num_elements*2;
 			}
 			for(int ii=0; ii < num_elements; ii++)
-				d_scratchspace[ii] = (float)(in_data[ii]);
+				f_scratchspace[ii] = (float)(in_data[ii]);
 			resulting_bytes = num_elements*sizeof(float);
+			cur_scratchspace = f_scratchspace;
 			}
 			break;
 
 		case INT32:{
-			int32_t *d_scratchspace = (int32_t *)scratchspace;
-			if(num_elements*sizeof(int32_t) > scratchspace_size){
-				d_scratchspace = new int32_t[num_elements*2];
-				scratchspace_size = num_elements*2*sizeof(int32_t);
+			if(num_elements > i32_size){
+				delete [] i32_scratchspace;
+				i32_scratchspace = new int32_t[num_elements*2];
+				i32_size = num_elements*2;
 			}
 			for(int ii=0; ii < num_elements; ii++)
-				d_scratchspace[ii] = (int32_t)(in_data[ii]);
+				i32_scratchspace[ii] = (int32_t)(in_data[ii]);
 			resulting_bytes = num_elements*sizeof(int32_t);
+			cur_scratchspace = i32_scratchspace;
 			}
 			break;
 
 		case INT16:{
-			int16_t *d_scratchspace = (int16_t *)scratchspace;
-			if(num_elements*sizeof(int16_t) > scratchspace_size){
-				d_scratchspace = new int16_t[num_elements*2];
-				scratchspace_size = num_elements*2*sizeof(int16_t);
+			if(num_elements > i16_size){
+				delete [] i16_scratchspace;
+				i16_scratchspace = new int16_t[num_elements*2];
+				i16_size = num_elements*2;
 			}
 			for(int ii=0; ii < num_elements; ii++)
-				d_scratchspace[ii] = (int16_t)(in_data[ii]);
+				i16_scratchspace[ii] = (int16_t)(in_data[ii]);
 			resulting_bytes = num_elements*sizeof(int16_t);
+			cur_scratchspace = i16_scratchspace;
 			}
 			break;
 
 		case INT8:{
-			int8_t *d_scratchspace = (int8_t *)scratchspace;
-			if(num_elements*sizeof(int8_t) > scratchspace_size){
-				d_scratchspace = new int8_t[num_elements*2];
-				scratchspace_size = num_elements*2*sizeof(int8_t);
+			if(num_elements > i8_size){
+				delete [] i8_scratchspace;
+				i8_scratchspace = new int8_t[num_elements*2];
+				i8_size = num_elements*2;
 			}
 			for(int ii=0; ii < num_elements; ii++)
-				d_scratchspace[ii] = (int8_t)(in_data[ii]);
+				i8_scratchspace[ii] = (int8_t)(in_data[ii]);
 			resulting_bytes = num_elements*sizeof(int8_t);
+			cur_scratchspace = i8_scratchspace;
 			}
 			break;
 
@@ -104,39 +121,38 @@ int streamConverter<T>::convertFrom(void *in_data, int num_bytes, primType start
 	//First count the number of actual elements
 	int num_elements = num_bytes/sizeOfType(start_type);
 
-	int resulting_bytes = num_elements*sizeof(T);
+	int resulting_bytes = num_elements;
 	if(resulting_bytes > scratchspace_size){
+		delete [] scratchspace;
 		scratchspace = new T[num_elements*2];
-		scratchspace_size = sizeof(T)*num_elements*2;
+		scratchspace_size = num_elements*2;
 	}
 
-	T *r_scratchspace = (T *)scratchspace;
-	
 	//TODO: Any suggestions on how to not do so much code duplication here?
 	switch(start_type){
 		case DOUBLE:
 			for(int ii=0; ii < num_elements; ii++)
-				r_scratchspace[ii] = (T)(((double*)in_data)[ii]);
+				scratchspace[ii] = (T)(((double*)in_data)[ii]);
 			break;
 
 		case FLOAT:
 			for(int ii=0; ii < num_elements; ii++)
-				r_scratchspace[ii] = (T)(((float*)in_data)[ii]);
+				scratchspace[ii] = (T)(((float*)in_data)[ii]);
 			break;
 
 		case INT32:
 			for(int ii=0; ii < num_elements; ii++)
-				r_scratchspace[ii] = (T)(((int32_t*)in_data)[ii]);
+				scratchspace[ii] = (T)(((int32_t*)in_data)[ii]);
 			break;
 
 		case INT16:
 			for(int ii=0; ii < num_elements; ii++)
-				r_scratchspace[ii] = (T)(((int16_t*)in_data)[ii]);
+				scratchspace[ii] = (T)(((int16_t*)in_data)[ii]);
 			break;
 
 		case INT8:
 			for(int ii=0; ii < num_elements; ii++)
-				r_scratchspace[ii] = (T)(((int8_t*)in_data)[ii]);
+				scratchspace[ii] = (T)(((int8_t*)in_data)[ii]);
 			break;
 	}
 
@@ -159,7 +175,7 @@ int streamConverter<T>::sizeOfType(primType in_type){
 
 template <typename T>
 void *streamConverter<T>::getResult(){
-	return scratchspace;
+	return cur_scratchspace;
 }
 
 #endif
