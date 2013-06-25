@@ -130,11 +130,13 @@ function showApp(){
 function tuneLower(){
 	cur_freq = cur_freq - 0.2;
 	displayFreq(cur_freq);
+	cmd_handle.setFreq(cur_freq*1000000);
 }
 
 function tuneHigher(){
 	cur_freq = cur_freq + 0.2;
 	displayFreq(cur_freq);
+	cmd_handle.setFreq(cur_freq*1000000);
 }
 
 function displayFreq(in_freq){
