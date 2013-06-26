@@ -162,10 +162,10 @@ class rds_rx_graph (gr.top_block):
 #							options.audio_output, False)
 # 		self.connect(self.resamp_L, (self.audio_sink, 0))
 #		self.connect(self.resamp_R, (self.audio_sink, 1))
-#		self.file_sink1 = gr.file_sink(gr.sizeof_float, 'audioL.dat')
+		self.file_sink1 = gr.file_sink(gr.sizeof_float, 'audioL.dat')
 #		self.file_sink2 = gr.file_sink(gr.sizeof_float, 'audioR.dat')
 #		self.file_sink3 = gr.file_sink(gr.sizeof_float, 'fmDemod.dat')
-#       		self.connect(self.resamp_L, self.file_sink1)
+       		self.connect(self.resamp_L, self.file_sink1)
 #		self.connect(self.resamp_R, self.file_sink2)
 #		self.connect(self.fm_demod, self.file_sink3)
 

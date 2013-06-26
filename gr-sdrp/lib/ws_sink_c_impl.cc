@@ -24,6 +24,7 @@
 
 #include <gr_io_signature.h>
 #include <string>
+#include <iostream>
 #include "ws_sink_c_impl.h"
 
 namespace gr {
@@ -80,13 +81,16 @@ namespace gr {
 	const float *in = (const float *) input_items[0];
 
 	//Convert everything to the requested result type
-	stream_conv.convertTo((float*)in, noutput_items*2, result_type);
+	stream_conv.convertTo((float*)in, noutput_items*sizeof(gr_complex), result_type);
+
+//	std::cerr << "noutput_items = " << noutput_items << " in[1000] = " << in[1000] << std::endl;
 
 	//Send everything out to the socket
 	messageType resulting_message;
 	resulting_message.buffer = (char*)stream_conv.getResult();
 	resulting_message.num_bytes = noutput_items*sizeof(float)*2;
-	dataToLowerLevel(stream_conv.getResult(), 1);
+	resulting_message.socket_channel = -1;
+	dataToLowerLevel(&resulting_message, 1);
 
 	// Tell runtime system how many output items we produced.
 	return noutput_items;
