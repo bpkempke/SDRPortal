@@ -4,6 +4,46 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "shellPortal.h"
+#include <signal.h>
+#include <sys/wait.h>
+
+#define READ 0
+#define WRITE 1
+
+pid_t popen2(char **command, FILE **infp, FILE **outfp){
+	int p_stdin[2], p_stdout[2];
+	pid_t pid;
+	
+	if (pipe(p_stdin) != 0 || pipe(p_stdout) != 0)
+		return -1;
+	
+	pid = fork();
+	
+	if (pid < 0)
+		return pid;
+	else if (pid == 0){
+		close(p_stdin[WRITE]);
+		dup2(p_stdin[READ], READ);
+		close(p_stdout[READ]);
+		dup2(p_stdout[WRITE], WRITE);
+		
+		execvp(*command, command);
+		perror("execvp");
+		exit(1);
+	}
+	
+	if (infp == NULL)
+		close(p_stdin[WRITE]);
+	else
+		*infp = fdopen(p_stdin[WRITE],"w");
+	
+	if (outfp == NULL)
+		close(p_stdout[READ]);
+	else
+		*outfp = fdopen(p_stdout[READ],"r");
+	
+	return pid;
+}
 
 shellPortal::shellPortal(socketType in_socket_type, int socket_num) : hierarchicalDataflowBlock(1, 1){
 	socket_type = in_socket_type;
@@ -29,12 +69,22 @@ void shellPortal::dataFromUpperLevel(void *data, int num_messages, int local_up_
 	}
 }
 
+void shellPortal::notificationFromLower(void *in_notification){
+	int closing_channel = *((int*)in_notification);
+	for(unsigned int ii=0; ii < command_threads.size(); ii++){
+		if(closing_channel == command_threads[ii]->down_channel){
+			deleteListener(command_threads[ii]);
+			ii--;
+		}
+	}
+}
+
 #define MAX_BUFFER 2048
 static void *commandListener(void *in_args){
 	cmdListenerArgs *cmd_args = (cmdListenerArgs*)in_args;
 	int down_channel = cmd_args->down_channel;
 	char buffer[MAX_BUFFER];
-	while(fgets(buffer, MAX_BUFFER, cmd_args->command_fp) != NULL){
+	while(fgets(buffer, MAX_BUFFER, cmd_args->out_fp) != NULL){
 		messageType out_message;
 		out_message.buffer = buffer;
 		out_message.num_bytes = strlen(buffer);
@@ -46,7 +96,14 @@ static void *commandListener(void *in_args){
 }
 
 void shellPortal::deleteListener(cmdListenerArgs *in_arg){
-	pclose(in_arg->command_fp);
+	//TODO: Processes still become defunct...
+	kill(in_arg->pid,SIGINT);
+	waitpid(in_arg->pid,NULL,WNOHANG);
+	//TODO: This is time-consuming.... ugh...
+	for(unsigned int ii=0; ii < command_threads.size(); ii++){
+		if(in_arg == command_threads[ii])
+			command_threads.erase(command_threads.begin()+ii);
+	}
 }
 
 void shellPortal::dataFromLowerLevel(void *data, int num_messages, int local_down_channel){
@@ -54,37 +111,51 @@ void shellPortal::dataFromLowerLevel(void *data, int num_messages, int local_dow
 
 	//First, we need to make sure data is casted correctly (data is a pointer to a vector of messages)
 	messageType *in_messages = static_cast<messageType *>(data);
+	std::cout << "GOT AN INCOMING MESSAGE: " << in_messages[0].buffer << std::endl;
 	int down_channel = in_messages[0].socket_channel;
 
 	//Insert historic messages into a string stream so as to easily extract lines
 	static std::stringstream command_stream;
 	for(int ii=0; ii < num_messages; ii++){
 		std::string in_data_string(in_messages[ii].buffer,in_messages[ii].num_bytes);
+		std::cout << "APPENDING " << in_data_string << std::endl;
 		command_stream << in_data_string;
 	}
+	std::cout << "AFTER STRINGSTREAM: " << command_stream.str() << std::endl;
 
 	//Now parse out incoming commands
 	std::string current_command;
-	if(!getline(command_stream, current_command).fail()){
-		//Now we have a command that we should execute, execute it and create a thread to listen to stdout and pipe it to the upper level
-		FILE *new_shell_output = new FILE;
-
+	if(!std::getline(command_stream, current_command).fail()){
+		//TODO: Not sure if stringstream should keep on growing or not?
+		command_stream.clear();
+		std::cout << "AFTER EXTRACTION: " << command_stream.str() << std::endl;
+		std::cout << "GOT A COMMAND: " << current_command << std::endl;
 		//Look for the first line break (if there is one) and turn into null termination
 		for(unsigned int ii=0; ii < current_command.length(); ii++)
 			if(current_command[ii] == '\r' || current_command[ii] == '\n')
 				current_command[ii] = 0;
-
-		//Run the command
-		new_shell_output = popen(current_command.c_str(), "r");
-		//new_shell_output = popen("ls", "r");
+		std::cout << "Now it's shrunk: " << current_command << std::endl;
 
 		//Set up the arguments and the pthread to serve as listener to the output
 		pthread_t *new_thread = new pthread_t;
 		cmdListenerArgs *listener_args = new cmdListenerArgs;
 		listener_args->shell_portal_ptr = this;
 		listener_args->down_channel = down_channel;
-		listener_args->command_fp = new_shell_output;
 		listener_args->thread_ptr = new_thread;
+		
+		//Split the command up into command and arguments
+		std::stringstream ss(current_command);
+		std::string item;
+		std::vector<char*> vc;
+		while(std::getline(ss,item,' ')){
+			char *cur_arg = new char[item.size()+1];
+			strcpy(cur_arg, item.c_str());
+			vc.push_back(cur_arg);
+		}
+		vc.push_back(NULL);
+
+		//Now we have a command that we should execute, execute it and create a thread to listen to stdout and pipe it to the upper level
+		listener_args->pid = popen2(&vc[0], NULL, &(listener_args->out_fp));
 
 		pthread_create(new_thread, NULL, commandListener, (void*)listener_args);
 		command_threads.push_back(listener_args);

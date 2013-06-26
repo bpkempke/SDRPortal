@@ -26,6 +26,8 @@ public:
 	void dataToLowerLevel(void *data, int num_bytes, int local_down_channel=0);
 	void removeUpperLevel(hierarchicalDataflowBlock *in_block);
 	void removeLowerLevel(hierarchicalDataflowBlock *in_block);
+	void notifyUpper(void *notification);
+	virtual void notificationFromLower(void *notification){};
 private:
 	struct hierarchicalDataConnection {
 		int local_channel;

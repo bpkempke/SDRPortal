@@ -11,7 +11,8 @@ class shellPortal;
 struct cmdListenerArgs{
 	shellPortal *shell_portal_ptr;
 	int down_channel;
-	FILE *command_fp;
+	pid_t pid;
+	FILE *out_fp;
 	pthread_t *thread_ptr;
 };
 
@@ -25,6 +26,7 @@ public:
 	//Methods inherited from hierarchicalDataflowBlock
 	virtual void dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0);
 	virtual void dataFromLowerLevel(void *data, int num_bytes, int local_down_channel=0);
+	virtual void notificationFromLower(void *notification);
 private:
 	int cur_channel;
 	socketType socket_type;

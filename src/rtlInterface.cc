@@ -12,6 +12,17 @@ static void *rtlReadProxy(void *in_args){
 rtlInterface::rtlInterface(int index){
 	rtl_dev = NULL;
 
+	//Get information about each RTL device
+	int device_count = rtlsdr_get_device_count();
+	std::cout << "RTLSDR Device Count: " << device_count << std::endl;
+
+	char vendor[256], product[256], serial[256];
+	for(int ii=0; ii < device_count; ii++){
+		rtlsdr_get_device_usb_strings(ii, vendor, product, serial);
+		std::cout << ii << ": " << vendor << ", " << product << ", SN: " << serial << std::endl;
+	}
+	std::cout << "Using device " << index << ": " << rtlsdr_get_device_name(index) << std::endl;
+
 	//TODO: Maybe some error checking with the return values?
 	rtlsdr_open(&rtl_dev, (uint32_t)index);
 
@@ -19,8 +30,8 @@ rtlInterface::rtlInterface(int index){
 }
 
 rtlInterface::~rtlInterface(){
-	if(is_receiving)
-		rtlsdr_cancel_async(rtl_dev);
+	pthread_cancel(rx_listener);
+	//TODO: This needs to wait for the thread to be done before closing, otherwise stuff gets corrupted...
 	rtlsdr_close(rtl_dev);
 }
 
@@ -31,6 +42,7 @@ void rtlInterface::setRXFreq(paramData in_param){
 }
 
 void rtlInterface::setRXGain(paramData in_param){
+	std::cout << "Setting RX Gain" << std::endl;
 	//First figure out what the desired gain is
 	double desired_gain = in_param.getDouble();
 
@@ -45,7 +57,7 @@ void rtlInterface::setRXGain(paramData in_param){
 	}
 
 	//Then set it
-	rtlsdr_set_agc_mode(rtl_dev, 1);
+	//rtlsdr_set_agc_mode(rtl_dev, 1);
 	rtlsdr_set_tuner_gain_mode(rtl_dev, 0);
 	rtlsdr_set_tuner_gain(rtl_dev, gains[resulting_gain]);
 
@@ -53,6 +65,7 @@ void rtlInterface::setRXGain(paramData in_param){
 }
 
 void rtlInterface::setRXRate(paramData in_param){
+	std::cout << "Setting RX Rate" << std::endl;
 	rtlsdr_set_sample_rate(rtl_dev, in_param.getUInt32());
 }
 
@@ -122,7 +135,10 @@ void *rtlInterface::rxThread(){
 	char read_translate_buffer[RTL_BUFF_LEN];
 	int n_read;
 	bool first_time = true;
-	rtlsdr_reset_buffer(rtl_dev);
+	int r = rtlsdr_reset_buffer(rtl_dev);
+	if(r < 0)
+		std::cout << "WARNING: Failed to reset buffers" << std::endl;
+	std::cout << "Starting sync read from RTL" << std::endl;
 	while(1){
 		//Read data synchronously from the RTL device
 		int r = rtlsdr_read_sync(rtl_dev, read_buffer, RTL_BUFF_LEN, &n_read);

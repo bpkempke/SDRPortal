@@ -133,16 +133,20 @@ int genericSocketInterface::getPortNum(){
 
 void genericSocketInterface::dataFromUpperLevel(void *data, int num_messages, int local_up_channel){
 	//FROM THE USRP
-	try{
-		//TODO: This is where some logic needs to go to figure out which destination 
-		messageType *in_message_vec = static_cast<messageType *>(data);
-		for(int ii=0; ii < num_messages; ii++){
+	messageType *in_message_vec = static_cast<messageType *>(data);
+	for(int ii=0; ii < num_messages; ii++){
+		try{
 			dataToLowerLevel(&in_message_vec[ii], 1, in_message_vec[ii].socket_channel);
+		} catch(socketClosedException e){
+			int socket_channel = in_message_vec[ii].socket_channel;
+			notifyUpper((void*)&socket_channel);
+			removeLowerLevel(e.getSocket());
 		}
-	} catch(socketClosedException e){
-		std::cout << "REMOVING SOCKET" << std::endl;
-		removeLowerLevel(e.getSocket());
 	}
+}
+
+void genericSocketInterface::notificationFromLower(void *in_notification){
+	notifyUpper(in_notification);
 }
 
 void genericSocketInterface::dataFromLowerLevel(void *data, int num_bytes, int local_down_channel){
@@ -388,6 +392,9 @@ void *socketThread::socketReader(){
 		if(shared_mutex)
 			pthread_mutex_unlock(shared_mutex);
 	}
+
+	std::cout << "socket closed, notifying upper..." << std::endl;
+	notifyUpper(&uid);
 
 	close(socket_fp);
 

@@ -31,9 +31,20 @@ void hierarchicalDataflowBlock::dataToUpperLevel(void *data, int num_bytes, int 
 		for(int cur_up_channel = start_channel; cur_up_channel <= end_channel; cur_up_channel++){
 			//Push the requested data to all of the higher-level blocks that reside on the requested channel
 			for(unsigned int ii=0; ii < upper_level_links[cur_up_channel].size(); ii++){
-				std::cout << ii << std::endl;
 				hierarchicalDataConnection cur_conn = upper_level_links[cur_up_channel][ii];
 				cur_conn.remote->dataFromLowerLevel(data, num_bytes, cur_conn.remote_channel);
+			}
+		}
+	}
+}
+
+void hierarchicalDataflowBlock::notifyUpper(void *in_notification){
+
+	if(upper_level_links.size() > 0){
+		for(unsigned int ii = 0; ii < upper_level_links.size(); ii++){
+			for(unsigned int jj=0; jj < upper_level_links[ii].size(); jj++){
+				hierarchicalDataConnection cur_conn = upper_level_links[ii][jj];
+				cur_conn.remote->notificationFromLower(in_notification);
 			}
 		}
 	}
