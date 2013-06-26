@@ -25,9 +25,9 @@ void sighandler(int sig){
 	printf("sdrportal: signal %d caught...\n", sig);
 
 	//Delete all dynamically-allocated things
+	delete sdr_interface;
 	delete tcp_cmd_socket;
 	delete ws_cmd_socket;
-	delete sdr_interface;
 
 	exit(1);
 }

@@ -65,6 +65,7 @@ struct paramAccessor {
 class genericSDRInterface{
 public:
 	genericSDRInterface();
+	virtual ~genericSDRInterface(){};
 	void setSDRParameter(int in_uid, std::string name, std::string val);
 	int getNumAllocatedChannels();
 	rxtxChanInfo getChanInfo(int uid);

@@ -10,7 +10,7 @@
 class rtlInterface : public genericSDRInterface{
 public:
 	rtlInterface(int index);
-	~rtlInterface();
+	virtual ~rtlInterface();
 
 	void *rxThread();
 
@@ -31,6 +31,7 @@ public:
 private:
 	rtlsdr_dev_t *rtl_dev;
 	bool is_receiving;
+	bool rx_cancel;
 	pthread_t rx_listener;
 
 	//Stream converter to easily switch back and forth between primitive streaming types...

@@ -11,6 +11,7 @@ static void *rtlReadProxy(void *in_args){
 
 rtlInterface::rtlInterface(int index){
 	rtl_dev = NULL;
+	rx_cancel = false;
 
 	//Get information about each RTL device
 	int device_count = rtlsdr_get_device_count();
@@ -30,8 +31,10 @@ rtlInterface::rtlInterface(int index){
 }
 
 rtlInterface::~rtlInterface(){
-	pthread_cancel(rx_listener);
-	//TODO: This needs to wait for the thread to be done before closing, otherwise stuff gets corrupted...
+	rx_cancel = true;
+	std::cout << "JOINING" << std::endl;
+	pthread_join(rx_listener, NULL);
+	std::cout << "CLOSING" << std::endl;
 	rtlsdr_close(rtl_dev);
 }
 
@@ -146,6 +149,7 @@ void *rtlInterface::rxThread(){
 			std::cerr << "WARNING: sync read failed." << std::endl;
 			break;
 		}
+		if(rx_cancel) break;
 		if(first_time)
 			std::cout << "GOT SOME SAMPLES!" << std::endl;
 		first_time = false;
