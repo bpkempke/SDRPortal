@@ -51,13 +51,16 @@ div.content {
 
 <script type="text/javascript" src="portalCMD.js"></script>
 <script type="text/javascript" src="shellCMD.js"></script>
+<script type="text/javascript" src="wsAudio.js"></script>
 <script type="text/javascript">
 var sdrp_ws;
 var title_div, app_div;
-var progress_window, shell_progress_window;
+var progress_window, shell_progress_window, wsaudio_progress_window;
 var cur_freq;
-var shell_handle, cmd_handle;
-var sdr_host_addr;
+var shell_handle, cmd_handle, wsaudio_handle;
+var sdr_host_addr, proc_host_addr, wsaudio_host_addr;
+
+var wsaudio_portnum = 22344;
 
 var flowgraph_history;
 var flowgraph_running;
@@ -69,18 +72,22 @@ function flowgraphCallback(data){
 			flowgraph_running = true;
 			showApp();
 			//TODO: Do more stuff here... like opening additional sockets!
+			var host_addr_parts = proc_host_addr.split(':');
+			wsaudio_host_addr = host_addr_parts[0] + ":" + wsaudio_portnum;
+			wsaudio_handle = new wsAudio(wsaudio_host_addr, wsaudio_progress_window, 48000);
+			wsaudio_handle.connect();
 		}
 	}
 }
 
 function shellOpen(){
-	var command_string = "./gr-sdrportal/python/sdrp_rds_rx.py -H " + sdr_host_addr.split(':')[0] + " -P " + cmd_handle.port;
+	var command_string = "./gr-sdrp/python/sdrp_rds_rx_ws.py -H " + sdr_host_addr.split(':')[0] + " -P " + cmd_handle.port + " -W " + wsaudio_portnum;
 	shell_handle.sendShellCommand(command_string,flowgraphCallback);
 }
 
 function SDRPOpen(){
-	var host_addr = document.getElementById('proc_host').value;
-	shell_handle = new shellCMD(host_addr, shell_progress_window);
+	proc_host_addr = document.getElementById('proc_host').value;
+	shell_handle = new shellCMD(proc_host_addr, shell_progress_window);
 	shell_handle.connect(shellOpen, connectionClosed);
 }
 
@@ -107,6 +114,7 @@ function init(){
 	app_div = document.getElementById('app_div');
 	progress_window = document.getElementById('progress_window');
 	shell_progress_window = document.getElementById('shell_progress_window');
+	wsaudio_progress_window = document.getElementById('wsaudio_progress_window');
 	flowgraph_running = false;
 	flowgraph_history = "";
 
@@ -120,6 +128,7 @@ function showTitle(){
 	app_div.style.display = "none";
 	progress_window.style.visibility = "hidden";
 	shell_progress_window.style.visibility = "hidden";
+	wsaudio_progress_window.style.visibility = "hidden";
 }
 
 function showApp(){
@@ -166,15 +175,17 @@ function displayFreq(in_freq){
 <div class="frameT">
 <div class="frameTC">
 <div class="content" id="title_div">
-SDRPortal Server Address: <input type="text" id="sdrp_host" value="172.16.15.193:12600"/>
+SDRPortal Server Address: <input type="text" id="sdrp_host" value="172.16.15.194:12600"/>
 <br/>
-Processing Server Address: <input type="text" id="proc_host" value="172.16.15.193:12800"/>
+Processing Server Address: <input type="text" id="proc_host" value="172.16.15.194:12800"/>
 <br/>
 <input type="submit" id="ws-submit" value="Connect" onclick="openConnection()"/>
 <br/>
 <span id="progress_window" style="visibility:hidden">.</span>
 <br/>
 <span id="shell_progress_window" style="visibility:hidden">.</span>
+<br/>
+<span id="wsaudio_progress_window" style="visibility:hidden">.</span>
 </div>
 <div class="content" id="app_div">
 <input type="submit" id="tune_lower" value="<" onmousedown="tuneLower()" onmouseup="stopTuneInterval()" style="position:relative; top:-8px"/>
