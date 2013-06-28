@@ -2,6 +2,17 @@
 #define STREAM_CONVERTER_H
 
 #include "generic.h"
+#include <algorithm>
+#include <map>
+
+class scratchspaceType{
+public:
+	void *scratchspace;
+	int cur_capacity;
+	int cur_size;
+
+	scratchspaceType() : scratchspace(NULL), cur_capacity(0), cur_size(0) {};
+};
 
 template <typename T>
 class streamConverter {
@@ -12,100 +23,64 @@ public:
 	void *getResult();
 private:
 	int sizeOfType(primType in_type);
-	T *scratchspace;
-	int scratchspace_size;
-	double *d_scratchspace;
-	float *f_scratchspace;
-	int32_t *i32_scratchspace;
-	int16_t *i16_scratchspace;
-	int8_t *i8_scratchspace;
-	void *cur_scratchspace;
-	int d_size, f_size, i32_size, i16_size, i8_size;
+
+	//Scratchspace used in convertFrom()
+	scratchspaceType t_scratch;
+
+	//Current type points to the last type sent to convertTo()
+	primType cur_type;
+
+	//Map to different scratchspaces used in convertTo()
+	std::map<primType, scratchspaceType> scratchspace_map;
 };
 
 template <typename T>
 streamConverter<T>::streamConverter(){
-	d_size = f_size = i32_size = i16_size = i8_size = scratchspace_size = 0;
-	scratchspace = NULL;
-	d_scratchspace = NULL;
-	f_scratchspace = NULL;
-	i32_scratchspace = NULL;
-	i16_scratchspace = NULL;
-	i8_scratchspace = NULL;
+}
+
+template <typename TO, typename FROM>
+int convertWorker(scratchspaceType &in_scratch, FROM *in_from_array, int num_bytes){
+	//First count the number of actual elements
+	in_scratch.cur_size = num_bytes/sizeof(FROM);
+
+	//Resize the desired array if necessary
+	if(in_scratch.cur_size > in_scratch.cur_capacity){
+		delete [] (TO*)in_scratch.scratchspace;
+		in_scratch.scratchspace = new TO[in_scratch.cur_size*2];
+		in_scratch.cur_capacity = in_scratch.cur_size*2;
+	}
+
+	//Do a standard copy and type conversion
+	std::copy(in_from_array, in_from_array+in_scratch.cur_size, (TO*)(in_scratch.scratchspace));
+
+	//Return the number of resulting bytes
+	return in_scratch.cur_size*sizeof(TO);
 }
 
 template <typename T>
 int streamConverter<T>::convertTo(T *in_data, int num_bytes, primType result_type){
-	//First count the number of actual elements
-	int num_elements = num_bytes/sizeof(T);
-
-	int resulting_bytes = num_bytes;
+	int resulting_bytes;
+	cur_type = result_type;
 	
-	//TODO: Any suggestions on how to not do so much code duplication here?
 	switch(result_type){
-		case DOUBLE:{
-			if(num_elements > d_size){
-				delete [] d_scratchspace;
-				d_scratchspace = new double[num_elements*2];
-				d_size = num_elements*2;
-			}
-			for(int ii=0; ii < num_elements; ii++)
-				d_scratchspace[ii] = (double)(in_data[ii]);
-			resulting_bytes = num_elements*sizeof(double);
-			cur_scratchspace = d_scratchspace;
-			}
+		case DOUBLE:
+			resulting_bytes = convertWorker<double, T>(scratchspace_map[result_type], in_data, num_bytes);
 			break;
 
-		case FLOAT:{
-			if(num_elements > f_size){
-				delete [] f_scratchspace;
-				f_scratchspace = new float[num_elements*2];
-				f_size = num_elements*2;
-			}
-			for(int ii=0; ii < num_elements; ii++)
-				f_scratchspace[ii] = (float)(in_data[ii]);
-			resulting_bytes = num_elements*sizeof(float);
-			cur_scratchspace = f_scratchspace;
-			}
+		case FLOAT:
+			resulting_bytes = convertWorker<float, T>(scratchspace_map[result_type], in_data, num_bytes);
 			break;
 
-		case INT32:{
-			if(num_elements > i32_size){
-				delete [] i32_scratchspace;
-				i32_scratchspace = new int32_t[num_elements*2];
-				i32_size = num_elements*2;
-			}
-			for(int ii=0; ii < num_elements; ii++)
-				i32_scratchspace[ii] = (int32_t)(in_data[ii]);
-			resulting_bytes = num_elements*sizeof(int32_t);
-			cur_scratchspace = i32_scratchspace;
-			}
+		case INT32:
+			resulting_bytes = convertWorker<int32_t, T>(scratchspace_map[result_type], in_data, num_bytes);
 			break;
 
-		case INT16:{
-			if(num_elements > i16_size){
-				delete [] i16_scratchspace;
-				i16_scratchspace = new int16_t[num_elements*2];
-				i16_size = num_elements*2;
-			}
-			for(int ii=0; ii < num_elements; ii++)
-				i16_scratchspace[ii] = (int16_t)(in_data[ii]);
-			resulting_bytes = num_elements*sizeof(int16_t);
-			cur_scratchspace = i16_scratchspace;
-			}
+		case INT16:
+			resulting_bytes = convertWorker<int16_t, T>(scratchspace_map[result_type], in_data, num_bytes);
 			break;
 
-		case INT8:{
-			if(num_elements > i8_size){
-				delete [] i8_scratchspace;
-				i8_scratchspace = new int8_t[num_elements*2];
-				i8_size = num_elements*2;
-			}
-			for(int ii=0; ii < num_elements; ii++)
-				i8_scratchspace[ii] = (int8_t)(in_data[ii]);
-			resulting_bytes = num_elements*sizeof(int8_t);
-			cur_scratchspace = i8_scratchspace;
-			}
+		case INT8:
+			resulting_bytes = convertWorker<int8_t, T>(scratchspace_map[result_type], in_data, num_bytes);
 			break;
 
 		default:
@@ -121,38 +96,32 @@ int streamConverter<T>::convertFrom(void *in_data, int num_bytes, primType start
 	//First count the number of actual elements
 	int num_elements = num_bytes/sizeOfType(start_type);
 
-	int resulting_bytes = num_elements;
-	if(resulting_bytes > scratchspace_size){
-		delete [] scratchspace;
-		scratchspace = new T[num_elements*2];
-		scratchspace_size = num_elements*2;
+	int resulting_bytes = num_elements*sizeof(T);
+	if(num_elements > t_scratch.cur_capacity){
+		delete [] t_scratch.scratchspace;
+		t_scratch.scratchspace = new T[num_elements*2];
+		t_scratch.cur_capacity = num_elements*2;
 	}
 
-	//TODO: Any suggestions on how to not do so much code duplication here?
 	switch(start_type){
 		case DOUBLE:
-			for(int ii=0; ii < num_elements; ii++)
-				scratchspace[ii] = (T)(((double*)in_data)[ii]);
+			std::copy((double*)in_data, ((double*)in_data) + num_elements, t_scratch.scratchspace);
 			break;
 
 		case FLOAT:
-			for(int ii=0; ii < num_elements; ii++)
-				scratchspace[ii] = (T)(((float*)in_data)[ii]);
+			std::copy((float*)in_data, ((float*)in_data) + num_elements, t_scratch.scratchspace);
 			break;
 
 		case INT32:
-			for(int ii=0; ii < num_elements; ii++)
-				scratchspace[ii] = (T)(((int32_t*)in_data)[ii]);
+			std::copy((int32_t*)in_data, ((int32_t*)in_data) + num_elements, t_scratch.scratchspace);
 			break;
 
 		case INT16:
-			for(int ii=0; ii < num_elements; ii++)
-				scratchspace[ii] = (T)(((int16_t*)in_data)[ii]);
+			std::copy((int16_t*)in_data, ((int16_t*)in_data) + num_elements, t_scratch.scratchspace);
 			break;
 
 		case INT8:
-			for(int ii=0; ii < num_elements; ii++)
-				scratchspace[ii] = (T)(((int8_t*)in_data)[ii]);
+			std::copy((int8_t*)in_data, ((int8_t*)in_data) + num_elements, t_scratch.scratchspace);
 			break;
 	}
 
@@ -175,7 +144,7 @@ int streamConverter<T>::sizeOfType(primType in_type){
 
 template <typename T>
 void *streamConverter<T>::getResult(){
-	return cur_scratchspace;
+	return scratchspace_map[cur_type].scratchspace;
 }
 
 #endif
