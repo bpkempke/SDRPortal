@@ -15,7 +15,7 @@ public:
 	int rx_chan;
 	int tx_chan;
 	rxtxChanInfo(int r, int t) : rx_chan(r), tx_chan(t) {};
-	rxtxChanInfo(){rx_chan = 0; tx_chan = 0;};//TODO: Is this really the best way to make this 'struct'?
+	rxtxChanInfo() : rx_chan(0), tx_chan(0) {};
 };
 
 class paramData {
@@ -77,7 +77,7 @@ public:
 	std::vector<primType> getResultingPrimTypes(int rx_chan);
 	void distributeRXData(void *in_data, int num_bytes, int rx_chan, primType in_type);
 	void sendIQData(void *data, int num_bytes, int uid_port, primType in_type);
-	void setStreamDataType(streamType in_type); //TODO: Need to integrate this in
+	void setStreamDataType(primType in_type, int in_uid);
 
 	//All possible get/set/check methods.  If they're not implemented, the virtual method will default to throwing an exception
 	virtual void setRXFreq(paramData in_param){throw invalidCommandException("");};

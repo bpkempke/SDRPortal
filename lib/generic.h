@@ -4,16 +4,7 @@
 #include <sstream>
 #include <stdlib.h>
 
-enum streamType {
-	COMPLEX_FLOAT,
-	COMPLEX_DOUBLE,
-	COMPLEX_INT8,
-	COMPLEX_INT16,
-	COMPLEX_INT32
-};
-
-enum primType {DOUBLE, INT, FLOAT, VOID, INT32, INT16, INT8, UINT32};
-enum cPrimType {C_DOUBLE64, C_FLOAT32, C_INT32, C_INT16, C_INT8};
+enum primType {DOUBLE, INT, FLOAT, INT32, INT16, INT8, UINT32, VOID};
 
 enum socketType{
 	SOCKET_TCP,
@@ -24,6 +15,7 @@ enum socketType{
 
 bool isInteger(std::string in_string);
 bool isDouble(std::string in_string);
+primType stringToPrim(std::string in_string);
 
 class badArgumentException {
 public:

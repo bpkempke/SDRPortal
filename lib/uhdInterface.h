@@ -69,9 +69,6 @@ private:
 	//PThreads for rx and tx
 	pthread_t rx_listener, tx_thread;
 
-	//Current RX/TX Channel configurations
-	streamType cur_stream_type;
-
 	//Stream converter to easily switch back and forth between primitive streaming types...
 	streamConverter<int16_t> str_converter;
 

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <sstream>
+#include <string>
 #include <algorithm>
 #include "portalDataSocket.h"
 #include "genericSDRInterface.h"
@@ -26,6 +27,18 @@ int genericSDRInterface::addChannel(portalDataSocket *in_channel){
 	in_channel->setUID(num_channels++);
 
 	return num_channels-1;
+}
+
+void genericSDRInterface::setStreamDataType(primType in_type, int in_uid){
+
+	//First make sure that this UID is actually associated with something...
+	std::map<int,portalDataSocket*>::iterator found_data_socket = uid_map.find(in_uid);
+
+	//If that data socket is found, set its type, otherwise throw an error
+	if(found_data_socket != uid_map.end()){
+		portalDataSocket *cur_data_socket = found_data_socket->second;
+		cur_data_socket->setDataType(in_type);
+	} else throw badArgumentException(badArgumentException::OUT_OF_BOUNDS, 1, std::to_string(in_uid));
 }
 
 void genericSDRInterface::setSDRParameter(int in_uid, std::string name, std::string val){

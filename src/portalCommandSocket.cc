@@ -108,6 +108,14 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_messages, int l
 					//TODO: Respond with UID
 				else
 					throw badArgumentException(badArgumentException::MALFORMED, 1, arg1);
+			} else if(command == "DATATYPE"){
+				primType new_type = stringToPrim(arg1);
+				if(new_type != VOID){
+					sdr_int->setStreamDataType(new_type, cur_channel);
+					response_message.num_bytes = sprintf(response_message.buffer,"%s\r\n",arg1.c_str());
+					dataToLowerLevel(&response_message, 1);
+				} else
+					throw badArgumentException(badArgumentException::MALFORMED, 1, arg1);
 			} else {
 				sdr_int->setSDRParameter(cur_channel, command, arg1);
 			}
