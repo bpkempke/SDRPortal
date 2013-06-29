@@ -2,6 +2,7 @@
 #define HIER_DATAFLOW_BLOCK_H
 
 #include <vector>
+#include <map>
 
 class hierarchicalDataflowBlock;
 
@@ -17,7 +18,7 @@ struct hierarchicalDataConnection{
  */
 class hierarchicalDataflowBlock{
 public:
-	hierarchicalDataflowBlock(int num_down_channels=1, int num_up_channels=1);
+	hierarchicalDataflowBlock(){};
 	void addUpperLevel(hierarchicalDataflowBlock *in_block, int up_channel=0, int local_up_channel=0);
 	virtual void dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0) = 0;
 	void dataToUpperLevel(void *data, int num_bytes, int local_up_channel=0);
@@ -35,9 +36,9 @@ private:
 		hierarchicalDataflowBlock *remote;
 	};
 
-	//TODO: These should be a map of vectors
-	std::vector<std::vector<hierarchicalDataConnection> > upper_level_links;
-	std::vector<std::vector<hierarchicalDataConnection> > lower_level_links;
+	typedef std::map<int, std::vector<hierarchicalDataConnection> >::iterator linkIterator;
+	std::map<int, std::vector<hierarchicalDataConnection> > upper_level_links;
+	std::map<int, std::vector<hierarchicalDataConnection> > lower_level_links;
 };
 
 #endif

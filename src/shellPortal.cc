@@ -45,7 +45,7 @@ pid_t popen2(char **command, FILE **infp, FILE **outfp){
 	return pid;
 }
 
-shellPortal::shellPortal(socketType in_socket_type, int socket_num) : hierarchicalDataflowBlock(1, 1){
+shellPortal::shellPortal(socketType in_socket_type, int socket_num){
 	socket_type = in_socket_type;
 
 	//Create the socket that we'll be listening on...

@@ -2,7 +2,7 @@
 #include "genericSDRInterface.h"
 #include "portalDataSocket.h"
 
-portalDataSocket::portalDataSocket(socketType in_socket_type, int socket_num, genericSDRInterface *in_sdr_int) : hierarchicalDataflowBlock(1, 1){
+portalDataSocket::portalDataSocket(socketType in_socket_type, int socket_num, genericSDRInterface *in_sdr_int){
 	sdr_int = in_sdr_int;
 	data_type = INT8;
 

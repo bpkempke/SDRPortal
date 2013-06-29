@@ -36,7 +36,7 @@ static void *listeningThreadProxy(void *in_ptr){
 	return return_pointer;
 }
 
-genericSocketInterface::genericSocketInterface(socketType in_socket_type, int portnum, int in_max_connections) : hierarchicalDataflowBlock(0, 1){
+genericSocketInterface::genericSocketInterface(socketType in_socket_type, int portnum, int in_max_connections){
 	socket_type = in_socket_type;
 	max_connections = in_max_connections;
 	cur_uid = 0;
@@ -353,7 +353,7 @@ static void *socketReaderProxy(void *in_socket_thread){
 	return return_pointer;
 }
 
-socketThread::socketThread(int in_fp, pthread_mutex_t *in_mutex, socketInterpreter *in_interp, int in_uid) : hierarchicalDataflowBlock(0, 1) {
+socketThread::socketThread(int in_fp, pthread_mutex_t *in_mutex, socketInterpreter *in_interp, int in_uid){
 
 	socket_fp = in_fp;
 	shared_mutex = in_mutex;

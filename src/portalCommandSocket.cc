@@ -5,7 +5,7 @@
 #include "portalDataSocket.h"
 #include "portalCommandSocket.h"
 
-portalCommandSocket::portalCommandSocket(socketType in_socket_type, int socket_num, genericSDRInterface *in_sdr_int) : hierarchicalDataflowBlock(1, 1){
+portalCommandSocket::portalCommandSocket(socketType in_socket_type, int socket_num, genericSDRInterface *in_sdr_int){
 	sdr_int = in_sdr_int;
 	cmd_socket_type = in_socket_type;
 

@@ -1,12 +1,6 @@
 #include <iostream>
 #include "hierarchicalDataflowBlock.h"
 
-hierarchicalDataflowBlock::hierarchicalDataflowBlock(int num_down_channels, int num_up_channels){
-
-	//Initialize higher and lower-level links based on the number of channels passed in
-	upper_level_links.resize(num_up_channels);
-	lower_level_links.resize(num_down_channels);
-}
 
 void hierarchicalDataflowBlock::addUpperLevel(hierarchicalDataflowBlock *in_block, int remote_up_channel, int local_up_channel){
 
@@ -15,10 +9,6 @@ void hierarchicalDataflowBlock::addUpperLevel(hierarchicalDataflowBlock *in_bloc
 	new_connection.local_channel = local_up_channel;
 	new_connection.remote_channel = remote_up_channel;
 	new_connection.remote = in_block;
-
-	//Make sure there's space reserved first
-	if((unsigned int)local_up_channel >= upper_level_links.size())
-		upper_level_links.resize(local_up_channel+1);
 	upper_level_links[local_up_channel].push_back(new_connection);
 }
 
@@ -26,12 +16,12 @@ void hierarchicalDataflowBlock::addUpperLevel(hierarchicalDataflowBlock *in_bloc
 void hierarchicalDataflowBlock::dataToUpperLevel(void *data, int num_bytes, int local_up_channel){
 
 	if(upper_level_links.size() > 0){
-		int start_channel = (local_up_channel < 0) ? 0 : local_up_channel;
-		int end_channel = (local_up_channel < 0) ? upper_level_links.size()-1 : local_up_channel;
-		for(int cur_up_channel = start_channel; cur_up_channel <= end_channel; cur_up_channel++){
+		linkIterator start_channel = (local_up_channel < 0) ? upper_level_links.begin() : upper_level_links.find(local_up_channel);
+		linkIterator end_channel = (local_up_channel < 0) ? upper_level_links.end() : ++upper_level_links.find(local_up_channel);
+		for(linkIterator it=start_channel; it != end_channel; it++){
 			//Push the requested data to all of the higher-level blocks that reside on the requested channel
-			for(unsigned int ii=0; ii < upper_level_links[cur_up_channel].size(); ii++){
-				hierarchicalDataConnection cur_conn = upper_level_links[cur_up_channel][ii];
+			for(unsigned int ii=0; ii < it->second.size(); ii++){
+				hierarchicalDataConnection cur_conn = it->second[ii];
 				cur_conn.remote->dataFromLowerLevel(data, num_bytes, cur_conn.remote_channel);
 			}
 		}
@@ -41,9 +31,9 @@ void hierarchicalDataflowBlock::dataToUpperLevel(void *data, int num_bytes, int 
 void hierarchicalDataflowBlock::notifyUpper(void *in_notification){
 
 	if(upper_level_links.size() > 0){
-		for(unsigned int ii = 0; ii < upper_level_links.size(); ii++){
-			for(unsigned int jj=0; jj < upper_level_links[ii].size(); jj++){
-				hierarchicalDataConnection cur_conn = upper_level_links[ii][jj];
+		for(linkIterator it=upper_level_links.begin(); it != upper_level_links.end(); it++){
+			for(unsigned int jj=0; jj < it->second.size(); jj++){
+				hierarchicalDataConnection cur_conn = it->second[jj];
 				cur_conn.remote->notificationFromLower(in_notification);
 			}
 		}
@@ -59,21 +49,18 @@ void hierarchicalDataflowBlock::addLowerLevel(hierarchicalDataflowBlock *in_bloc
 	new_connection.remote = in_block;
 
 	//Make sure there's space reserved first
-	//TODO: lower_level_links should be a map instead of a vector I believe...
-	if((unsigned int)local_down_channel >= lower_level_links.size())
-		lower_level_links.resize(local_down_channel+1);
 	lower_level_links[local_down_channel].push_back(new_connection);
 }
 
 void hierarchicalDataflowBlock::dataToLowerLevel(void *data, int num_bytes, int local_down_channel){
 
 	if(lower_level_links.size() > 0){
-		int start_channel = (local_down_channel < 0) ? 0 : local_down_channel;
-		int end_channel = (local_down_channel < 0) ? lower_level_links.size()-1 : local_down_channel;
-		for(int cur_down_channel = start_channel; cur_down_channel <= end_channel; cur_down_channel++){
+		linkIterator start_channel = (local_down_channel < 0) ? lower_level_links.begin() : lower_level_links.find(local_down_channel);
+		linkIterator end_channel = (local_down_channel < 0) ? lower_level_links.end() : ++lower_level_links.find(local_down_channel);
+		for(linkIterator it=start_channel; it != end_channel; it++){
 			//Push the requested data to all of the higher-level blocks that reside on the requested channel
-			for(unsigned int ii=0; ii < lower_level_links[cur_down_channel].size(); ii++){
-				hierarchicalDataConnection cur_conn = lower_level_links[cur_down_channel][ii];
+			for(unsigned int ii=0; ii < it->second.size(); ii++){
+				hierarchicalDataConnection cur_conn = it->second[ii];
 				cur_conn.remote->dataFromUpperLevel(data, num_bytes, cur_conn.remote_channel);
 			}
 		}
@@ -84,12 +71,12 @@ void hierarchicalDataflowBlock::removeUpperLevel(hierarchicalDataflowBlock *in_b
 	std::cout << "removing upper level" << std::endl;
 
 	//Iterate over all of the different uplink channels
-	for(unsigned int ii=0; ii < upper_level_links.size(); ii++){
+	for(linkIterator it=upper_level_links.begin(); it != upper_level_links.end(); it++){
 
 		//Then just do a linear search for the block to delete, since this shouldn't happen often
-		for(unsigned int jj=0; jj < upper_level_links[ii].size(); jj++){
-			if(upper_level_links[ii][jj].remote == in_block){
-				upper_level_links[ii].erase(upper_level_links[ii].begin()+jj);
+		for(unsigned int jj=0; jj < it->second.size(); jj++){
+			if(it->second[jj].remote == in_block){
+				it->second.erase(it->second.begin()+jj);
 				jj--;
 			}
 		}
@@ -100,12 +87,12 @@ void hierarchicalDataflowBlock::removeLowerLevel(hierarchicalDataflowBlock *in_b
 	std::cout << "removing lower level" << std::endl;
 
 	//Iterate over all of the different uplink channels
-	for(unsigned int ii=0; ii < lower_level_links.size(); ii++){
+	for(linkIterator it=lower_level_links.begin(); it != lower_level_links.end(); it++){
 
 		//Then just do a linear search for the block to delete, since this shouldn't happen often
-		for(unsigned int jj=0; jj < lower_level_links[ii].size(); jj++){
-			if(lower_level_links[ii][jj].remote == in_block){
-				lower_level_links[ii].erase(lower_level_links[ii].begin()+jj);
+		for(unsigned int jj=0; jj < it->second.size(); jj++){
+			if(it->second[jj].remote == in_block){
+				it->second.erase(it->second.begin()+jj);
 				jj--;
 			}
 		}

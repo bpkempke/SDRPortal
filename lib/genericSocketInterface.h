@@ -61,7 +61,6 @@ protected:
 	socketType socket_type;
 	int socket_fp;
 	std::vector<socketThread*> clients;
-	//TODO: Delete: fdInterface *this_uplink;
 
 private:
 	int socket_portnum;
