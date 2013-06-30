@@ -64,7 +64,7 @@ void genericSDRInterface::setSDRParameter(int in_uid, std::string name, std::str
 
 			(this->*cur_param_details.setMethod)(val_int);
 		} else if(cur_param_details.arg_type == DOUBLE){
-			if(isInteger(val)){
+			if(isDouble(val)){
 				paramData val_double(strtod(val.c_str(), NULL), uid_to_chaninfo[in_uid]);
 				//Check to make sure the value is within bounds
 				//if(!(this->*(cur_param_details.checkMethod))(val_double))
@@ -136,13 +136,17 @@ void genericSDRInterface::distributeRXData(void *in_data, int num_bytes, int rx_
 		}
 }
 
-//TODO: How does this get integrate in?  Should genericSDRInterface be implementing hierarchicalDataflowBlock instead?
-void genericSDRInterface::sendIQData(void *in_data, int num_bytes, int uid_port, primType in_type){
-	//Data coming from socket for TX
-	int tx_chan = uid_to_chaninfo[uid_port].tx_chan;
-	txIQData(in_data, num_bytes, tx_chan, in_type);
-}
-
 rxtxChanInfo genericSDRInterface::getChanInfo(int in_uid){
 	return uid_to_chaninfo[in_uid];
 }
+
+void genericSDRInterface::dataFromLowerLevel(void *data, int num_messages, int local_down_channel){
+	//Data coming from socket for TX
+
+	messageType *in_messages = static_cast<messageType*>(data);
+	for(int ii=0; ii < num_messages; ii++){
+		int tx_chan = uid_to_chaninfo[in_messages[ii].socket_channel].tx_chan;
+		txIQData((void*)in_messages[ii].buffer, in_messages[ii].num_bytes, tx_chan, in_messages[ii].data_type);
+	}
+}
+

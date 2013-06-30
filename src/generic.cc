@@ -1,13 +1,27 @@
 #include <string>
 #include <generic.h>
+#include <stdlib.h>
 
-//TODO: These error checkers aren't doing their job...
+//Basic logic behind isInteger and isDouble courtesy of:
+//  http://pubs.opengroup.org/onlinepubs/009695399/functions/strtod.html
 bool isInteger(std::string in_string){
-	return true;
+	const char *s = in_string.c_str();
+	char *endp;
+
+	strtol(s, &endp, 0);
+	if(s != endp && *endp == '\0')
+		return true;
+	else return false;
 }
 
 bool isDouble(std::string in_string){
-	return true;
+	const char *s = in_string.c_str();
+	char *endp;
+
+	strtod(s, &endp);
+	if(s != endp && *endp == '\0')
+		return true;
+	else return false;
 }
 
 primType stringToPrim(std::string in_string){

@@ -12,9 +12,10 @@
 enum destType{UPSTREAM, DOWNSTREAM};
 
 struct messageType{
-	char *buffer;
+	char *buffer;//TODO: Should this be void* instead???
 	int num_bytes;
 	int socket_channel;
+	primType data_type;
 	destType message_dest;
 };
 

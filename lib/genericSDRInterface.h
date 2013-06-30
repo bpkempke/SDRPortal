@@ -7,6 +7,7 @@
 #include <vector>
 #include <stdint.h>
 #include "generic.h"
+#include "hierarchicalDataflowBlock.h"
 
 class portalDataSocket;
 
@@ -62,7 +63,7 @@ struct paramAccessor {
 	paramAccessor(){};
 };
 
-class genericSDRInterface{
+class genericSDRInterface : public hierarchicalDataflowBlock{
 public:
 	genericSDRInterface();
 	virtual ~genericSDRInterface(){};
@@ -76,7 +77,6 @@ public:
 
 	std::vector<primType> getResultingPrimTypes(int rx_chan);
 	void distributeRXData(void *in_data, int num_bytes, int rx_chan, primType in_type);
-	void sendIQData(void *data, int num_bytes, int uid_port, primType in_type);
 	void setStreamDataType(primType in_type, int in_uid);
 
 	//All possible get/set/check methods.  If they're not implemented, the virtual method will default to throwing an exception
@@ -105,6 +105,10 @@ public:
 	virtual void setCustomSDRParameter(std::string name, std::string val, int in_chan) = 0;
 	virtual void txIQData(void *data, int num_bytes, int tx_chan, primType in_type){};
 	std::map<std::string, paramAccessor > param_accessors;
+
+	//Methods inherited from hierarchicalDataflowBlock
+	virtual void dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0){};
+	virtual void dataFromLowerLevel(void *data, int num_bytes, int local_down_channel=0);
 private:
 	int num_channels, cur_channel;
 	std::map<int,portalDataSocket*> uid_map;

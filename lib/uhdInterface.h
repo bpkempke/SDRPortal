@@ -54,7 +54,7 @@ public:
 
 private:
 	void writeMAX2829Reg(uint32_t value);
-	//Pointer to the created uhd object.  TODO: Maybe this should be a superclass to make things more general?
+
 	uhd::usrp::multi_usrp::sptr shared_uhd;
 
 	//Pointers to the tx and rx streams
