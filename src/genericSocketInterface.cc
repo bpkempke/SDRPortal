@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <errno.h>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -73,9 +74,9 @@ int genericSocketInterface::initSocket(int portnum){
 	in_addr.sin_addr.s_addr = INADDR_ANY;
 	in_addr.sin_port = htons(portnum);//This just needs to be set to zero to get a randomly-assigned free port number!
 
-	if(bind(ret_id, (struct sockaddr *) &in_addr, sizeof(in_addr)) < 0)
-	{
-		exit(1); //TODO: Maybe this shouldn't be so harsh...
+	if(bind(ret_id, (struct sockaddr *) &in_addr, sizeof(in_addr)) < 0){
+		std::cout << "ERROR: Unable to bind to port " << portnum << std::endl;
+		exit(1);
 	}
 
 	listen(ret_id, 1);
@@ -100,9 +101,40 @@ void *genericSocketInterface::connectionListenerThread(){
 		datasock_fd = accept(socket_fp, (struct sockaddr *) &data_cli, &data_cli_len);
 		std::cout << "ACCEPTED CONNECTION" << std::endl;
 
-		//TODO: put some sort of error checking here....
-		if(datasock_fd < 0)
-			printf("ERROR on accept, socket_fid = %d\n", socket_fp);
+		//Error checking for data socket errors (Hint: there are a lot...)
+		if(datasock_fd < 0){
+			if(errno == EAGAIN || errno == ENETDOWN || errno == EPROTO || errno == ENOPROTOOPT ||
+				errno == EHOSTDOWN || errno == ENONET || errno == EHOSTUNREACH || 
+				errno == EOPNOTSUPP || errno == ENETUNREACH || errno == EWOULDBLOCK ||
+				errno == ECONNABORTED)
+				//non-critical error, just retry
+				continue;
+			else if(errno == EPERM)
+				std::cerr << "ERROR: Linux firewall blocking port " << getPortNum() << std::endl;
+			else if(errno == EBADF)
+				std::cerr << "ERROR: Inavlid socket identifier" << std::endl;
+			else if(errno == EFAULT)
+				std::cerr << "ERROR: Socket addr argument not in a writable part of user address space" << std::endl;
+			else if(errno == EINTR)
+				std::cerr << "ERROR: Socket connection interrupted by signal" << std::endl;
+			else if(errno == EINVAL)
+				std::cerr << "ERROR: Socket state invalid" << std::endl;
+			else if(errno == EMFILE)
+				std::cerr << "ERROR: Per-process limit of open file descriptors has been reached" << std::endl;
+			else if(errno == ENFILE)
+				std::cerr << "ERROR: System limit of open file descriptors has been reached" << std::endl;
+			else if(errno == ENOBUFS || errno == ENOMEM)
+				std::cerr << "ERROR: Not enough memory to open a socket" << std::endl;
+			else if(errno == ENOTSOCK)
+				std::cerr << "ERROR: Referencing a file descriptor, not a socket descriptor" << std::endl;
+			else if(errno == EOPNOTSUPP)
+				std::cerr << "ERROR: Referencing a socket which is not of type SOCK_STREAM" << std::endl;
+			else if(errno == EPROTO)
+				std::cerr << "ERROR: Socket protocol error" << std::endl;
+			else
+				std::cerr << "ERROR: Unidentified socket error: " << errno << std::endl;
+			exit(1);
+		}
 			
 		//TODO: Put a check for number of connections here...
 		socketInterpreter *new_interpreter;

@@ -74,8 +74,11 @@ void genericSDRInterface::setSDRParameter(int in_uid, std::string name, std::str
 			} else
 				throw badArgumentException(badArgumentException::MALFORMED, 1, val);
 
+		} else if(cur_param_details.arg_type == C_STRING){
+			paramData val_cstr(val.c_str(), uid_to_chaninfo[in_uid]);
+			(this->*(cur_param_details.setMethod))(val_cstr);
 		} else {
-			//TODO: Any other parameter types we want to support?
+			//SHOULDN'T GET HERE???
 		}
 	}
 }

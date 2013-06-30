@@ -13,8 +13,6 @@ portalCommandSocket::portalCommandSocket(socketType in_socket_type, int socket_n
 	socket_int = new genericSocketInterface(in_socket_type, socket_num);
 
 	//Link upper and lower 
-	//TODO: Not sure if this is needed at all...
-	//  in_sdr_int->addLowerLevel(this);
 	this->addLowerLevel(socket_int);
 	socket_int->addUpperLevel(this);
 }
@@ -24,9 +22,9 @@ portalCommandSocket::~portalCommandSocket(){
 }
 
 void portalCommandSocket::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel){
-	//Data coming in from the SDR
+	//Data coming in from the SDR -- should only be handled by portalDataSocket...
 
-	messageType new_message;
+/*	messageType new_message;
 	new_message.buffer = (char*)data;
 	new_message.num_bytes = num_bytes;
 	new_message.socket_channel = 0; //TODO: This isn't right!
@@ -35,6 +33,7 @@ void portalCommandSocket::dataFromUpperLevel(void *data, int num_bytes, int loca
 	transmit_messages.push_back(new_message);
 
 	socket_int->dataFromUpperLevel(&transmit_messages, num_bytes);
+	*/
 }
 
 void portalCommandSocket::dataFromLowerLevel(void *data, int num_messages, int local_down_channel){
@@ -119,14 +118,6 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_messages, int l
 			} else {
 				sdr_int->setSDRParameter(cur_channel, command, arg1);
 			}
-			/*//TODO: This needs to be transferred to the UHD interface code 
-			if(command == "RXANT"){
-				uhd_int->getUHDObject()->set_rx_antenna(arg1);
-			} else if(command == "TXANT"){
-				uhd_int->getUHDObject()->set_tx_antenna(arg1);
-			} else {
-				throw invalidCommandException();
-			}*/
 		} catch(badArgumentException const& e){
 			std::stringstream response;
 			response << "?" << e.what() << std::endl;

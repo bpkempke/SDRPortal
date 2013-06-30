@@ -61,7 +61,6 @@ public:
 protected:
 	socketType socket_type;
 	int socket_fp;
-	std::vector<socketThread*> clients;
 
 private:
 	int socket_portnum;

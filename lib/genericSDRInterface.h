@@ -24,6 +24,7 @@ public:
 	paramData(double in_data, rxtxChanInfo in_channel=rxtxChanInfo(0,0)) : channel(in_channel) {data_type = DOUBLE; param_double = in_data;};
 	paramData(int in_data, rxtxChanInfo in_channel=rxtxChanInfo(0,0)) : channel(in_channel) {data_type = INT; param_double = (double)in_data;};
 	paramData(uint32_t in_data, rxtxChanInfo in_channel=rxtxChanInfo(0,0)) : channel(in_channel) {data_type = UINT32; param_double = (double)in_data;};
+	paramData(const char *in_data, rxtxChanInfo in_channel=rxtxChanInfo(0,0)) : channel(in_channel) {data_type = C_STRING; param_cstr = (char*)in_data;};
 	paramData(rxtxChanInfo in_channel=rxtxChanInfo(0,0)) : channel(in_channel) {data_type = VOID;};
 	~paramData(){};
 
@@ -31,9 +32,11 @@ public:
 	int getInt(){return (int)param_double;};
 	double getDouble(){return param_double;};
 	uint32_t getUInt32(){return (uint32_t)param_double;};
+	char *getCString(){return param_cstr;};
 	rxtxChanInfo getChannel(){return channel;};
 private:
 	double param_double;
+	char *param_cstr;
 	primType data_type;
 	rxtxChanInfo channel;
 };
