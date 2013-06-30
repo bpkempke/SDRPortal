@@ -24,16 +24,6 @@ portalCommandSocket::~portalCommandSocket(){
 void portalCommandSocket::dataFromUpperLevel(void *data, int num_bytes, int local_up_channel){
 	//Data coming in from the SDR -- should only be handled by portalDataSocket...
 
-/*	messageType new_message;
-	new_message.buffer = (char*)data;
-	new_message.num_bytes = num_bytes;
-	new_message.socket_channel = 0; //TODO: This isn't right!
-
-	std::vector<messageType> transmit_messages;
-	transmit_messages.push_back(new_message);
-
-	socket_int->dataFromUpperLevel(&transmit_messages, num_bytes);
-	*/
 }
 
 void portalCommandSocket::dataFromLowerLevel(void *data, int num_messages, int local_down_channel){
