@@ -92,10 +92,11 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_messages, int l
 				} else
 					throw badArgumentException(badArgumentException::MALFORMED, 1, arg1);
 			} else if(command == "TXCHANNEL"){
-				if(isInteger(arg1))
+				if(isInteger(arg1)){
 					sdr_int->bindTXChannel(strtol(arg1.c_str(), NULL, 0), cur_channel);
-					//TODO: Respond with UID
-				else
+					response_message.num_bytes = sprintf(response_message.buffer,"%d\r\n",cur_channel);
+					dataToLowerLevel(&response_message, 1);
+				} else
 					throw badArgumentException(badArgumentException::MALFORMED, 1, arg1);
 			} else if(command == "DATATYPE"){
 				primType new_type = stringToPrim(arg1);

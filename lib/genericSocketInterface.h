@@ -35,6 +35,8 @@ public:
 	void *socketReader();
 	void socketWriter(char *buffer, int buffer_length);
 
+	int getUID(){return uid;};
+
 	//Methods inherited from hierarchicalDataflowBlock
 	virtual void dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0);
 	virtual void dataFromLowerLevel(void *data, int num_bytes, int local_down_channel=0){};

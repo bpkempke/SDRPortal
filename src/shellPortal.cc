@@ -52,8 +52,6 @@ shellPortal::shellPortal(socketType in_socket_type, int socket_num){
 	socket_int = new genericSocketInterface(in_socket_type, socket_num);
 
 	//Link upper and lower 
-	//TODO: Not sure if this is needed at all...
-	//  in_sdr_int->addLowerLevel(this);
 	this->addLowerLevel(socket_int);
 	socket_int->addUpperLevel(this);
 }
@@ -96,10 +94,8 @@ static void *commandListener(void *in_args){
 }
 
 void shellPortal::deleteListener(cmdListenerArgs *in_arg){
-	//TODO: Processes still become defunct...
 	kill(in_arg->pid,SIGINT);
 	waitpid(in_arg->pid,NULL,WNOHANG);
-	//TODO: This is time-consuming.... ugh...
 	for(unsigned int ii=0; ii < command_threads.size(); ii++){
 		if(in_arg == command_threads[ii])
 			command_threads.erase(command_threads.begin()+ii);
@@ -115,7 +111,7 @@ void shellPortal::dataFromLowerLevel(void *data, int num_messages, int local_dow
 	int down_channel = in_messages[0].socket_channel;
 
 	//Insert historic messages into a string stream so as to easily extract lines
-	static std::stringstream command_stream;
+	static std::stringstream command_stream("");
 	for(int ii=0; ii < num_messages; ii++){
 		std::string in_data_string(in_messages[ii].buffer,in_messages[ii].num_bytes);
 		std::cout << "APPENDING " << in_data_string << std::endl;
@@ -125,10 +121,11 @@ void shellPortal::dataFromLowerLevel(void *data, int num_messages, int local_dow
 
 	//Now parse out incoming commands
 	std::string current_command;
+	std::cout << "Before extraction[" << command_stream.gcount() << "]: " << command_stream.str() << std::endl;
 	if(!std::getline(command_stream, current_command).fail()){
 		//TODO: Not sure if stringstream should keep on growing or not?
 		command_stream.clear();
-		std::cout << "AFTER EXTRACTION: " << command_stream.str() << std::endl;
+		std::cout << "AFTER EXTRACTION[" << command_stream.gcount() << "]: " << command_stream.str() << std::endl;
 		std::cout << "GOT A COMMAND: " << current_command << std::endl;
 		//Look for the first line break (if there is one) and turn into null termination
 		for(unsigned int ii=0; ii < current_command.length(); ii++)

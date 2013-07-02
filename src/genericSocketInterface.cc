@@ -178,7 +178,11 @@ void genericSocketInterface::dataFromUpperLevel(void *data, int num_messages, in
 }
 
 void genericSocketInterface::notificationFromLower(void *in_notification){
-	notifyUpper(in_notification);
+	//Currently the only notification that's going to be coming up from socketThread is that it's closing
+	socketThread *in_socket = (socketThread*)in_notification;
+	int closed_uid = in_socket->getUID();
+	notifyUpper(&closed_uid);
+	removeLowerLevel(dynamic_cast<hierarchicalDataflowBlock*>(in_socket));
 }
 
 void genericSocketInterface::dataFromLowerLevel(void *data, int num_bytes, int local_down_channel){
@@ -426,7 +430,7 @@ void *socketThread::socketReader(){
 	}
 
 	std::cout << "socket closed, notifying upper..." << std::endl;
-	notifyUpper(&uid);
+	notifyUpper(this);
 
 	close(socket_fp);
 

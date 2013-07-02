@@ -24,8 +24,14 @@ rtlInterface::rtlInterface(int index){
 	}
 	std::cout << "Using device " << index << ": " << rtlsdr_get_device_name(index) << std::endl;
 
-	//TODO: Maybe some error checking with the return values?
-	rtlsdr_open(&rtl_dev, (uint32_t)index);
+	int rtl_ret = rtlsdr_open(&rtl_dev, (uint32_t)index);
+	if(rtl_ret != 0){
+		if(rtl_ret == -ENOMEM)
+			std::cerr << "ERROR: Not enough memory to instantiate rtlsdr" << std::endl;
+		else if(rtl_ret == -1)
+			std::cerr << "ERROR: rtlsdr device not found" << std::endl;
+		exit(1);
+	}
 
 	is_receiving = false;
 }
@@ -100,8 +106,15 @@ void rtlInterface::openRXChannel(int in_chan){
 }
 
 bool rtlInterface::checkRXFreq(paramData in_param){
-	//TODO: Might be able to do better than this depending on which device we're using, etc.
-	return true;
+	//Check to see if we can actually tune to the selected frequency
+	uint32_t rtl_prev_freq = rtlsdr_get_center_freq(rtl_dev);
+	int ret = rtlsdr_set_center_freq(rtl_dev, in_param.getUInt32());
+
+	//Set back to the previous frequency
+	rtlsdr_set_center_freq(rtl_dev, rtl_prev_freq);
+	
+	if(ret != 0) return false;
+	else return true;
 }
 
 bool rtlInterface::checkRXGain(paramData in_param){
@@ -128,8 +141,17 @@ bool rtlInterface::checkRXRate(paramData in_param){
 }
 
 void rtlInterface::setCustomSDRParameter(std::string name, std::string val, int in_chan){
-	//TODO: Things like AGC, etc?
-	//int rtlsdr_set_agc_mode(rtlsdr_dev_t *dev, int on);
+	if(name == "_RTLAGCTUNER"){
+		if(val == "ON")
+			rtlsdr_set_tuner_gain_mode(rtl_dev, 1);
+		else
+			rtlsdr_set_tuner_gain_mode(rtl_dev, 0);
+	} else if(name == "_RTLAGC"){
+		if(val == "ON")
+			rtlsdr_set_agc_mode(rtl_dev, 1);
+		else
+			rtlsdr_set_agc_mode(rtl_dev, 0);
+	}
 }
 
 #define RTL_BUFF_LEN 16384

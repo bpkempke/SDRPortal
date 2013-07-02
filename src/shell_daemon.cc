@@ -16,13 +16,17 @@ shellPortal *global_tcp_shell_portal = NULL;
 shellPortal *global_ws_shell_portal = NULL;
 
 void sighandler(int sig){
-	printf("sdrportal: signal %d caught...\n", sig);
+	printf("shellportal: signal %d caught...\n", sig);
 
 	//Delete all dynamically-allocated things
 	delete global_tcp_shell_portal;
 	delete global_ws_shell_portal;
 
 	exit(1);
+}
+
+void childsighandler(int sig){
+	printf("Got a signal from a child process...\n");
 }
 
 int main(int argc, char *argv[]){
@@ -49,6 +53,13 @@ int main(int argc, char *argv[]){
 		sigaction (SIGTERM, NULL, &old_action);
 	if (old_action.sa_handler != SIG_IGN)
 		sigaction (SIGTERM, &new_action, NULL);
+
+	//Set up child process signals
+	struct sigaction child_action;
+	child_action.sa_handler = childsighandler;
+	sigemptyset(&child_action.sa_mask);
+	child_action.sa_flags = SA_NOCLDWAIT;
+	sigaction(SIGCHLD, &child_action, NULL);
 
 	//Set up getopt
 	const char* const short_options = "p:w:";
