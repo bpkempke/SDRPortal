@@ -7,8 +7,8 @@ noinst_HEADERS = lib/base64.h lib/genericSDRInterface.h lib/hierarchicalDataflow
 
 uhdd_CPPFLAGS = -std=c++0x -Wall -g -Ilib
 uhdd_LDFLAGS = -pthread
-uhdd_LDADD = -luhd -lrtlsdr
+uhdd_LDADD = -luhd -lrtlsdr -lhackrf
 
 shelld_CPPFLAGS = -std=c++0x -Wall -g -Ilib
 shelld_LDFLAGS = -pthread
-shelld_LDADD = -luhd -lrtlsdr
+shelld_LDADD = -luhd -lrtlsdr -lhackrf
