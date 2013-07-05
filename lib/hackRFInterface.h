@@ -5,14 +5,15 @@
 #include "genericSDRInterface.h"
 #include "hierarchicalDataflowBlock.h"
 #include "streamConverter.h"
-#include <hackrf.h>
+#include <libhackrf/hackrf.h>
 
 class hackRFInterface : public genericSDRInterface{
 public:
-	hackRFInterface(int index);
+	hackRFInterface();
 	virtual ~hackRFInterface();
 
 	int rxData(hackrf_transfer *in_transfer);
+	int txData(hackrf_transfer *in_transfer);
 
 	//Certain functions inherited from genericSDRInterface class
 	virtual void setRXFreq(paramData in_param);
@@ -30,9 +31,15 @@ public:
 
 private:
 	hackrf_device *hrf_dev;
-	bool is_receiving;
+	bool is_receiving, is_transmitting;
 	bool rx_cancel;
 	pthread_t rx_listener;
+	char *read_translate_buffer;
+	int read_translate_length;
+
+	//Variables to store current parameters
+	uint32_t cur_rate, cur_gain;
+	uint64_t cur_freq;
 
 	//Stream converter to easily switch back and forth between primitive streaming types...
 	streamConverter<char> str_converter;

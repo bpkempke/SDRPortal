@@ -1,6 +1,7 @@
 #include <getopt.h>
 #include "uhdInterface.h"
 #include "rtlInterface.h"
+#include "hackRFInterface.h"
 #include "portalCommandSocket.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -14,7 +15,7 @@
 
 using namespace std;
 
-enum SDRType {UHD,RTL};
+enum SDRType {UHD,RTL,HACKRF};
 
 //GLOBALS
 genericSDRInterface *sdr_interface = NULL;
@@ -83,6 +84,8 @@ int main(int argc, char *argv[]){
 				sdr_type = UHD;
 			else if(!strcmp("RTL",optarg))
 				sdr_type = RTL;
+			else if(!strcmp("HACKRF",optarg))
+				sdr_type = HACKRF;
 			break;
 		case 'T':
 			tcp_cmd_portnum = atoi(optarg);
@@ -109,6 +112,8 @@ int main(int argc, char *argv[]){
 			sdr_interface = new rtlInterface(atoi(sdr_arguments.c_str()));
 		else
 			sdr_interface = new rtlInterface(0);
+	} else if(sdr_type == HACKRF){
+		sdr_interface = new hackRFInterface();
 	}
 
 	//Create command sockets which will spawn data sockets if requested

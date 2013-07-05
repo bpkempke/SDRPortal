@@ -4,7 +4,7 @@
 #include <sstream>
 #include <stdlib.h>
 
-enum primType {DOUBLE, INT, FLOAT, INT32, INT16, INT8, UINT32, C_STRING, VOID};
+enum primType {DOUBLE, INT, FLOAT, INT32, INT16, INT8, UINT32, UINT64, C_STRING, VOID};
 
 enum socketType{
 	SOCKET_TCP,
