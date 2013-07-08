@@ -17,18 +17,18 @@ add_library(sdrportalShared SHARED
 add_executable(uhdd uhd_daemon.cc)
 add_executable(shelld shell_daemon.cc)
 
-target_link_libraries(uhdd 
-	sdrportalShared
-	${CMAKE_THREAD_LIBS_INIT}
+target_link_libraries(sdrportalShared	
 	${LIBHACKRF_LIBRARIES}
 	${LIBRTLSDR_LIBRARIES}
 	${UHD_LIBRARIES}
 )
+
+target_link_libraries(uhdd 
+	sdrportalShared
+	${CMAKE_THREAD_LIBS_INIT}
+)
 target_link_libraries(shelld
 	sdrportalShared
 	${CMAKE_THREAD_LIBS_INIT}
-	${LIBHACKRF_LIBRARIES} #TODO: These libraries shouldn't be needed in shelld
-	${LIBRTLSDR_LIBRARIES}
-	${UHD_LIBRARIES}
 )
 
