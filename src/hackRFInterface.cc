@@ -29,6 +29,8 @@ hackRFInterface::hackRFInterface(){
 		exit(1);
 	}
 
+	std::cout << "Opened a connection to a HackRF" << std::endl;
+
 	is_receiving = false;
 	is_transmitting = false;
 }
@@ -180,6 +182,7 @@ int hackRFInterface::rxData(hackrf_transfer *in_transfer){
 	if(first_time)
 		std::cout << "GOT SOME SAMPLES!" << std::endl;
 	first_time = false;
+	std::cout << "GOT " << n_read << " SAMPLES" << std::endl;
 
 	//Resize translate buffer if it's too small
 	if(in_transfer->buffer_length > read_translate_length){
