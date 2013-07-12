@@ -9,7 +9,7 @@ class genericSDRInterface;
 
 class portalDataSocket : public hierarchicalDataflowBlock{
 public:
-	portalDataSocket(socketType in_socket_type, int socket_num, genericSDRInterface *in_sdr_int);
+	portalDataSocket(socketType in_socket_type, int socket_num);
 	~portalDataSocket();
 
 	int getPortNum();
@@ -25,7 +25,6 @@ public:
 private:
 	int uid;
 	genericSocketInterface *socket_int;
-	genericSDRInterface *sdr_int;
 	primType data_type;
 };
 

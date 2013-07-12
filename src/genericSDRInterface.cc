@@ -5,6 +5,9 @@
 #include "portalDataSocket.h"
 #include "genericSDRInterface.h"
 
+//TODO: Integrate PPM correction into genericSDRInterface
+//TODO: Integrate DC offset correction into genericSDRInterface
+
 genericSDRInterface::genericSDRInterface(){
 	num_channels = 0;
 	cur_channel = 0;

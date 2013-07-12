@@ -70,9 +70,10 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_messages, int l
 
 				//The client wants to add a data channel connection...
 				// Better create one! (and pass the random port back to the client so that he can connect to it...)
-				portalDataSocket *data_socket = new portalDataSocket(new_channel_type, 0, sdr_int);
+				portalDataSocket *data_socket = new portalDataSocket(new_channel_type, 0);
 
 				cur_channel = sdr_int->addChannel(data_socket);
+				data_socket->addUpperLevel(sdr_int);
 				response_message.num_bytes = sprintf(response_message.buffer,"%d: %d\r\n", cur_channel, data_socket->getPortNum());
 				dataToLowerLevel(&response_message, 1);
 			} else if(command == "CHANNEL"){

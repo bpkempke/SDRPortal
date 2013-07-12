@@ -2,8 +2,7 @@
 #include "genericSDRInterface.h"
 #include "portalDataSocket.h"
 
-portalDataSocket::portalDataSocket(socketType in_socket_type, int socket_num, genericSDRInterface *in_sdr_int){
-	sdr_int = in_sdr_int;
+portalDataSocket::portalDataSocket(socketType in_socket_type, int socket_num){
 	data_type = INT8;
 
 	//Create the socket that we'll be listening on...

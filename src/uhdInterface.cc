@@ -266,6 +266,7 @@ void uhdInterface::openTXChannel(int in_chan){
 }
 
 void uhdInterface::txIQData(void *data, int num_bytes, int tx_chan, primType in_type){
+	//TODO: This needs to operate on messageTypes instead...
 	std::complex<float> *in_samples = (std::complex<float>*)data;
 	tx_queue[tx_chan].insert(tx_queue[tx_chan].end(),in_samples,in_samples+num_bytes/sizeof(std::complex<float>));
 }

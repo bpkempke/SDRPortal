@@ -1,19 +1,17 @@
-#ifndef HACKRF_INTERFACE_H
-#define HACKRF_INTERFACE_H
+#ifndef RTL_INTERFACE_H
+#define RTL_INTERFACE_H
 
-#include <queue>
+#include <vector>
 #include "genericSDRInterface.h"
 #include "hierarchicalDataflowBlock.h"
 #include "streamConverter.h"
-#include <libhackrf/hackrf.h>
 
-class hackRFInterface : public genericSDRInterface{
+class fcdInterface : public genericSDRInterface{
 public:
-	hackRFInterface();
-	virtual ~hackRFInterface();
+	fcdInterface(int index);
+	virtual ~fcdInterface();
 
-	int rxData(hackrf_transfer *in_transfer);
-	int txData(hackrf_transfer *in_transfer);
+	void *rxData(const char *in_buffer, unsigned long num_frames);
 
 	//Certain functions inherited from genericSDRInterface class
 	virtual void setRXFreq(paramData in_param);
@@ -30,24 +28,13 @@ public:
 	virtual void setCustomSDRParameter(std::string name, std::string val, int in_chan);
 
 private:
-	void handleHRFResult(const char *func_name, int result, bool force_kill);
-	void stopTX();
-	void startTX();
-
-	hackrf_device *hrf_dev;
-	bool is_receiving, is_transmitting;
+	PaStream *fcd_dev;
+	bool is_receiving;
 	bool rx_cancel;
 	pthread_t rx_listener;
-	char *read_translate_buffer;
-	int read_translate_length;
-
-	//Variables to store current parameters
-	uint32_t cur_rate, cur_rx_gain, cur_tx_gain;
-	uint64_t cur_freq;
 
 	//Stream converter to easily switch back and forth between primitive streaming types...
-	streamConverter<char> str_converter;
-	std::queue<char> tx_queue;
+	streamConverter<float> str_converter;
 };
 
 #endif

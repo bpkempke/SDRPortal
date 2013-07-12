@@ -119,6 +119,9 @@ private:
 	std::map<int,portalDataSocket*> uid_map;
 	std::map<int,std::vector<portalDataSocket*> > rx_chan_to_streams, tx_chan_to_streams;
 	std::map<int,rxtxChanInfo> uid_to_chaninfo;
+
+	//Stream converter for converting to/from OTW format
+	
 };
 
 #endif
