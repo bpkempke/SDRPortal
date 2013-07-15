@@ -12,10 +12,18 @@ add_library(sdrportalShared SHARED
 	rtlInterface.cc
 	sha1.cc
 	uhdInterface.cc
+	gen_conversions.cc
 )
 
 add_executable(uhdd uhd_daemon.cc)
 add_executable(shelld shell_daemon.cc)
+add_executable(genc gen_conversions.cc)
+
+add_custom_command(
+	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/streamConversionHelper.h ${CMAKE_CURRENT_BINARY_DIR}/streamConversionHelper.cc
+	COMMAND genc types.txt ${CMAKE_CURRENT_BINARY_DIR}/streamConversionHelper.h ${CMAKE_CURRENT_BINARY_DIR}/streamConversionHelper.cc
+	DEPENDS genc
+)
 
 target_link_libraries(sdrportalShared	
 	${LIBHACKRF_LIBRARIES}

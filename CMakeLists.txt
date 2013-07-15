@@ -61,7 +61,6 @@ find_package(Threads)
 find_package(UHD)
 find_package(LibHackRF)
 find_package(LibRTLSDR)
-find_package(GnuradioFCD)
 find_package(Portaudio)
 
 #Add in debugging symbols for now... TODO: Get rid of debugging symbols
