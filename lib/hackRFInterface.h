@@ -3,6 +3,7 @@
 
 #include <queue>
 #include "genericSDRInterface.h"
+#include "genericSocketInterface.h"
 #include "hierarchicalDataflowBlock.h"
 #include "streamConverter.h"
 #include <libhackrf/hackrf.h>
@@ -27,6 +28,20 @@ public:
 	virtual bool checkRXFreq(paramData in_param);
 	virtual bool checkRXGain(paramData in_param);
 	virtual bool checkRXRate(paramData in_param);
+
+	virtual void setTXFreq(paramData in_param);
+	virtual void setTXGain(paramData in_param);
+	virtual void setTXRate(paramData in_param);
+	virtual paramData getTXFreq(rxtxChanInfo in_chan);
+	virtual paramData getTXGain(rxtxChanInfo in_chan);
+	virtual paramData getTXRate(rxtxChanInfo in_chan);
+	virtual bool checkTXChannel(int in_chan);
+	virtual void openTXChannel(int in_chan);
+	virtual bool checkTXFreq(paramData in_param);
+	virtual bool checkTXGain(paramData in_param);
+	virtual bool checkTXRate(paramData in_param);
+	virtual void txIQData(void *data, int num_bytes, int tx_chan, primType in_type);
+
 	virtual void setCustomSDRParameter(std::string name, std::string val, int in_chan);
 
 private:

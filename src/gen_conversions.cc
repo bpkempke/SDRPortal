@@ -21,7 +21,7 @@ int main(int argc, char *argv[]){
 		}
 		types.pop_back();
 		vector<string> types_upper(types);
-		for(int ii=0; ii < types.size(); ii++)
+		for(unsigned int ii=0; ii < types.size(); ii++)
 			transform(types_upper[ii].begin(), types_upper[ii].end(), types_upper[ii].begin(), ::toupper);
 
 		//Open two files - header & impl
@@ -32,7 +32,7 @@ int main(int argc, char *argv[]){
 		out_header << "#ifndef " << argv[1] << "_H" << endl;
 		out_header << "#define " << argv[1] << "_H" << endl << endl;
 		out_header << "enum streamType {" << endl;
-		for(int ii=0; ii < types_upper.size(); ii++){
+		for(unsigned int ii=0; ii < types_upper.size(); ii++){
 			out_header << "\tSTREAM_";
 			out_header << types_upper[ii];
 		       	if(ii < types_upper.size() - 1) out_header << "," << endl;
@@ -52,8 +52,8 @@ int main(int argc, char *argv[]){
 		out_impl << "#include \"" << argv[2] << "\"" << endl << endl;
 
 		//Now create all of the N^2 conversion functions
-		for(int ii=0; ii < types_upper.size(); ii++){
-			for(int jj=0; jj < types_upper.size(); jj++){
+		for(unsigned int ii=0; ii < types_upper.size(); ii++){
+			for(unsigned int jj=0; jj < types_upper.size(); jj++){
 				out_impl << "void " << types_upper[ii] << "_to_" << types_upper[jj] << "(void *start, void *end, void *result){" << endl;
 				out_impl << "\tstd::copy((" << types[ii] << "*)start, (" << types[ii] << "*)end, (" << types[jj] << "*)result);" << endl;
 				out_impl << "}" << endl << endl;
@@ -63,7 +63,7 @@ int main(int argc, char *argv[]){
 		//Now implement the functions listed in the header
 		out_impl << "streamType stringToStreamType(std::string in_string){" << endl;
 		out_impl << "\tstd::transform(in_string.begin(), in_string.end(), in_string.begin(), ::toupper)" << endl;
-		for(int ii=0; ii < types_upper.size(); ii++){
+		for(unsigned int ii=0; ii < types_upper.size(); ii++){
 			out_impl << "\tif(in_string == \"" << types_upper[ii] << "\") return STREAM_" << types_upper[ii] << ";" << endl;
 		}
 		out_impl << "\treturn STREAM_" << types_upper[0] << ";" << endl;
@@ -71,14 +71,14 @@ int main(int argc, char *argv[]){
 
 		//getStreamTypeLength
 		out_impl << "int getStreamTypeLength(streamType in_type){" << endl;
-		for(int ii=0; ii < types_upper.size(); ii++)
+		for(unsigned int ii=0; ii < types_upper.size(); ii++)
 			out_impl << "\tif(in_type == STREAM_" << types_upper[ii] << ") return sizeof(" << types[ii] << ");" << endl;
 		out_impl << "}" << endl << endl;
 
 		//getConversionFunc
 		out_impl << "convFunc getConversionFunc(streamType from_type, streamType to_type){" << endl;
-		for(int ii=0; ii < types_upper.size(); ii++)
-			for(int jj=0; jj < types_upper.size(); jj++)
+		for(unsigned int ii=0; ii < types_upper.size(); ii++)
+			for(unsigned int jj=0; jj < types_upper.size(); jj++)
 				out_impl << "\tif(from_type == STREAM_" << types_upper[ii] << " && to_type == STREAM_" << types_upper[jj] << ") return &" << types_upper[ii] << "_to_" << types_upper[jj] << ";" << endl;
 		out_impl << "}" << endl;
 		out_impl.close();

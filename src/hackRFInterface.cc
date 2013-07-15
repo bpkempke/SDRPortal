@@ -45,7 +45,7 @@ hackRFInterface::~hackRFInterface(){
 
 	//Now perform final close operations
 	result = hackrf_close(hrf_dev);
-	handleHRFResult("hackrf_close", reuslt, false);
+	handleHRFResult("hackrf_close", result, false);
 
 	hackrf_exit();
 }
@@ -210,8 +210,8 @@ void hackRFInterface::stopTX(){
 int hackRFInterface::txData(hackrf_transfer *in_transfer){
 	//Pull data off of the queue supplied by sockets
 	if(tx_queue.size() > 1){
-		int valid_txbytes = tx_queue.size() !& 1;
-		if(valid_txbytes > in_transfer->buffer_size) valid_txbytes = in_transfer->buffer_size;
+		int valid_txbytes = tx_queue.size() & ~(int)(1);
+		if(valid_txbytes > in_transfer->buffer_length) valid_txbytes = in_transfer->buffer_length;
 		for(int ii=0; ii < valid_txbytes; ii++){
 			in_transfer->buffer[ii] = (uint8_t)tx_queue.front() + 127;
 			tx_queue.pop();
@@ -264,7 +264,7 @@ void hackRFInterface::openTXChannel(int in_chan){
 
 bool hackRFInterface::checkTXFreq(paramData in_param){
 	//hackRF supports frequencies from 5 MHz to 6.8 GHz
-	uint64_t cand_freq = in_param.getUint64();
+	uint64_t cand_freq = in_param.getUInt64();
 	if(cand_freq >= 5e6L && cand_freq <= 6.8e9L)
 		return true;
 	else
@@ -290,7 +290,7 @@ bool hackRFInterface::checkTXRate(paramData in_param){
 }
 
 void hackRFInterface::txIQData(void *data, int num_messages, int tx_chan, primType in_type){
-	static vector<char> inprogress();
+	static std::vector<char> inprogress;
 
 	//Start TX if it hasn't started already
 	startTX();
@@ -302,9 +302,9 @@ void hackRFInterface::txIQData(void *data, int num_messages, int tx_chan, primTy
 		
 
 
-		for(int jj=0; jj < in_messages[ii].
+	//	for(int jj=0; jj < in_messages[ii].
 	}
 
-	tx_queue.insert(tx_queue.end(),in_samples,in_samples+num_bytes/sizeof(std::complex<float>));
+	//tx_queue.insert(tx_queue.end(),in_samples,in_samples+num_bytes/sizeof(std::complex<float>));
 	//TODO: If there is too much data, block here...
 }
