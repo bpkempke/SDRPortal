@@ -12,6 +12,7 @@ add_library(sdrportalShared SHARED
 	rtlInterface.cc
 	sha1.cc
 	uhdInterface.cc
+	streamConverter.cc
 )
 
 add_executable(uhdd uhd_daemon.cc)
