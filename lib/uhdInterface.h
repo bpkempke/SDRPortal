@@ -69,9 +69,6 @@ private:
 	//PThreads for rx and tx
 	pthread_t rx_listener, tx_thread;
 
-	//Stream converter to easily switch back and forth between primitive streaming types...
-	streamConverter<int16_t> str_converter;
-
 	//Special parameters just for the USRP series
 	//TODO: This...
 

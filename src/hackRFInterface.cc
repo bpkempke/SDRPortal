@@ -11,7 +11,7 @@ int hrfTxProxy(hackrf_transfer *in_transfer){
 	return hrf_int->txData(in_transfer);
 }
 
-hackRFInterface::hackRFInterface(){
+hackRFInterface::hackRFInterface() : genericSDRInterface(STREAM_INT8_T){
 	hrf_dev = NULL;
 	rx_cancel = false;
 	read_translate_buffer = NULL;
@@ -173,12 +173,8 @@ int hackRFInterface::rxData(hackrf_transfer *in_transfer){
 	for(int ii=0; ii < n_read; ii++)
 		read_translate_buffer[ii] = (char)(in_transfer->buffer[ii])-127;
 
-	//Now figure out what we need to change the data to
-	std::vector<primType> resulting_prim_types = getResultingPrimTypes(0);
-	for(unsigned int ii=0; ii < resulting_prim_types.size(); ii++){
-		int num_translated_bytes = str_converter.convertTo(read_translate_buffer, n_read, resulting_prim_types[ii]);
-		distributeRXData(str_converter.getResult(), num_translated_bytes, 0, resulting_prim_types[ii]);
-	}
+	//Now send the data off to where it needs to go...
+	distributeRXData(read_translate_buffer, n_read, 0);
 	return 0;
 }
 	

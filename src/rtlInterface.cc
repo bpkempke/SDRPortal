@@ -9,7 +9,7 @@ static void *rtlReadProxy(void *in_args){
 	return return_pointer;
 }
 
-rtlInterface::rtlInterface(int index){
+rtlInterface::rtlInterface(int index) : genericSDRInterface(STREAM_INT8_T){
 	rtl_dev = NULL;
 	rx_cancel = false;
 
@@ -180,12 +180,8 @@ void *rtlInterface::rxThread(){
 		for(int ii=0; ii < n_read; ii++)
 			read_translate_buffer[ii] = (char)(read_buffer[ii])-127;
 
-		//Now figure out what we need to change the data to
-		std::vector<primType> resulting_prim_types = getResultingPrimTypes(0);
-		for(unsigned int ii=0; ii < resulting_prim_types.size(); ii++){
-			int num_translated_bytes = str_converter.convertTo(read_translate_buffer, RTL_BUFF_LEN, resulting_prim_types[ii]);
-			distributeRXData(str_converter.getResult(), num_translated_bytes, 0, resulting_prim_types[ii]);
-		}
+		//Now send the data off to where it needs to go...
+		distributeRXData(read_translate_buffer, n_read, 0);
 	}
 	return NULL;
 }

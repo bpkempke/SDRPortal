@@ -60,8 +60,6 @@ private:
 	uint32_t cur_rate, cur_rx_gain, cur_tx_gain;
 	uint64_t cur_freq;
 
-	//Stream converter to easily switch back and forth between primitive streaming types...
-	streamConverter<char> str_converter;
 	std::queue<char> tx_queue;
 };
 

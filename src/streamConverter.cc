@@ -56,3 +56,6 @@ int streamConverter::convertWorker(void *in_data, int num_bytes, streamType seco
 	return num_consumed_bytes;
 }
 
+void *streamConverter::getResultFromStreamType(streamType in_type){
+	return scratchspace_map[in_type].scratchspace;
+}

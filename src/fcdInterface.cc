@@ -11,7 +11,7 @@ int fcdReadProxy(const void *in_buffer, void *out_buffer, unsigned long num_fram
 	return fcd_int->rxData(in_buffer, num_frames);
 }
 
-fcdInterface::fcdInterface(const char *device_name){
+fcdInterface::fcdInterface(const char *device_name) : genericSDRInterface(STREAM_FLOAT_T){
 	//Set up portaudio stuff first
 	PaError result = Pa_Initialize();
 	handleFCDResult("Pa_Initialize", result, true);
@@ -152,12 +152,7 @@ void fcdInterface::setCustomSDRParameter(std::string name, std::string val, int 
 void *fcdInterface::rxData(const char *in_buffer, unsigned long num_frames){
 
 	//Each frame consists of one I/Q float pair
-	//Now figure out what we need to change the data to
-	std::vector<primType> resulting_prim_types = getResultingPrimTypes(0);
-	for(unsigned int ii=0; ii < resulting_prim_types.size(); ii++){
-		int num_translated_bytes = str_converter.convertTo(in_buffer, num_frames*sizeof(float)*2, resulting_prim_types[ii]);
-		distributeRXData(str_converter.getResult(), num_translated_bytes, 0, resulting_prim_types[ii]);
-	}
+	distributeRXData(in_buffer, num_frames*sizeof(float)*2, 0);
 	return NULL;
 }
 

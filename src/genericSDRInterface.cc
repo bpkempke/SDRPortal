@@ -8,7 +8,9 @@
 //TODO: Integrate PPM correction into genericSDRInterface
 //TODO: Integrate DC offset correction into genericSDRInterface
 
-genericSDRInterface::genericSDRInterface(){
+genericSDRInterface::genericSDRInterface(streamType common_type){
+	str_converter.setConversionCommonType(common_type);
+	
 	num_channels = 0;
 	cur_channel = 0;
 
@@ -132,14 +134,20 @@ std::vector<primType> genericSDRInterface::getResultingPrimTypes(int rx_chan){
 	return resulting_prim_types;
 }
 
-void genericSDRInterface::distributeRXData(void *in_data, int num_bytes, int rx_chan, primType in_type){
-	//Data coming from SDR RX for distribution to sockets
+void genericSDRInterface::distributeRXData(void *in_data, int num_bytes, int rx_chan){
+	//TODO: Keep track of any data which didn't fit the block length...
 	std::vector<portalDataSocket*> streams = rx_chan_to_streams[rx_chan];
-	for(unsigned int ii=0; ii < streams.size(); ii++)
-		if(streams[ii]->getDataType() == in_type){
-//			std::cout << "Distributing data to streams..." << std::endl;
-			streams[ii]->dataFromUpperLevel(in_data, num_bytes);
-		}
+
+	//Now figure out what we need to change the data to
+	std::vector<primType> resulting_prim_types = getResultingPrimTypes(rx_chan);
+	for(unsigned int ii=0; ii < resulting_prim_types.size(); ii++){
+		int num_translated_bytes = str_converter.convertFromCommon(in_data, num_bytes, resulting_prim_types[ii]);
+
+		//Distribute this translated data to all streams which require it...
+		for(unsigned int ii=0; ii < streams.size(); ii++)
+			if(streams[ii]->getDataType() == resulting_prim_types[ii])
+				streams[ii]->dataFromUpperLevel(str_converter.getResultFromStreamType(resulting_prim_types[ii]), num_translated_bytes);
+	}
 }
 
 rxtxChanInfo genericSDRInterface::getChanInfo(int in_uid){
@@ -148,6 +156,8 @@ rxtxChanInfo genericSDRInterface::getChanInfo(int in_uid){
 
 void genericSDRInterface::dataFromLowerLevel(void *data, int num_messages, int local_down_channel){
 	//Data coming from socket for TX
+	//TODO: Pass this data through the stream converter
+	//TODO: Keep track of any data which didn't fit the block length...
 
 	messageType *in_messages = static_cast<messageType*>(data);
 	for(int ii=0; ii < num_messages; ii++){

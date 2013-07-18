@@ -29,7 +29,7 @@ ofstream log_file;
 /**********************
   * uhdInterface class
   *********************/
-uhdInterface::uhdInterface(string args, string tx_subdev, string rx_subdev, string tx_ant, string rx_ant, double tx_rate, double rx_rate, double tx_freq, double rx_freq, double tx_gain, double rx_gain, bool codec_highspeed) : genericSDRInterface(){
+uhdInterface::uhdInterface(string args, string tx_subdev, string rx_subdev, string tx_ant, string rx_ant, double tx_rate, double rx_rate, double tx_freq, double rx_freq, double tx_gain, double rx_gain, bool codec_highspeed) : genericSDRInterface(STREAM_INT16_T){
 
 	//Open a log file
 	log_file.open("log.out", ios::out | ios::trunc | ios::binary);
@@ -313,12 +313,8 @@ void *uhdInterface::rxThread(int rx_chan){
 	while(1){
 		rxData(rx_data, RX_CHUNK_SIZE, rx_chan);
 		//log_file.write((char*)rx_data, RX_CHUNK_SIZE*sizeof(complex<int16_t>));
-
-		vector<primType> resulting_prim_types = getResultingPrimTypes(rx_chan);
-		for(unsigned int ii=0; ii < resulting_prim_types.size(); ii++){
-			int num_translated_bytes = str_converter.convertTo((int16_t*)rx_data, RX_CHUNK_SIZE*sizeof(complex<int16_t>), resulting_prim_types[ii]);
-			distributeRXData(str_converter.getResult(), num_translated_bytes, rx_chan, resulting_prim_types[ii]);
-		}
+		//Now send the data off to where it needs to go...
+		distributeRXData(rx_data, RX_CHUNK_SIZE*sizeof(complex<int16_t>), 0);
 	}
 	return NULL;
 }

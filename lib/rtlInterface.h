@@ -34,8 +34,6 @@ private:
 	bool rx_cancel;
 	pthread_t rx_listener;
 
-	//Stream converter to easily switch back and forth between primitive streaming types...
-	streamConverter<char> str_converter;
 };
 
 #endif
