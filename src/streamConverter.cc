@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <map>
+#include "streamConverter.h"
 
 streamConverter::streamConverter(streamType common_type){
 	this->common_type = common_type;
@@ -9,18 +10,18 @@ void streamConverter::setConversionCommonType(streamType common_type){
 	this->common_type = common_type;
 
 	//Update conversion function map
-	for(std::map<streamType, convFunc>::iterator it=conversion_map.begin(); it != 	conversion_map.end(); it++){
+	for(std::map<streamType, fullConvType>::iterator it=conversion_map.begin(); it != conversion_map.end(); it++){
 		conversion_map[it->first].cnv_to_common = getConversionFunc(it->first, common_type);
 		conversion_map[it->first].cnv_from_common = getConversionFunc(common_type, it->first);
 	}
 }
 
-int streamConverter::convertToCommon(void *in_data, int num_bytes, primType start_type, int num_prims_per_block){
-	return convertWorker(in_data, num_bytes, secondary_type, num_prims_per_block, true);;
+int streamConverter::convertToCommon(void *in_data, int num_bytes, streamType start_type, int num_prims_per_block){
+	return convertWorker(in_data, num_bytes, start_type, num_prims_per_block, true);;
 }
 
-int streamConverter::convertFromCommon(void *in_data, int num_bytes, primType result_type, int num_prims_per_block){
-	return convertWorker(in_data, num_bytes, secondary_type, num_prims_per_block, false);;
+int streamConverter::convertFromCommon(void *in_data, int num_bytes, streamType result_type, int num_prims_per_block){
+	return convertWorker(in_data, num_bytes, result_type, num_prims_per_block, false);;
 }
 
 int streamConverter::convertWorker(void *in_data, int num_bytes, streamType secondary_type, int num_prims_per_block, bool convert_to){
@@ -36,7 +37,7 @@ int streamConverter::convertWorker(void *in_data, int num_bytes, streamType seco
 	//Make sure there's a scratchspace available
 	if(scratchspace_map.find(secondary_type) == scratchspace_map.end() || scratchspace_map[secondary_type].cur_capacity < num_consumed_bytes){
 
-		delete [] scratchspace_map[secondary_type].scratchspace;
+		delete [] (char*)(scratchspace_map[secondary_type].scratchspace);
 		scratchspace_map[secondary_type].scratchspace = new char[num_consumed_bytes];
 		scratchspace_map[secondary_type].cur_capacity = num_consumed_bytes;
 

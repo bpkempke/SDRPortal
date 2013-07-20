@@ -3,6 +3,7 @@
 
 #include "hierarchicalDataflowBlock.h"
 #include "genericSocketInterface.h"
+#include "streamConverter.h"
 #include "generic.h"
 
 class genericSDRInterface;
@@ -16,8 +17,8 @@ public:
 	void setUID(int in_uid);
 	int getUID();
 
-	primType getDataType(){return data_type;};
-	void setDataType(primType in_data_type){data_type = in_data_type;};
+	streamType getStreamType(){return stream_type;};
+	void setStreamType(streamType in_stream_type){stream_type = in_stream_type;};
 
 	//Methods inherited from hierarchicalDataflowBlock
 	virtual void dataFromUpperLevel(void *data, int num_bytes, int local_up_channel=0);
@@ -25,7 +26,7 @@ public:
 private:
 	int uid;
 	genericSocketInterface *socket_int;
-	primType data_type;
+	streamType stream_type;
 };
 
 #endif

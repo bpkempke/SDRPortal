@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include "generic.h"
 #include "hierarchicalDataflowBlock.h"
+#include "streamConverter.h"
 
 enum destType{UPSTREAM, DOWNSTREAM};
 
@@ -15,7 +16,7 @@ struct messageType{
 	char *buffer;//TODO: Should this be void* instead???
 	int num_bytes;
 	int socket_channel;
-	primType data_type;
+	streamType stream_type;
 	destType message_dest;
 };
 

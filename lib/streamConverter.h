@@ -22,7 +22,7 @@ struct fullConvType{
 class streamConverter {
 public:
 	streamConverter(streamType common_type);
-	void setConversionToFrom(streamType from_type, streamType to_type);
+	void setConversionCommonType(streamType common_type);
 	int convertToCommon(void *in_data, int num_bytes, streamType start_type, int num_prims_per_block);
 	int convertFromCommon(void *in_data, int num_bytes, streamType result_type, int num_prims_per_block);
 	void *getResultFromStreamType(streamType in_type);

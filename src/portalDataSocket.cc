@@ -3,7 +3,7 @@
 #include "portalDataSocket.h"
 
 portalDataSocket::portalDataSocket(socketType in_socket_type, int socket_num){
-	data_type = INT8;
+	stream_type = STREAM_INT8_T;
 
 	//Create the socket that we'll be listening on...
 	socket_int = new genericSocketInterface(in_socket_type, socket_num);
@@ -49,7 +49,7 @@ void portalDataSocket::dataFromLowerLevel(void *data, int num_messages, int loca
 	//Traverse all incoming messages and forward all IQ data on to the SDR
 	for(int ii=0; ii < num_messages; ii++){
 		in_messages[ii].socket_channel = uid;
-		in_messages[ii].data_type = data_type;
+		in_messages[ii].stream_type = stream_type;
 		dataToUpperLevel(&in_messages[ii], 1);
 	}
 }

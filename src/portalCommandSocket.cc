@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "portalDataSocket.h"
 #include "portalCommandSocket.h"
+#include "streamConverter.h"
 
 portalCommandSocket::portalCommandSocket(socketType in_socket_type, int socket_num, genericSDRInterface *in_sdr_int){
 	sdr_int = in_sdr_int;
@@ -100,8 +101,8 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_messages, int l
 				} else
 					throw badArgumentException(badArgumentException::MALFORMED, 1, arg1);
 			} else if(command == "DATATYPE"){
-				primType new_type = stringToPrim(arg1);
-				if(new_type != VOID){
+				streamType new_type = stringToStreamType(arg1);
+				if(new_type != STREAM_UNKNOWN){
 					sdr_int->setStreamDataType(new_type, cur_channel);
 					response_message.num_bytes = sprintf(response_message.buffer,"%s\r\n",arg1.c_str());
 					dataToLowerLevel(&response_message, 1);

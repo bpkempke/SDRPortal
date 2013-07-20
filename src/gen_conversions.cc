@@ -29,15 +29,15 @@ int main(int argc, char *argv[]){
 		ofstream out_impl(argv[3]);
 
 		//First create the enumeration type
-		out_header << "#ifndef " << argv[1] << "_H" << endl;
-		out_header << "#define " << argv[1] << "_H" << endl << endl;
+		out_header << "#ifndef STREAM_CONVERSIONS_H" << endl;
+		out_header << "#define STREAM_CONVERSIONS_H" << endl << endl;
 		out_header << "enum streamType {" << endl;
 		for(unsigned int ii=0; ii < types_upper.size(); ii++){
 			out_header << "\tSTREAM_";
 			out_header << types_upper[ii];
-		       	if(ii < types_upper.size() - 1) out_header << "," << endl;
+		       	out_header << "," << endl;
 		}
-		out_header << "};" << endl << endl;
+		out_header << "STREAM_UNKNOWN};" << endl << endl;
 
 		//Then include prototypes for stringToStreamType and getConversionFunc
 		out_header << "streamType stringToStreamType(std::string in_string);" << endl << endl;
@@ -62,7 +62,7 @@ int main(int argc, char *argv[]){
 
 		//Now implement the functions listed in the header
 		out_impl << "streamType stringToStreamType(std::string in_string){" << endl;
-		out_impl << "\tstd::transform(in_string.begin(), in_string.end(), in_string.begin(), ::toupper)" << endl;
+		out_impl << "\tstd::transform(in_string.begin(), in_string.end(), in_string.begin(), ::toupper);" << endl;
 		for(unsigned int ii=0; ii < types_upper.size(); ii++){
 			out_impl << "\tif(in_string == \"" << types_upper[ii] << "\") return STREAM_" << types_upper[ii] << ";" << endl;
 		}
@@ -73,6 +73,7 @@ int main(int argc, char *argv[]){
 		out_impl << "int getStreamTypeLength(streamType in_type){" << endl;
 		for(unsigned int ii=0; ii < types_upper.size(); ii++)
 			out_impl << "\tif(in_type == STREAM_" << types_upper[ii] << ") return sizeof(" << types[ii] << ");" << endl;
+		out_impl << "\treturn 0;" << endl;
 		out_impl << "}" << endl << endl;
 
 		//getConversionFunc
@@ -80,6 +81,7 @@ int main(int argc, char *argv[]){
 		for(unsigned int ii=0; ii < types_upper.size(); ii++)
 			for(unsigned int jj=0; jj < types_upper.size(); jj++)
 				out_impl << "\tif(from_type == STREAM_" << types_upper[ii] << " && to_type == STREAM_" << types_upper[jj] << ") return &" << types_upper[ii] << "_to_" << types_upper[jj] << ";" << endl;
+		out_impl << "\treturn NULL;" << endl;
 		out_impl << "}" << endl;
 		out_impl.close();
 	}

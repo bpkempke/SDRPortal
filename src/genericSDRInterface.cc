@@ -8,7 +8,7 @@
 //TODO: Integrate PPM correction into genericSDRInterface
 //TODO: Integrate DC offset correction into genericSDRInterface
 
-genericSDRInterface::genericSDRInterface(streamType common_type){
+genericSDRInterface::genericSDRInterface(streamType common_type) : str_converter(common_type){
 	str_converter.setConversionCommonType(common_type);
 	
 	num_channels = 0;
@@ -34,7 +34,7 @@ int genericSDRInterface::addChannel(portalDataSocket *in_channel){
 	return num_channels-1;
 }
 
-void genericSDRInterface::setStreamDataType(primType in_type, int in_uid){
+void genericSDRInterface::setStreamDataType(streamType in_type, int in_uid){
 
 	//First make sure that this UID is actually associated with something...
 	std::map<int,portalDataSocket*>::iterator found_data_socket = uid_map.find(in_uid);
@@ -42,7 +42,7 @@ void genericSDRInterface::setStreamDataType(primType in_type, int in_uid){
 	//If that data socket is found, set its type, otherwise throw an error
 	if(found_data_socket != uid_map.end()){
 		portalDataSocket *cur_data_socket = found_data_socket->second;
-		cur_data_socket->setDataType(in_type);
+		cur_data_socket->setStreamType(in_type);
 	} else throw badArgumentException(badArgumentException::OUT_OF_BOUNDS, 1, std::to_string(in_uid));
 }
 
@@ -122,12 +122,12 @@ int genericSDRInterface::getNumAllocatedChannels(){
 	return num_channels;
 }
 
-std::vector<primType> genericSDRInterface::getResultingPrimTypes(int rx_chan){
-	std::vector<primType> resulting_prim_types;
+std::vector<streamType> genericSDRInterface::getResultingPrimTypes(int rx_chan){
+	std::vector<streamType> resulting_prim_types;
 	std::vector<portalDataSocket*> rx_streams = rx_chan_to_streams[rx_chan];
 	for(unsigned int ii=0; ii < rx_streams.size(); ii++){
-		primType cur_prim_type = rx_streams[ii]->getDataType();
-		std::vector<primType>::iterator it = std::find(resulting_prim_types.begin(), resulting_prim_types.end(), cur_prim_type);
+		streamType cur_prim_type = rx_streams[ii]->getStreamType();
+		std::vector<streamType>::iterator it = std::find(resulting_prim_types.begin(), resulting_prim_types.end(), cur_prim_type);
 		if(it == resulting_prim_types.end())
 			resulting_prim_types.push_back(cur_prim_type);
 	}
@@ -139,13 +139,13 @@ void genericSDRInterface::distributeRXData(void *in_data, int num_bytes, int rx_
 	std::vector<portalDataSocket*> streams = rx_chan_to_streams[rx_chan];
 
 	//Now figure out what we need to change the data to
-	std::vector<primType> resulting_prim_types = getResultingPrimTypes(rx_chan);
+	std::vector<streamType> resulting_prim_types = getResultingPrimTypes(rx_chan);
 	for(unsigned int ii=0; ii < resulting_prim_types.size(); ii++){
-		int num_translated_bytes = str_converter.convertFromCommon(in_data, num_bytes, resulting_prim_types[ii]);
+		int num_translated_bytes = str_converter.convertFromCommon(in_data, num_bytes, resulting_prim_types[ii], 2);
 
 		//Distribute this translated data to all streams which require it...
 		for(unsigned int ii=0; ii < streams.size(); ii++)
-			if(streams[ii]->getDataType() == resulting_prim_types[ii])
+			if(streams[ii]->getStreamType() == resulting_prim_types[ii])
 				streams[ii]->dataFromUpperLevel(str_converter.getResultFromStreamType(resulting_prim_types[ii]), num_translated_bytes);
 	}
 }
@@ -162,7 +162,7 @@ void genericSDRInterface::dataFromLowerLevel(void *data, int num_messages, int l
 	messageType *in_messages = static_cast<messageType*>(data);
 	for(int ii=0; ii < num_messages; ii++){
 		int tx_chan = uid_to_chaninfo[in_messages[ii].socket_channel].tx_chan;
-		txIQData((void*)in_messages[ii].buffer, in_messages[ii].num_bytes, tx_chan, in_messages[ii].data_type);
+		txIQData((void*)in_messages[ii].buffer, in_messages[ii].num_bytes, tx_chan, in_messages[ii].stream_type);
 	}
 }
 

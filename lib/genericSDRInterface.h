@@ -7,6 +7,7 @@
 #include <vector>
 #include <stdint.h>
 #include "generic.h"
+#include "streamConverter.h"
 #include "hierarchicalDataflowBlock.h"
 
 class portalDataSocket;
@@ -70,7 +71,7 @@ struct paramAccessor {
 
 class genericSDRInterface : public hierarchicalDataflowBlock{
 public:
-	genericSDRInterface();
+	genericSDRInterface(streamType common_type);
 	virtual ~genericSDRInterface(){};
 	void setSDRParameter(int in_uid, std::string name, std::string val);
 	int getNumAllocatedChannels();
@@ -80,9 +81,9 @@ public:
 	void bindRXChannel(int rx_chan, int in_uid);
 	void bindTXChannel(int tx_chan, int in_uid);
 
-	std::vector<primType> getResultingPrimTypes(int rx_chan);
-	void distributeRXData(void *in_data, int num_bytes, int rx_chan, primType in_type);
-	void setStreamDataType(primType in_type, int in_uid);
+	std::vector<streamType> getResultingPrimTypes(int rx_chan);
+	void distributeRXData(void *in_data, int num_bytes, int rx_chan);
+	void setStreamDataType(streamType in_type, int in_uid);
 
 	//All possible get/set/check methods.  If they're not implemented, the virtual method will default to throwing an exception
 	virtual void setRXFreq(paramData in_param){throw invalidCommandException("");};
@@ -108,7 +109,7 @@ public:
 	virtual bool checkRXRate(paramData in_param){throw invalidCommandException("");};
 	virtual bool checkTXRate(paramData in_param){throw invalidCommandException("");};
 	virtual void setCustomSDRParameter(std::string name, std::string val, int in_chan) = 0;
-	virtual void txIQData(void *data, int num_bytes, int tx_chan, primType in_type){};
+	virtual void txIQData(void *data, int num_bytes, int tx_chan, streamType in_type){};
 	std::map<std::string, paramAccessor > param_accessors;
 
 	//Methods inherited from hierarchicalDataflowBlock
@@ -121,6 +122,7 @@ private:
 	std::map<int,rxtxChanInfo> uid_to_chaninfo;
 
 	//Stream converter for converting to/from OTW format
+	streamConverter str_converter;
 	
 };
 

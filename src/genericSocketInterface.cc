@@ -74,7 +74,7 @@ int genericSocketInterface::initSocket(int portnum){
 	in_addr.sin_addr.s_addr = INADDR_ANY;
 	in_addr.sin_port = htons(portnum);//This just needs to be set to zero to get a randomly-assigned free port number!
 
-	if(bind(ret_id, (struct sockaddr *) &in_addr, sizeof(in_addr)) < 0){
+	if(::bind(ret_id, (struct sockaddr *) &in_addr, sizeof(in_addr)) < 0){
 		std::cout << "ERROR: Unable to bind to port " << portnum << std::endl;
 		exit(1);
 	}
