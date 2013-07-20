@@ -8,6 +8,7 @@
 #include <uhd/utils/thread_priority.hpp>
 #include <map>
 #include <vector>
+#include <queue>
 
 class uhdInterface : public genericSDRInterface{
 public:
@@ -49,7 +50,7 @@ public:
 	virtual bool checkRXRate(paramData in_param);
 	virtual bool checkTXRate(paramData in_param);
 	virtual void setCustomSDRParameter(std::string name, std::string val, int in_chan);
-	virtual void txIQData(void *data, int num_bytes, int tx_chan, primType in_type);
+	virtual void txIQData(void *data, int num_bytes, int tx_chan);
 
 
 private:
@@ -64,7 +65,7 @@ private:
 	std::vector<uhd::rx_metadata_t> rx_md;
 
 	//Queue of samples to transmit
-	std::vector<std::vector<std::complex<float> > > tx_queue;
+	std::vector<std::queue<std::complex<float> > > tx_queue;
 
 	//PThreads for rx and tx
 	pthread_t rx_listener, tx_thread;

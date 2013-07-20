@@ -285,22 +285,15 @@ bool hackRFInterface::checkTXRate(paramData in_param){
 		return false;
 }
 
-void hackRFInterface::txIQData(void *data, int num_messages, int tx_chan, primType in_type){
+void hackRFInterface::txIQData(void *data, int num_bytes, int tx_chan){
 	static std::vector<char> inprogress;
 
 	//Start TX if it hasn't started already
 	startTX();
 
-	messageType *in_messages = static_cast<messageType*>(data);
-	for(int ii=0; ii < num_messages; ii++){
-		//First translate the incoming data, holding on to any which are incomplete
-		//TODO: All of this translation/messing around should be done in genericSDRInterface instead...
-		
+	char *in_array_cast = static_cast<char*>(data);
+	for(int jj=0; jj < num_bytes; jj++)
+		tx_queue.push(in_array_cast[jj]);
 
-
-	//	for(int jj=0; jj < in_messages[ii].
-	}
-
-	//tx_queue.insert(tx_queue.end(),in_samples,in_samples+num_bytes/sizeof(std::complex<float>));
 	//TODO: If there is too much data, block here...
 }

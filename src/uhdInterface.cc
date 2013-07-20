@@ -265,10 +265,14 @@ void uhdInterface::openTXChannel(int in_chan){
 	pthread_create(&tx_thread, NULL, uhdWriteProxy, (void*)&arguments);
 }
 
-void uhdInterface::txIQData(void *data, int num_bytes, int tx_chan, primType in_type){
-	//TODO: This needs to operate on messageTypes instead...
-	std::complex<float> *in_samples = (std::complex<float>*)data;
-	tx_queue[tx_chan].insert(tx_queue[tx_chan].end(),in_samples,in_samples+num_bytes/sizeof(std::complex<float>));
+void uhdInterface::txIQData(void *data, int num_bytes, int tx_chan){
+
+	//Cast this message to an array of complex floats
+	std::complex<float> *in_array_cast = static_cast<std::complex<float> *>(data);
+	for(unsigned int jj=0; jj < num_bytes/sizeof(std::complex<float>); jj++)
+		tx_queue[tx_chan].push(in_array_cast[jj]);
+
+	//TODO: If there is too much data, block here...
 }
 
 //This is a dummy function whose only job is to notify the uhddriver that we're done with the current tx burst
@@ -322,19 +326,23 @@ void *uhdInterface::rxThread(int rx_chan){
 //This thread waits until a theshold size is met in order to tx a constant stream of samples out to the USRP
 #define TX_THRESHOLD 2000
 void *uhdInterface::txThread(int tx_chan){
+	std::complex<float> temp_send_space[TX_THRESHOLD];
 	while(1){
 		usleep(5000);
 		if(tx_queue[tx_chan].size() > TX_THRESHOLD){
 			txStart(tx_chan);
 			while(tx_queue[tx_chan].size() > TX_THRESHOLD){
 				//TODO: Lock here
-				vector<std::complex<float> > temp_tx_queue = tx_queue[tx_chan];
-				tx_queue[tx_chan].clear();
+				//Copy all the contents into the temp vector
+				for(unsigned int ii=0; ii < TX_THRESHOLD; ii++){
+					temp_send_space[ii] = tx_queue[tx_chan].front();
+					tx_queue[tx_chan].pop();
+				}
 				//TODO: Unlock here
 
 				//Simple function just passes all iq data out to the device
 				tx_md[tx_chan].end_of_burst = false;
-				tx_streams[tx_chan]->send((complex<float> *)(&temp_tx_queue[0]), temp_tx_queue.size(), tx_md[tx_chan]);
+				tx_streams[tx_chan]->send(temp_send_space, TX_THRESHOLD, tx_md[tx_chan]);
 			}
 			txEnd(tx_chan);
 		}

@@ -156,13 +156,13 @@ rxtxChanInfo genericSDRInterface::getChanInfo(int in_uid){
 
 void genericSDRInterface::dataFromLowerLevel(void *data, int num_messages, int local_down_channel){
 	//Data coming from socket for TX
-	//TODO: Pass this data through the stream converter
-	//TODO: Keep track of any data which didn't fit the block length...
 
 	messageType *in_messages = static_cast<messageType*>(data);
 	for(int ii=0; ii < num_messages; ii++){
 		int tx_chan = uid_to_chaninfo[in_messages[ii].socket_channel].tx_chan;
-		txIQData((void*)in_messages[ii].buffer, in_messages[ii].num_bytes, tx_chan, in_messages[ii].stream_type);
+		int resulting_bytes = str_converter.convertToCommon(in_messages[ii].buffer, in_messages[ii].num_bytes, in_messages[ii].stream_type, 2);
+		//TODO: Keep track of any data which didn't fit the block length...
+		txIQData(str_converter.getResultFromStreamType(in_messages[ii].stream_type), resulting_bytes, tx_chan);
 	}
 }
 

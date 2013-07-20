@@ -40,7 +40,7 @@ public:
 	virtual bool checkTXFreq(paramData in_param);
 	virtual bool checkTXGain(paramData in_param);
 	virtual bool checkTXRate(paramData in_param);
-	virtual void txIQData(void *data, int num_bytes, int tx_chan, primType in_type);
+	virtual void txIQData(void *data, int num_bytes, int tx_chan);
 
 	virtual void setCustomSDRParameter(std::string name, std::string val, int in_chan);
 

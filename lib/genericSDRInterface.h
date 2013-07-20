@@ -109,7 +109,7 @@ public:
 	virtual bool checkRXRate(paramData in_param){throw invalidCommandException("");};
 	virtual bool checkTXRate(paramData in_param){throw invalidCommandException("");};
 	virtual void setCustomSDRParameter(std::string name, std::string val, int in_chan) = 0;
-	virtual void txIQData(void *data, int num_bytes, int tx_chan, streamType in_type){};
+	virtual void txIQData(void *data, int num_bytes, int tx_chan){};
 	std::map<std::string, paramAccessor > param_accessors;
 
 	//Methods inherited from hierarchicalDataflowBlock
