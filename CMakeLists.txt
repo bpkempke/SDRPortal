@@ -1,45 +1,18 @@
+#    SDRPortal - A generic web-based interface for SDRs
+#    Copyright (C) 2013 Ben Kempke (bpkempke@umich.edu)
 #
-##CMake version and language
-#cmake_minimum_required(VERSION 2.6)
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
 #
-##Project name and details
-#project(SDRPortal)
-#set(SDRPortal_VERSION_MAJOR 0)
-#set(SDRPortal_VERSION_MINOR 1)
-#list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/Modules)
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
 #
-##Compiler-specific setup
-#if(CMAKE_COMPILER_IS_GNUCXX)
-#	add_definitions(-Wall)
-#	add_definitions(-Wextra)
-#	add_definitions(-Wno-unused)
-#	add_definitions(-Wsign-compare)
-#	add_definitions(-fvisibility=hidden)
-#	add_definitions(-std=c++0x)
-#endif()
-#
-##Set up the packages which are necessary in order to build the project
-#find_package(Threads)
-#find_package(UHD)
-#find_package(LibHackRF)
-#find_package(LibRTLSDR)
-#
-#include_directories(
-#	${CMAKE_SOURCE_DIR}/lib
-#)
-#
-#add_subdirectory(src)
-#
-#
-# DSPFlow CMakeLists.txt
-#
-# Ben Kempke
-#
-# Shared libraries should be compiled as follows:
-#  gcc -shared -nostartfiles -o bar bar.c
-#
-# Also make sure to install libdb in order to compile...:
-#  sudo apt-get install libdb-dev
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 cmake_minimum_required(VERSION 2.6)
 project(SDRPortal)
