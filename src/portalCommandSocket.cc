@@ -52,6 +52,7 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_messages, int l
 	std::cout << "GOT HERE" << std::endl;
 
 	//Insert historic messages into a string stream so as to easily extract lines
+	//TODO: There probably needs to be one stringstream for each channel, otherwise parsing will get confused...
 	static std::stringstream command_stream;
 	for(int ii=0; ii < num_messages; ii++){
 		std::string in_data_string(in_messages[ii].buffer,in_messages[ii].num_bytes);
@@ -125,6 +126,32 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_messages, int l
 					dataToLowerLevel(&response_message, 1);
 				} else
 					throw badArgumentException(badArgumentException::MALFORMED, 1, arg1);
+			} else if(command == "TX_LOGFILE"){
+				//TODO: Implement this...
+			} else if(command == "RX_LOGFILE"){
+				//TODO: Implement this...
+			} else if(command == "LOAD_PROFILE"){
+				//TODO: Profiles need to be instantiated on a connection-by-connection basis...
+				if(isValidProfile(arg1)){
+					//Unload the current profile if there is one
+					if(profile_loaded)
+						delete cur_profile;
+
+					//Now load up a new profile with the specified name
+					cur_profile = new portalProfile(arg1);
+					profile_loaded = true;
+				}
+			} else if(command == "UNLOAD_PROFILE"){
+				//Unload the current profile if there is one
+				if(profile_loaded)
+					delete cur_profile;
+				profile_loaded = false;
+			} else if(profile_loaded && cur_profile->acceptsCommand(command)){
+				//Send profile-specific command off to the currently-loaded profile
+				std::string response = cur_profile->sendCommand(current_command);
+				response_message.num_bytes = response.length();
+				memcpy(response_message.buffer, &response[0], response_message.num_bytes);
+				dataToLowerLevel(&response_message, 1);
 			} else {
 				sdr_int->setSDRParameter(cur_channel, command, arg1);
 			}
