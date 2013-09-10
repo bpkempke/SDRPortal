@@ -26,6 +26,7 @@
 portalCommandSocket::portalCommandSocket(socketType in_socket_type, int socket_num, genericSDRInterface *in_sdr_int){
 	sdr_int = in_sdr_int;
 	cmd_socket_type = in_socket_type;
+	profile_loaded = false;
 
 	//Create the socket that we'll be listening on...
 	socket_int = new genericSocketInterface(in_socket_type, socket_num);
@@ -126,6 +127,12 @@ void portalCommandSocket::dataFromLowerLevel(void *data, int num_messages, int l
 					dataToLowerLevel(&response_message, 1);
 				} else
 					throw badArgumentException(badArgumentException::MALFORMED, 1, arg1);
+			} else if(command == "SDR_DISCONNECT"){
+				//This command disconnects the SDR from SDRPortal for use elsewhere
+				sdr_int->disconnect();
+			} else if(command == "SDR_CONNECT"){
+				//This command re-connects a previously-disconnected SDR to SDRPortal
+				sdr_int->connect();
 			} else if(command == "TX_LOGFILE"){
 				//TODO: Implement this...
 			} else if(command == "RX_LOGFILE"){

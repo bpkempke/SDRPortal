@@ -22,6 +22,7 @@
 #include "hierarchicalDataflowBlock.h"
 #include "genericSDRInterface.h"
 #include "genericSocketInterface.h"
+#include "portalProfile.h"
 
 class portalCommandSocket : public hierarchicalDataflowBlock{
 public:
@@ -36,6 +37,9 @@ private:
 	socketType cmd_socket_type;
 	genericSocketInterface *socket_int;
 	genericSDRInterface *sdr_int;
+
+	portalProfile *cur_profile;
+	bool profile_loaded;
 };
 
 #endif

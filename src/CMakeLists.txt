@@ -16,6 +16,7 @@
 
 add_library(sdrportalShared SHARED
 	portalCommandSocket.cc
+	portalProfile.cc
 	shellPortal.cc
 	base64.cc
 	generic.cc

@@ -164,6 +164,15 @@ void fcdInterface::setCustomSDRParameter(std::string name, std::string val, int 
 	//TODO: Anything here???
 }
 
+void fcdInterface::disconnect(){
+	//TODO: Fill this in...
+}
+
+void fcdInterface::connect(){
+	//TODO: Fill this in...
+}
+
+
 #define RTL_BUFF_LEN 16384
 void *fcdInterface::rxData(const char *in_buffer, unsigned long num_frames){
 

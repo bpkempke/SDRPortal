@@ -15,8 +15,8 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef RTL_INTERFACE_H
-#define RTL_INTERFACE_H
+#ifndef FCD_INTERFACE_H
+#define FCD_INTERFACE_H
 
 #include <vector>
 #include "genericSDRInterface.h"
@@ -43,6 +43,8 @@ public:
 	virtual bool checkRXGain(paramData in_param);
 	virtual bool checkRXRate(paramData in_param);
 	virtual void setCustomSDRParameter(std::string name, std::string val, int in_chan);
+	virtual void disconnect();
+	virtual void connect();
 
 private:
 	PaStream *fcd_dev;

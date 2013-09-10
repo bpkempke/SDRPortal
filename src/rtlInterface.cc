@@ -171,6 +171,14 @@ void rtlInterface::setCustomSDRParameter(std::string name, std::string val, int 
 	}
 }
 
+void rtlInterface::disconnect(){
+	//TODO: Fill this in...
+}
+
+void rtlInterface::connect(){
+	//TODO: Fill this in...
+}
+
 #define RTL_BUFF_LEN 16384
 void *rtlInterface::rxThread(){
 	unsigned char read_buffer[RTL_BUFF_LEN];

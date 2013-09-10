@@ -44,6 +44,8 @@ public:
 	virtual bool checkRXGain(paramData in_param);
 	virtual bool checkRXRate(paramData in_param);
 	virtual void setCustomSDRParameter(std::string name, std::string val, int in_chan);
+	virtual void disconnect();
+	virtual void connect();
 
 private:
 	rtlsdr_dev_t *rtl_dev;

@@ -17,10 +17,18 @@
 
 #include <sstream>
 #include <fstream>
+#include <algorithm>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <signal.h>
 #include "portalProfile.h"
 
 #define COMMAND_FIFO "cmd_fifo"
 #define READBACK_FIFO "rb_fifo"
+
+#define READ 0
+#define WRITE 1
 
 bool isValidProfile(std::string profile_name){
 	//This function just validates profile names based on the presence of the designated profile specification file
@@ -60,7 +68,7 @@ pid_t popen3(std::string command){
 		close(p_stdout[READ]);
 		dup2(p_stdout[WRITE], WRITE);
 		
-		execvp(*command, command);
+		execvp(vc[0], &vc[0]);
 		perror("execvp");
 		exit(1);
 	}
@@ -82,7 +90,7 @@ portalProfile::portalProfile(std::string profile_name){
 	// comma-separated list of profile command names	
 	//TODO: Better error checking on profile file contents
 	std::string sigproc_command;
-	file.getline(sigproc_command, 100);
+	std::getline(file, sigproc_command);
 
 	//Read in all the csv-separated accepted command names
 	//TODO: Better error checking here...
@@ -110,14 +118,14 @@ portalProfile::~portalProfile(){
 bool portalProfile::acceptsCommand(std::string command_name){
 	//Search the vector of accepted command strings for the specified command
 	std::vector<std::string>::iterator it;
-	it = find(commands.begin(), commands.end(), command_name);
+	it = std::find(commands.begin(), commands.end(), command_name);
 	if(it != commands.end())
 		return true;
 	else
 		return false;
 }
 
-std::string portalProfile:sendCommand(std::string command){
+std::string portalProfile::sendCommand(std::string command){
 	//First open the command fifo for writing, then send the command
 	//   int cf_fd = open(COMMAND_FIFO, O_WRONLY);
 	//   write(cf_fd, command.c_str(), command.length());

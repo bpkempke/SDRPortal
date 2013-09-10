@@ -60,6 +60,8 @@ public:
 	virtual void txIQData(void *data, int num_bytes, int tx_chan);
 
 	virtual void setCustomSDRParameter(std::string name, std::string val, int in_chan);
+	virtual void disconnect();
+	virtual void connect();
 
 private:
 	void handleHRFResult(const char *func_name, int result, bool force_kill);

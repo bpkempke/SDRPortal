@@ -46,96 +46,30 @@ ofstream log_file;
 /**********************
   * uhdInterface class
   *********************/
-uhdInterface::uhdInterface(string args, string tx_subdev, string rx_subdev, string tx_ant, string rx_ant, double tx_rate, double rx_rate, double tx_freq, double rx_freq, double tx_gain, double rx_gain, bool codec_highspeed) : genericSDRInterface(STREAM_INT16_T){
+uhdInterface::uhdInterface(string args, string tx_subdev, string rx_subdev, string tx_ant, string rx_ant, double tx_rate, double rx_rate, double tx_freq, double rx_freq, double tx_gain, double rx_gain, bool codec_highspeed) : 
+	genericSDRInterface(STREAM_INT16_T), 
+	d_args(args), 
+	d_tx_subdev(tx_subdev), 
+	d_rx_subdev(rx_subdev),
+	d_tx_ant(tx_ant),
+	d_rx_ant(rx_ant),
+	d_tx_rate(tx_rate),
+	d_rx_rate(rx_rate),
+	d_tx_freq(tx_freq),
+	d_rx_freq(rx_freq),
+	d_tx_gain(tx_gain),
+	d_rx_gain(rx_gain),
+	d_codec_highspeed(codec_highspeed)
+	{
 
 	//Open a log file
 	log_file.open("log.out", ios::out | ios::trunc | ios::binary);
 
-	//Open blank UHD object
-	shared_uhd = uhd::usrp::multi_usrp::make(args);
+	//Connect to the USRP
+	connect();
 
-	//Default to the internal oscillator
-	shared_uhd->set_clock_source("internal");
-
-	//If subdevice specification given, use it
-	if(tx_subdev != "") shared_uhd->set_tx_subdev_spec(tx_subdev);
-	if(rx_subdev != "") shared_uhd->set_rx_subdev_spec(rx_subdev);
-
-	//Set the sample rate
-	shared_uhd->set_tx_rate(tx_rate);
-	shared_uhd->set_rx_rate(rx_rate);
-
-	//Set the desired carrier frequencies
-	shared_uhd->set_tx_freq(tx_freq);
-	shared_uhd->set_rx_freq(rx_freq);
-
-	//Set the desired gains
-	shared_uhd->set_tx_gain(tx_gain);
-	shared_uhd->set_rx_gain(rx_gain);
-
-	//Set up the antennas
-	printf("setting up antennas....\n");
-	if(tx_ant != "") shared_uhd->set_tx_antenna(tx_ant);
-	if(rx_ant != "") shared_uhd->set_rx_antenna(rx_ant);
-
-	//TODO: Ugh... this is hard-coded...
-	//shared_uhd->set_tx_bandwidth(24e6);
-	//shared_uhd->set_rx_bandwidth(18e6);
-
-	if(codec_highspeed){
-		//Write all the regs we need if using this for demo build
-		printf("setting max2829 regs...\n");
-
-		if(rx_freq > 5e9){
-			//5.63 GHz
-			writeMAX2829Reg(0x00D33);
-			writeMAX2829Reg(0x08004);
-			writeMAX2829Reg(0x38E35);
-	
-			writeMAX2829Reg(0x04006);
-			writeMAX2829Reg(0x007A7);
-			writeMAX2829Reg(0x068B9);
-			writeMAX2829Reg(0x006CB);//RX Gain
-			writeMAX2829Reg(0x002AC);//TX Gain
-			printf("Setting gpio_ddr...\n");
-			uhd::usrp::dboard_iface::sptr  iface_ptr = shared_uhd->get_rx_dboard_iface();
-			iface_ptr->set_gpio_ddr(uhd::usrp::dboard_iface::UNIT_RX, 0x7FE0, 0xFFFF);
-			printf("Setting up atr registers...\n");
-			iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_RX_ONLY, 0xD010);
-			iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_TX_ONLY, 0x6810);
-			iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_FULL_DUPLEX, 0x6810);//TODO: This shouldn't really happen, should it??
-			//printf("First reading the atr registers...\n");
-			//printf("ATR_REG_RX_ONLY: %x\n",iface_ptr->get_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_RX_ONLY));
-			//Read back the state of the tx output to see if ANTSEL is switching...
-			//while(1)
-			//	printf("ANTSEL REG=%x\n",iface_ptr->read_gpio(uhd::usrp::dboard_iface::UNIT_TX));
-
-		} else {
-			//2.5 GHz
-//			writeMAX2829Reg(0x20A63);
-//			writeMAX2829Reg(0x2AAA4);
-//			writeMAX2829Reg(0x38E25);
-			writeMAX2829Reg(0x10d03);
-			writeMAX2829Reg(0x15554);
-			writeMAX2829Reg(0x38245);
-			writeMAX2829Reg(0x38A45);
-
-			writeMAX2829Reg(0x04006);
-			writeMAX2829Reg(0x007A7);
-			writeMAX2829Reg(0x068B9);
-			writeMAX2829Reg(0x006CB);//RX Gain
-			writeMAX2829Reg(0x002AC);//TX Gain
-			printf("Setting gpio_ddr...\n");
-			uhd::usrp::dboard_iface::sptr  iface_ptr = shared_uhd->get_rx_dboard_iface();
-			iface_ptr->set_gpio_ddr(uhd::usrp::dboard_iface::UNIT_RX, 0x7FE0, 0xFFFF);
-			printf("Setting up atr registers...\n");
-			iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_RX_ONLY, 0xD000);
-			iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_TX_ONLY, 0xA800);//Gotta make sure the right amp is turned on!
-			iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_FULL_DUPLEX, 0xA800);//TODO: This shouldn't really happen, should it??
-	
-		}
-	}
-
+	rx_running = false;
+	tx_running = false;
 
 }
 
@@ -262,6 +196,7 @@ void uhdInterface::openRXChannel(int in_chan){
 	argStruct *arguments = new argStruct();
 	arguments->uhd_int = this;
 	arguments->channel = in_chan;
+	rx_running = true;
 	pthread_create(&rx_listener, NULL, uhdReadProxy, (void*)arguments);
 
 }
@@ -279,6 +214,7 @@ void uhdInterface::openTXChannel(int in_chan){
 	argStruct arguments;
 	arguments.uhd_int = this;
 	arguments.channel = in_chan;
+	tx_running = true;
 	pthread_create(&tx_thread, NULL, uhdWriteProxy, (void*)&arguments);
 }
 
@@ -367,8 +303,19 @@ void *uhdInterface::txThread(int tx_chan){
 	return NULL;
 }
 
-void uhdInterface::rxEnd(){
-	log_file.close();
+void uhdInterface::txStop(){
+	if(tx_running){
+		pthread_join(tx_thread, NULL);
+		tx_running = false;
+	}
+}
+
+void uhdInterface::rxStop(){
+	if(rx_running == true){
+		pthread_join(rx_listener, NULL);
+		log_file.close();
+		rx_running = false;
+	}
 }
 
 void uhdInterface::setCustomSDRParameter(string name, string val, int in_chan){
@@ -386,4 +333,99 @@ void uhdInterface::setCustomSDRParameter(string name, string val, int in_chan){
 	} else
 		throw invalidCommandException(name);
 }
+
+void uhdInterface::disconnect(){
+	//TODO: Fill this in...
+	txStop();
+	rxStop();
+	shared_uhd.reset();
+}
+
+void uhdInterface::connect(){
+	//Open blank UHD object
+	shared_uhd = uhd::usrp::multi_usrp::make(d_args);
+
+	//Default to the internal oscillator
+	shared_uhd->set_clock_source("internal");
+
+	//If subdevice specification given, use it
+	if(d_tx_subdev != "") shared_uhd->set_tx_subdev_spec(d_tx_subdev);
+	if(d_rx_subdev != "") shared_uhd->set_rx_subdev_spec(d_rx_subdev);
+
+	//Set the sample rate
+	shared_uhd->set_tx_rate(d_tx_rate);
+	shared_uhd->set_rx_rate(d_rx_rate);
+
+	//Set the desired carrier frequencies
+	shared_uhd->set_tx_freq(d_tx_freq);
+	shared_uhd->set_rx_freq(d_rx_freq);
+
+	//Set the desired gains
+	shared_uhd->set_tx_gain(d_tx_gain);
+	shared_uhd->set_rx_gain(d_rx_gain);
+
+	//Set up the antennas
+	printf("setting up antennas....\n");
+	if(d_tx_ant != "") shared_uhd->set_tx_antenna(d_tx_ant);
+	if(d_rx_ant != "") shared_uhd->set_rx_antenna(d_rx_ant);
+
+	//TODO: Ugh... this is hard-coded...
+	//shared_uhd->set_tx_bandwidth(24e6);
+	//shared_uhd->set_rx_bandwidth(18e6);
+
+	if(d_codec_highspeed){
+		//Write all the regs we need if using this for demo build
+		printf("setting max2829 regs...\n");
+
+		if(d_rx_freq > 5e9){
+			//5.63 GHz
+			writeMAX2829Reg(0x00D33);
+			writeMAX2829Reg(0x08004);
+			writeMAX2829Reg(0x38E35);
+	
+			writeMAX2829Reg(0x04006);
+			writeMAX2829Reg(0x007A7);
+			writeMAX2829Reg(0x068B9);
+			writeMAX2829Reg(0x006CB);//RX Gain
+			writeMAX2829Reg(0x002AC);//TX Gain
+			printf("Setting gpio_ddr...\n");
+			uhd::usrp::dboard_iface::sptr  iface_ptr = shared_uhd->get_rx_dboard_iface();
+			iface_ptr->set_gpio_ddr(uhd::usrp::dboard_iface::UNIT_RX, 0x7FE0, 0xFFFF);
+			printf("Setting up atr registers...\n");
+			iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_RX_ONLY, 0xD010);
+			iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_TX_ONLY, 0x6810);
+			iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_FULL_DUPLEX, 0x6810);//TODO: This shouldn't really happen, should it??
+			//printf("First reading the atr registers...\n");
+			//printf("ATR_REG_RX_ONLY: %x\n",iface_ptr->get_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_RX_ONLY));
+			//Read back the state of the tx output to see if ANTSEL is switching...
+			//while(1)
+			//	printf("ANTSEL REG=%x\n",iface_ptr->read_gpio(uhd::usrp::dboard_iface::UNIT_TX));
+
+		} else {
+			//2.5 GHz
+//			writeMAX2829Reg(0x20A63);
+//			writeMAX2829Reg(0x2AAA4);
+//			writeMAX2829Reg(0x38E25);
+			writeMAX2829Reg(0x10d03);
+			writeMAX2829Reg(0x15554);
+			writeMAX2829Reg(0x38245);
+			writeMAX2829Reg(0x38A45);
+
+			writeMAX2829Reg(0x04006);
+			writeMAX2829Reg(0x007A7);
+			writeMAX2829Reg(0x068B9);
+			writeMAX2829Reg(0x006CB);//RX Gain
+			writeMAX2829Reg(0x002AC);//TX Gain
+			printf("Setting gpio_ddr...\n");
+			uhd::usrp::dboard_iface::sptr  iface_ptr = shared_uhd->get_rx_dboard_iface();
+			iface_ptr->set_gpio_ddr(uhd::usrp::dboard_iface::UNIT_RX, 0x7FE0, 0xFFFF);
+			printf("Setting up atr registers...\n");
+			iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_RX_ONLY, 0xD000);
+			iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_TX_ONLY, 0xA800);//Gotta make sure the right amp is turned on!
+			iface_ptr->set_atr_reg(uhd::usrp::dboard_iface::UNIT_TX, uhd::usrp::dboard_iface::ATR_REG_FULL_DUPLEX, 0xA800);//TODO: This shouldn't really happen, should it??
+	
+		}
+	}
+}
+
 

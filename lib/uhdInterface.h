@@ -39,9 +39,12 @@ public:
 	//Receive data methods
 	void rxStart(int in_chan);
 	int rxData(std::complex<int16_t> *rx_data_iq, int num_samples, int rx_chan);
-	void rxEnd();
 	void *rxThread(int rx_chan);
 	void *txThread(int tx_chan);
+
+	//Accessor methods to stop tx/rx threads
+	void rxStop();
+	void txStop();
 
 	//Certain functions inherited from genericSDRInterface class
 	virtual void setRXFreq(paramData in_param);
@@ -67,6 +70,8 @@ public:
 	virtual bool checkRXRate(paramData in_param);
 	virtual bool checkTXRate(paramData in_param);
 	virtual void setCustomSDRParameter(std::string name, std::string val, int in_chan);
+	virtual void disconnect();
+	virtual void connect();
 	virtual void txIQData(void *data, int num_bytes, int tx_chan);
 
 
@@ -89,6 +94,11 @@ private:
 
 	//Special parameters just for the USRP series
 	//TODO: This...
+
+	std::string d_args, d_tx_subdev, d_rx_subdev, d_tx_ant, d_rx_ant;
+	double d_tx_rate, d_rx_rate, d_tx_freq, d_rx_freq, d_tx_gain, d_rx_gain;
+	bool d_codec_highspeed;
+	bool rx_running, tx_running;
 
 };
 

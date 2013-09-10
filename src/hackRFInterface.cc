@@ -170,6 +170,14 @@ void hackRFInterface::setCustomSDRParameter(std::string name, std::string val, i
 	}
 }
 
+void hackRFInterface::disconnect(){
+	//TODO: Fill this in...
+}
+
+void hackRFInterface::connect(){
+	//TODO: Fill this in...
+}
+
 int hackRFInterface::rxData(hackrf_transfer *in_transfer){
 	int n_read = in_transfer->valid_length;
 	static bool first_time = true;
