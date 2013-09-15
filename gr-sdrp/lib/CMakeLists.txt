@@ -27,6 +27,7 @@ link_directories(${Boost_LIBRARY_DIRS})
 
 list(APPEND sdrp_sources
     ccsds_aos_framer_impl.cc
+    ccsds_tm_framer_impl.cc
     correlate_long_access_code_bb_impl.cc
 )
 

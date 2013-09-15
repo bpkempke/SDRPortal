@@ -24,7 +24,7 @@
 #include "config.h"
 #endif
 
-#include "ccsds_aos_framer_impl.h"
+#include "ccsds_tm_framer_impl.h"
 #include <gnuradio/io_signature.h>
 #include <cstdio>
 #include <string>
@@ -32,17 +32,17 @@
 namespace gr {
 namespace sdrp {
 
-inline void ccsds_aos_framer_impl::enter_search(){
+inline void ccsds_tm_framer_impl::enter_search(){
 	d_state = STATE_SYNC_SEARCH;
 }
 
-inline void ccsds_aos_framer_impl::enter_have_sync(){
+inline void ccsds_tm_framer_impl::enter_have_sync(){
 	d_state = STATE_HAVE_SYNC;
 	d_header = 0;
 	d_headerbitlen_cnt = 0;
 }
 
-inline void ccsds_aos_framer_impl::enter_have_header(int payload_len, int whitener_offset){
+inline void ccsds_tm_framer_impl::enter_have_header(int payload_len, int whitener_offset){
 	d_state = STATE_HAVE_HEADER;
 	d_packetlen = payload_len;
 	d_packet_whitener_offset = whitener_offset;
@@ -51,13 +51,13 @@ inline void ccsds_aos_framer_impl::enter_have_header(int payload_len, int whiten
 	d_packet_byte_index = 0;
 }
 
-ccsds_aos_framer::sptr ccsds_aos_framer::make(msg_queue::sptr target_queue){
+ccsds_tm_framer::sptr ccsds_tm_framer::make(msg_queue::sptr target_queue){
 	return gnuradio::get_initial_sptr
-		(new ccsds_aos_framer_impl(target_queue));
+		(new ccsds_tm_framer_impl(target_queue));
 }
 
-ccsds_aos_framer_impl::ccsds_aos_framer_impl(msg_queue::sptr target_queue)
-	: sync_block("ccsds_aos_framer",
+ccsds_tm_framer_impl::ccsds_tm_framer_impl(msg_queue::sptr target_queue)
+	: sync_block("ccsds_tm_framer",
 			io_signature::make(1, 1, sizeof(unsigned char)),
 			io_signature::make(0, 0, 0)),
 	d_target_queue(target_queue)
@@ -65,10 +65,10 @@ ccsds_aos_framer_impl::ccsds_aos_framer_impl(msg_queue::sptr target_queue)
 	enter_search();
 }
 
-ccsds_aos_framer_impl::~ccsds_aos_framer_impl(){
+ccsds_tm_framer_impl::~ccsds_tm_framer_impl(){
 }
 
-int ccsds_aos_framer_impl::work(int noutput_items,
+int ccsds_tm_framer_impl::work(int noutput_items,
 		gr_vector_const_void_star &input_items,
 		gr_vector_void_star &output_items){
 

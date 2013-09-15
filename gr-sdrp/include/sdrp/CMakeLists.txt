@@ -23,5 +23,6 @@
 install(FILES
     api.h
     correlate_long_access_code_bb.h
+    ccsds_tm_framer.h
     ccsds_aos_framer.h DESTINATION include/sdrp
 )
