@@ -23,7 +23,7 @@
 #define INCLUDED_SDRP_WS_SINK_C_H
 
 #include <sdrp/api.h>
-#include <gr_sync_block.h>
+#include <gnuradio/sync_block.h>
 
 namespace gr {
   namespace sdrp {
@@ -33,7 +33,7 @@ namespace gr {
      * \ingroup sdrp
      *
      */
-    class SDRP_API ws_sink_c : virtual public gr_sync_block
+    class SDRP_API ws_sink_c : virtual public sync_block
     {
     public:
        typedef boost::shared_ptr<ws_sink_c> sptr;

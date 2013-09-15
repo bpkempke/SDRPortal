@@ -26,15 +26,12 @@ include_directories(${Boost_INCLUDE_DIR})
 link_directories(${Boost_LIBRARY_DIRS})
 
 list(APPEND sdrp_sources
-    ws_sink_c_impl.cc
-    sha1.cc
-    base64.cc
-    hierarchicalDataflowBlock.cc
-    genericSocketInterface.cc
+    ccsds_aos_framer_impl.cc
+    correlate_long_access_code_bb_impl.cc
 )
 
 add_library(gnuradio-sdrp SHARED ${sdrp_sources})
-target_link_libraries(gnuradio-sdrp ${Boost_LIBRARIES} ${GRUEL_LIBRARIES} ${GNURADIO_CORE_LIBRARIES})
+target_link_libraries(gnuradio-sdrp ${Boost_LIBRARIES} ${GNURADIO_RUNTIME_LIBRARIES})
 set_target_properties(gnuradio-sdrp PROPERTIES DEFINE_SYMBOL "gnuradio_sdrp_EXPORTS")
 
 ########################################################################
@@ -62,7 +59,7 @@ add_executable(test-sdrp ${test_sdrp_sources})
 
 target_link_libraries(
   test-sdrp
-  ${GNURADIO_CORE_LIBRARIES}
+  ${GNURADIO_RUNTIME_LIBRARIES}
   ${Boost_LIBRARIES}
   ${CPPUNIT_LIBRARIES}
   gnuradio-sdrp

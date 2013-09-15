@@ -22,5 +22,6 @@
 ########################################################################
 install(FILES
     api.h
-    ws_sink_c.h DESTINATION include/sdrp
+    correlate_long_access_code_bb.h
+    ccsds_aos_framer.h DESTINATION include/sdrp
 )
