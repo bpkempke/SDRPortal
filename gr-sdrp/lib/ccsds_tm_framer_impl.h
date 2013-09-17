@@ -31,7 +31,9 @@ namespace gr {
     class ccsds_tm_framer_impl : public ccsds_tm_framer
     {
     private:
+      void performHardDecisions(std::vector<uint8_t> &packet_data);
       enum state_t {STATE_SYNC_SEARCH, STATE_HAVE_SYNC, STATE_HAVE_HEADER};
+      enum coding_method_t {METHOD_CONV, METHOD_RS, METHOD_CC, METHOD_TURBO, METHOD_LDPC, METHOD_NONE};
 
       static const int MAX_PKT_LEN    = 4096;
       static const int HEADERBITLEN   = 32;
@@ -47,6 +49,19 @@ namespace gr {
       int	       d_packetlen;		   // length of packet
       int              d_packet_whitener_offset;   // offset into whitener string to use
       int	       d_packetlen_cnt;	           // how many so far
+
+      int d_frame_len;
+      coding_method_t  d_coding_method;
+      unsigned int d_r_mult, d_r_div;
+      unsigned int d_rs_e, d_rs_i, d_rs_q;
+      unsigned int d_turbo_k;
+      unsigned int d_ldpc_k;
+      unsigned int d_tot_bits;
+      pmt::pmt_t d_correlate_key;
+      unsigned int d_packet_id;
+      std::vector<float> d_symbol_hist;
+
+      void *d_vp;
 
     protected:
       void enter_search();
@@ -68,13 +83,20 @@ namespace gr {
 	*offset = (d_header >> 28) & 0x000f;
       }
 
+      void resetDecoder();
+
     public:
-      ccsds_tm_framer_impl(msg_queue::sptr target_queue);
+      ccsds_tm_framer_impl(unsigned packet_id);
       ~ccsds_tm_framer_impl();
 
       int work(int noutput_items,
 	       gr_vector_const_void_star &input_items,
 	       gr_vector_void_star &output_items);
+
+      void setFrameLength(unsigned int num_bits);
+      void setCodeRate(unsigned int r_mult, unsigned int r_div);
+      void setCodingMethod(std::string in_method);
+      void setCodingParameter(std::string param_name, std::string param_val);
     };
 
   } /* namespace digital */

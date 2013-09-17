@@ -59,7 +59,12 @@ namespace gr {
        *
        * \param target_queue The message queue where frames go.
        */
-      static sptr make(msg_queue::sptr target_queue);
+      static sptr make(unsigned packet_id);
+
+      virtual void setFrameLength(unsigned int num_bits) = 0;
+      virtual void setCodeRate(unsigned int r_mult, unsigned int r_div) = 0;
+      virtual void setCodingMethod(std::string in_method) = 0;
+      virtual void setCodingParameter(std::string param_name, std::string param_val) = 0;
     };
 
   } /* namespace sdrp */
