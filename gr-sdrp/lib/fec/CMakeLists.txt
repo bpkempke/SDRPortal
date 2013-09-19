@@ -17,13 +17,11 @@
 # the Free Software Foundation, Inc., 51 Franklin Street,
 # Boston, MA 02110-1301, USA.
 
-########################################################################
-# Install public header files
-########################################################################
-install(FILES
-    api.h
-    correlate_long_access_code_bb.h
-    correlate_soft_access_tag_ff.h
-    ccsds_tm_framer.h
-    ccsds_aos_framer.h DESTINATION include/sdrp
+set(fec_sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/viterbi27_port.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/decode_rs_ccsds.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/fec.c
 )
+
+list(APPEND sdrp_sources ${fec_sources})
+

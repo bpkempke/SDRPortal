@@ -6,6 +6,10 @@
 #ifndef _FEC_H_
 #define _FEC_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void partab_init();
 
 static inline int parityb(unsigned char x){
@@ -28,5 +32,9 @@ extern int Bitcnt[];
 
 double normal_rand(double mean, double std_dev);
 unsigned char addnoise(int sym,double amp,double gain,double offset,int clip);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

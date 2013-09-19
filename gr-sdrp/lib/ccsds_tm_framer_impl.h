@@ -86,7 +86,7 @@ namespace gr {
       void resetDecoder();
 
     public:
-      ccsds_tm_framer_impl(unsigned packet_id);
+      ccsds_tm_framer_impl(unsigned packet_id, const std::string &tag_name);
       ~ccsds_tm_framer_impl();
 
       int work(int noutput_items,

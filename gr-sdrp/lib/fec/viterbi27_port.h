@@ -1,5 +1,10 @@
 #ifndef VITERBI27_PORT_H
 #define VITERBI27_PORT_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "fec.h"
 
 #define	V27POLYA	0x6d
@@ -11,5 +16,9 @@ int init_viterbi27_port(void *p,int starting_state);
 int chainback_viterbi27_port(void *p,unsigned char *data,unsigned int nbits,unsigned int endstate);
 void delete_viterbi27_port(void *p);
 int update_viterbi27_blk_port(void *p,unsigned char *syms,int nbits);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

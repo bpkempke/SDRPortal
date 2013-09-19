@@ -17,6 +17,9 @@
 # the Free Software Foundation, Inc., 51 Franklin Street,
 # Boston, MA 02110-1301, USA.
 
+include(GrMiscUtils)
+GR_INCLUDE_SUBDIRECTORY(fec)
+
 ########################################################################
 # Setup library
 ########################################################################
@@ -29,6 +32,7 @@ list(APPEND sdrp_sources
     ccsds_aos_framer_impl.cc
     ccsds_tm_framer_impl.cc
     correlate_long_access_code_bb_impl.cc
+    correlate_soft_access_tag_ff_impl.cc
 )
 
 add_library(gnuradio-sdrp SHARED ${sdrp_sources})

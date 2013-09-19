@@ -53,12 +53,12 @@ inline void ccsds_tm_framer_impl::enter_have_header(int payload_len, int whitene
 	d_packet_byte_index = 0;
 }
 
-ccsds_tm_framer::sptr ccsds_tm_framer::make(unsigned packet_id){
+ccsds_tm_framer::sptr ccsds_tm_framer::make(unsigned packet_id, const std::string &tag_name){
 	return gnuradio::get_initial_sptr
-		(new ccsds_tm_framer_impl(packet_id));
+		(new ccsds_tm_framer_impl(packet_id, tag_name));
 }
 
-ccsds_tm_framer_impl::ccsds_tm_framer_impl(unsigned packet_id)
+ccsds_tm_framer_impl::ccsds_tm_framer_impl(unsigned packet_id, const std::string &tag_name)
 	: sync_block("ccsds_tm_framer",
 			io_signature::make(1, 1, sizeof(float)),
 			io_signature::make(0, 0, 0)),
@@ -70,7 +70,7 @@ ccsds_tm_framer_impl::ccsds_tm_framer_impl(unsigned packet_id)
 	d_vp(NULL),
 	d_packet_id(packet_id)
 {
-	d_correlate_key = pmt::string_to_symbol("access_code_tag");
+	d_correlate_key = pmt::string_to_symbol(tag_name);
 
 	message_port_register_out(pmt::mp("tm_frame_out"));
 	resetDecoder();
