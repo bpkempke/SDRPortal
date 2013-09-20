@@ -24,6 +24,7 @@ install(FILES
     api.h
     correlate_long_access_code_bb.h
     correlate_soft_access_tag_ff.h
+    constellation_soft_receiver_cf.h
     ccsds_tm_framer.h
     ccsds_aos_framer.h DESTINATION include/sdrp
 )
