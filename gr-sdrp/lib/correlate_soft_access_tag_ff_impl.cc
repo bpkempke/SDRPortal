@@ -50,6 +50,10 @@ correlate_soft_access_tag_ff_impl::correlate_soft_access_tag_ff_impl(
 	d_access_code(NULL), d_data_reg(NULL), d_mask(NULL), d_len_64(0),
 	d_threshold(threshold)
 {
+	//Check to make sure there IS an access code first
+	if(access_code.length() == 0)
+		throw std::invalid_argument("correlate_soft_access_tag_ff: Access code length must be >0!");
+
 	set_access_code(access_code);
 
 	std::stringstream str;
@@ -109,7 +113,7 @@ int correlate_soft_access_tag_ff_impl::work(int noutput_items,
 
 	for(int i = 0; i < noutput_items; i++) {
 		//compute overflow
-		for(unsigned int ii=d_len_64-1; ii >= 0; ii--){
+		for(int ii=d_len_64-1; ii >= 0; ii--){
 			d_data_reg[ii] <<= 1;
 			if(ii > 0 && (d_data_reg[ii-1] & 0x8000000000000000ULL))
 				d_data_reg[ii] |= 1ULL;

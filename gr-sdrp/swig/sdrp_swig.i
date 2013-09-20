@@ -1,11 +1,13 @@
 /* -*- c++ -*- */
 
+#define DIGITAL_API
 #define SDRP_API
 
 %include "gnuradio.i"			// the common stuff
 
 //load generated python docstrings
 %include "sdrp_swig_doc.i"
+%include "gnuradio/digital/constellation.h"
 
 %{
 #include "sdrp/ccsds_aos_framer.h"

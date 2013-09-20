@@ -37,7 +37,7 @@ list(APPEND sdrp_sources
 )
 
 add_library(gnuradio-sdrp SHARED ${sdrp_sources})
-target_link_libraries(gnuradio-sdrp ${Boost_LIBRARIES} ${GNURADIO_RUNTIME_LIBRARIES})
+target_link_libraries(gnuradio-sdrp gnuradio-digital ${Boost_LIBRARIES} ${GNURADIO_RUNTIME_LIBRARIES})
 set_target_properties(gnuradio-sdrp PROPERTIES DEFINE_SYMBOL "gnuradio_sdrp_EXPORTS")
 
 ########################################################################

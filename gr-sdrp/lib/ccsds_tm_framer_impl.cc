@@ -165,19 +165,23 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 	const uint64_t nread = nitems_read(0);
 	const float *in = (const float *) input_items[0];
 	int count=0;
+	bool found_tag;
 
 	while(count < noutput_items){
 		switch(d_state) {
 
 			case STATE_SYNC_SEARCH:    // Look for tags indicating beginning of pkt
 				get_tags_in_range(tags, 0, nread+count, nread+noutput_items);
+				found_tag = false;
 				for(unsigned ii=0; ii < tags.size(); ii++){
 					if(tags[ii].key == d_correlate_key){
 						count = tags[ii].offset-nread;
 						enter_have_sync();
 						d_symbol_hist.clear();
+						found_tag = true;
 					}
 				}
+				if(!found_tag) count = noutput_items;
 				break;
 
 			case STATE_HAVE_SYNC:
