@@ -40,10 +40,7 @@ namespace gr {
       // gr::blocks::ccsds_tm_tx::sptr
       typedef boost::shared_ptr<ccsds_tm_tx> sptr;
 
-      static sptr make(size_t itemsize, int msgq_limit=0);
-      static sptr make(size_t itemsize, gr::msg_queue::sptr msgq);
-      static sptr make(size_t itemsize, gr::msg_queue::sptr msgq,
-		       const std::string& lengthtagname);
+      static sptr make();
 
       virtual gr::msg_queue::sptr msgq() const = 0;
     };
