@@ -26,5 +26,6 @@ install(FILES
     correlate_soft_access_tag_ff.h
     constellation_soft_receiver_cf.h
     ccsds_tm_framer.h
+    ccsds_tm_tx.h
     ccsds_aos_framer.h DESTINATION include/sdrp
 )
