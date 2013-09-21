@@ -38,34 +38,10 @@ namespace gr {
   namespace sdrp {
 
     ccsds_tm_tx::sptr
-    ccsds_tm_tx::make(size_t itemsize, int msgq_limit)
-    {
-      return gnuradio::get_initial_sptr
-        (new ccsds_tm_tx_impl(itemsize, msgq_limit));
-    }
-
-    ccsds_tm_tx::sptr
     ccsds_tm_tx::make(size_t itemsize, msg_queue::sptr msgq)
     {
       return gnuradio::get_initial_sptr
         (new ccsds_tm_tx_impl(itemsize, msgq));
-    }
-
-    ccsds_tm_tx::sptr
-    ccsds_tm_tx::make(size_t itemsize, msg_queue::sptr msgq,
-			 const std::string& lengthtagname)
-    {
-      return gnuradio::get_initial_sptr
-        (new ccsds_tm_tx_impl(itemsize, msgq, lengthtagname));
-    }
-
-    ccsds_tm_tx_impl::ccsds_tm_tx_impl(size_t itemsize, int msgq_limit)
-      : sync_block("ccsds_tm_tx",
-                      io_signature::make(0, 0, 0),
-                      io_signature::make(1, 1, itemsize)),
-        d_itemsize(itemsize), d_msgq(msg_queue::make(msgq_limit)),
-        d_msg_offset(0), d_eof(false), d_tags(false)
-    {
     }
 
     ccsds_tm_tx_impl::ccsds_tm_tx_impl(size_t itemsize, msg_queue::sptr msgq)
@@ -74,16 +50,6 @@ namespace gr {
                       io_signature::make(1, 1, itemsize)),
         d_itemsize(itemsize), d_msgq(msgq),
         d_msg_offset(0), d_eof(false), d_tags(false)
-    {
-    }
-
-    ccsds_tm_tx_impl::ccsds_tm_tx_impl(size_t itemsize, msg_queue::sptr msgq,
-					     const std::string& lengthtagname)
-      : sync_block("ccsds_tm_tx",
-                      io_signature::make(0, 0, 0),
-                      io_signature::make(1, 1, itemsize)),
-        d_itemsize(itemsize), d_msgq(msgq), d_msg_offset(0), d_eof(false),
-        d_tags(true), d_lengthtagname(lengthtagname)
     {
     }
 

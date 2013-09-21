@@ -16,6 +16,7 @@ int init_viterbi27_port(void *p,int starting_state);
 int chainback_viterbi27_port(void *p,unsigned char *data,unsigned int nbits,unsigned int endstate);
 void delete_viterbi27_port(void *p);
 int update_viterbi27_blk_port(void *p,unsigned char *syms,int nbits);
+void encode_viterbi27_port(unsigned char *bits, int nbits, unsigned char *return_bits);
 
 #ifdef __cplusplus
 }

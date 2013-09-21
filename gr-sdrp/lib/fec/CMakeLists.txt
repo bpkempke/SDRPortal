@@ -20,6 +20,7 @@
 set(fec_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/viterbi27_port.c
     ${CMAKE_CURRENT_SOURCE_DIR}/decode_rs_ccsds.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/encode_rs_ccsds.c
     ${CMAKE_CURRENT_SOURCE_DIR}/fec.c
 )
 
