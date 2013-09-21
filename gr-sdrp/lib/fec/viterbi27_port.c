@@ -193,7 +193,7 @@ void encode_viterbi27_port(unsigned char *bits, int nbits, unsigned char *return
 	int ii=0;
 	int sr=0;
 	int bit=0;
-	for(ii = 0; ii < nbits+6, ii++){
+	for(ii = 0; ii < nbits+6; ii++){
 		bit = (ii < nbits) ? bits[ii] : 0;
 		sr = (sr << 1) | bit;
 		return_bits[2*ii+0] = parity(sr & V27POLYB);
