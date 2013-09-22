@@ -62,12 +62,13 @@ ccsds_tm_framer_impl::ccsds_tm_framer_impl(unsigned packet_id, const std::string
 	: sync_block("ccsds_tm_framer",
 			io_signature::make(1, 1, sizeof(float)),
 			io_signature::make(0, 0, 0)),
-	d_frame_len(0),
+	d_frame_len(223*8),
 	d_r_mult(1), d_r_div(1),
 	d_rs_e(16), d_rs_i(1), d_rs_q(0),
 	d_turbo_k(8920),
 	d_ldpc_k(7136),
 	d_vp(NULL),
+	d_num_times(0),
 	d_packet_id(packet_id)
 {
 	d_correlate_key = pmt::string_to_symbol(tag_name);
@@ -82,12 +83,14 @@ ccsds_tm_framer_impl::~ccsds_tm_framer_impl(){
 }
 
 void ccsds_tm_framer_impl::setFrameLength(unsigned int num_bits){
-	d_frame_len = num_bits;
-	resetDecoder();
-
-	//Recreate the convolutional encoder
-	delete_viterbi27_port(d_vp);
-	d_vp = create_viterbi27_port(num_bits);
+	if(num_bits > 0){
+		d_frame_len = num_bits;
+		resetDecoder();
+	
+		//Recreate the convolutional encoder
+		delete_viterbi27_port(d_vp);
+		d_vp = create_viterbi27_port(num_bits);
+	}
 }
       
 void ccsds_tm_framer_impl::setCodeRate(unsigned int r_mult, unsigned int r_div){
@@ -177,6 +180,7 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 					if(tags[ii].key == d_correlate_key){
 						count = tags[ii].offset-nread;
 						enter_have_sync();
+						std::cout << "entered have_sync " << d_num_times++ << " times" << std::endl;
 						d_symbol_hist.clear();
 						found_tag = true;
 					}
@@ -186,8 +190,8 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 
 			case STATE_HAVE_SYNC:
 				//Push soft bits into vector 
-				while(d_symbol_hist.size() < d_tot_bits && count++ < noutput_items)
-					d_symbol_hist.push_back(in[count]);
+				while(d_symbol_hist.size() < d_tot_bits && count < noutput_items)
+					d_symbol_hist.push_back(in[count++]);
 
 				//If we're at the end of the packet, first try decoding it, then return to searching
 				if(d_symbol_hist.size() >= d_tot_bits){

@@ -60,6 +60,7 @@ namespace gr {
       pmt::pmt_t d_correlate_key;
       unsigned int d_packet_id;
       std::vector<float> d_symbol_hist;
+      unsigned long d_num_times;
 
       void *d_vp;
 
@@ -93,10 +94,10 @@ namespace gr {
 	       gr_vector_const_void_star &input_items,
 	       gr_vector_void_star &output_items);
 
-      void setFrameLength(unsigned int num_bits);
-      void setCodeRate(unsigned int r_mult, unsigned int r_div);
-      void setCodingMethod(std::string in_method);
-      void setCodingParameter(std::string param_name, std::string param_val);
+      virtual void setFrameLength(unsigned int num_bits);
+      virtual void setCodeRate(unsigned int r_mult, unsigned int r_div);
+      virtual void setCodingMethod(std::string in_method);
+      virtual void setCodingParameter(std::string param_name, std::string param_val);
     };
 
   } /* namespace digital */

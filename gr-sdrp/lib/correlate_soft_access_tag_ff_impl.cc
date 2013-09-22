@@ -90,9 +90,13 @@ bool correlate_soft_access_tag_ff_impl::set_access_code(
 	}
 
 	for(unsigned ii=0; ii < len; ii++){
-		d_mask[ii/64] |= 1ULL << (ii % 64);
+		d_mask[(len-ii-1)/64] |= 1ULL << ((len-ii-1) % 64);
 		if(access_code[ii] & 1)
-			d_access_code[ii/64] |= 1ULL << (ii % 64);
+			d_access_code[(len-ii-1)/64] |= 1ULL << ((len-ii-1) % 64);
+	}
+
+	for(unsigned ii=0; ii < d_len_64; ii++){
+		printf("%llX\n",d_access_code[ii]);
 	}
 
 	return true;
@@ -139,7 +143,7 @@ int correlate_soft_access_tag_ff_impl::work(int noutput_items,
 			nwrong_n = gr::blocks::count_bits64(wrong_bits);
 		}
 
-		if(nwrong < d_threshold || nwrong_n < d_threshold){
+		if(nwrong <= d_threshold || nwrong_n <= d_threshold){
 			if(nwrong_n < d_threshold)
 				d_negate = true;
 			else

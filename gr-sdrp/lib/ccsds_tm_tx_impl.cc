@@ -35,10 +35,15 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdexcept>
+#include <iostream>
 #include <string.h>
+#include <pthread.h>
 
 namespace gr {
 namespace sdrp {
+
+pthread_mutex_t packet_queue_mutex;
+pthread_cond_t packet_queue_cv;
 
 ccsds_tm_tx::sptr ccsds_tm_tx::make(){
 	return gnuradio::get_initial_sptr(new ccsds_tm_tx_impl());
@@ -47,7 +52,7 @@ ccsds_tm_tx::sptr ccsds_tm_tx::make(){
 ccsds_tm_tx_impl::ccsds_tm_tx_impl()
 	: sync_block("ccsds_tm_tx",
 		io_signature::make(0, 0, 0),
-		io_signature::make(1, 1, 1)){
+		io_signature::make(1, 1, sizeof(gr_complex))){
 
 	//Incoming messages consist of arrays of uint8_t's corresponding to the desired data bytes
 	message_port_register_in(pmt::mp("ccsds_tx_msg_in"));
@@ -68,10 +73,15 @@ void ccsds_tm_tx_impl::inTXMsg(pmt::pmt_t msg){
 	size_t offset(0);
 	uint8_t *msg_array = (uint8_t*)(pmt::uniform_vector_elements(msg_vector, offset));
 
+	std::cout << "GOT A MESSAGE... msg_len = " << msg_len << std::endl;
+
 	//Make a vector and push it on to the queue of vectors to push out
 	std::vector<uint8_t> new_packet;
 	new_packet.assign(msg_array, msg_array+msg_len);
+	pthread_mutex_lock(&packet_queue_mutex);
 	d_packet_queue.push(new_packet);
+	pthread_cond_signal(&packet_queue_cv);
+	pthread_mutex_unlock(&packet_queue_mutex);
 }
 
 void ccsds_tm_tx_impl::setCodeRate(unsigned int r_mult, unsigned int r_div){
@@ -84,10 +94,12 @@ void ccsds_tm_tx_impl::setFrameLength(int in_frame_len){
 	d_frame_len = in_frame_len;
 }
 
-void ccsds_tm_tx_impl::setCodingMethod(std::string in_method){
-	if(in_method == "CONV")
+void ccsds_tm_tx_impl::setCodingMethod(const std::string in_method){
+	if(in_method == "CONV"){
+		std::cout << "setting coding method to CONV" << std::endl;
 		d_coding_method = METHOD_CONV;
-	else if(in_method == "RS"){
+	}else if(in_method == "RS"){
+		std::cout << "Setting coding method to RS" << std::endl;
 		d_coding_method = METHOD_RS;
 		d_frame_len = 223*8;
 		d_r_mult = 255;
@@ -98,8 +110,10 @@ void ccsds_tm_tx_impl::setCodingMethod(std::string in_method){
 		d_coding_method = METHOD_TURBO;
 	else if(in_method == "LDPC")
 		d_coding_method = METHOD_LDPC;
-	else
+	else {
+		std::cout << "Setting coding method to None" << std::endl;
 		d_coding_method = METHOD_NONE;
+	}
 }
 
 void ccsds_tm_tx_impl::setCodingParameter(std::string param_name, std::string param_val){
@@ -128,11 +142,14 @@ void ccsds_tm_tx_impl::setAccessCode(std::string access_code){
 }
 
 void ccsds_tm_tx_impl::pushByte(uint8_t in_byte){
+//	printf("%02X (", in_byte);
 	//Assuming MSB-first
 	for(int ii=0; ii < 8; ii++){
 		uint8_t cur_bit = (in_byte & (1 << (7-ii))) ? 1 : 0;
+//		std::cout << cur_bit+0;
 		d_historic_bits.push(cur_bit);
 	}
+//	printf(")\n");
 }
 
 std::vector<uint8_t> ccsds_tm_tx_impl::unpackBits(std::vector<uint8_t> in_packet){
@@ -148,14 +165,16 @@ std::vector<uint8_t> ccsds_tm_tx_impl::unpackBits(std::vector<uint8_t> in_packet
 int ccsds_tm_tx_impl::work(int noutput_items,
 			gr_vector_const_void_star &input_items,
 			gr_vector_void_star &output_items){
-	char *out = (char*)output_items[0];
+	gr_complex *out = (gr_complex*)output_items[0];
+	gr_complex out_sample;
 	int nn = 0;
 
 	while(nn < noutput_items) {
 		if(d_historic_bits.size() > 0){
 			//Push out any bits that are waiting to go out...
 			while(nn < noutput_items && d_historic_bits.size() > 0){
-				out[nn++] = d_historic_bits.front();
+				out_sample = (d_historic_bits.front()) ? 1.0 : -1.0;
+				out[nn++] = out_sample;
 				d_historic_bits.pop();
 			}
 		} else if(d_packet_queue.size() > 0){
@@ -191,9 +210,20 @@ int ccsds_tm_tx_impl::work(int noutput_items,
 				//TODO: Implement the remaining coding methods...
 			}
 		} else {
-			return 0;
+			if(d_packet_queue.size() == 0){
+				//Rest are all zeros
+				out_sample = 0.0;
+				while(nn < noutput_items)
+					out[nn++] = out_sample;
+				/*//Block waiting for incoming data
+				pthread_mutex_lock(&packet_queue_mutex);
+				while(d_packet_queue.size() == 0)
+					pthread_cond_wait(&packet_queue_cv, &packet_queue_mutex);
+				pthread_mutex_unlock(&packet_queue_mutex);*/
+			} else continue;
 		}
 	}
+
 
 	return nn;
 }

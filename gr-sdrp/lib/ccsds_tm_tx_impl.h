@@ -64,11 +64,11 @@ public:
 
 	msg_queue::sptr msgq() const { return d_msgq; }
 
-	void setCodeRate(unsigned int r_mult, unsigned int r_div);
-	void setFrameLength(int in_frame_len);
-	void setCodingMethod(std::string in_method);
-	void setCodingParameter(std::string param_name, std::string param_val);
-	void setAccessCode(std::string access_code);
+	virtual void setCodeRate(unsigned int r_mult, unsigned int r_div);
+	virtual void setFrameLength(int in_frame_len);
+	virtual void setCodingMethod(const std::string in_method);
+	virtual void setCodingParameter(std::string param_name, std::string param_val);
+	virtual void setAccessCode(std::string access_code);
 
 	int work(int noutput_items,
 			gr_vector_const_void_star &input_items,
