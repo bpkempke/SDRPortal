@@ -16,6 +16,7 @@
 #include "sdrp/constellation_soft_receiver_cf.h"
 #include "sdrp/correlate_long_access_code_bb.h"
 #include "sdrp/correlate_soft_access_tag_ff.h"
+#include "sdrp/sdrp_packet_interpreter.h"
 %}
 
 %include "sdrp/ccsds_aos_framer.h"
@@ -35,3 +36,6 @@ GR_SWIG_BLOCK_MAGIC2(sdrp, correlate_long_access_code_bb);
 
 %include "sdrp/correlate_soft_access_tag_ff.h"
 GR_SWIG_BLOCK_MAGIC2(sdrp, correlate_soft_access_tag_ff);
+
+%include "sdrp/sdrp_packet_interpreter.h"
+GR_SWIG_BLOCK_MAGIC2(sdrp, sdrp_packet_interpreter);

@@ -27,5 +27,6 @@ install(FILES
     constellation_soft_receiver_cf.h
     ccsds_tm_framer.h
     ccsds_tm_tx.h
+    sdrp_packet_interpreter.h
     ccsds_aos_framer.h DESTINATION include/sdrp
 )

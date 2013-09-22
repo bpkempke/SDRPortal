@@ -35,6 +35,7 @@ list(APPEND sdrp_sources
     constellation_soft_receiver_cf_impl.cc
     correlate_long_access_code_bb_impl.cc
     correlate_soft_access_tag_ff_impl.cc
+    sdrp_packet_interpreter_impl.cc
 )
 
 add_library(gnuradio-sdrp SHARED ${sdrp_sources})
