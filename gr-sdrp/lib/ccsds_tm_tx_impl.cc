@@ -160,6 +160,7 @@ std::vector<uint8_t> ccsds_tm_tx_impl::unpackBits(std::vector<uint8_t> in_packet
 			return_bits.push_back(cur_bit);
 		}
 	}
+	return return_bits;
 }
 
 int ccsds_tm_tx_impl::work(int noutput_items,
@@ -185,6 +186,10 @@ int ccsds_tm_tx_impl::work(int noutput_items,
 			for(unsigned int ii=0; ii < d_access_code.size(); ii++)
 				pushByte(d_access_code[ii]);
 
+			//Pad cur_packet with X's until it's the size we want
+			for(unsigned int ii=cur_packet.size(); ii < d_frame_len/8; ii++)
+				cur_packet.push_back((uint8_t)('X'));
+
 			//Encoding varies depending on the coding method used...
 			if(d_coding_method == METHOD_NONE){
 				//Nothing else needs to be done in the no-encoding case
@@ -193,7 +198,7 @@ int ccsds_tm_tx_impl::work(int noutput_items,
 			} else if(d_coding_method == METHOD_CONV){
 				//Encode using r=1/2 k=7 CCSDS code
 				std::vector<uint8_t> payload_bits = unpackBits(cur_packet);
-				std::vector<uint8_t> encoded_bits(cur_packet.size()*2+6);
+				std::vector<uint8_t> encoded_bits((payload_bits.size()+6)*2);
 				encode_viterbi27_port(&payload_bits[0], payload_bits.size(), &encoded_bits[0]);
 				for(unsigned int ii=0; ii < encoded_bits.size(); ii++)
 					d_historic_bits.push(encoded_bits[ii]);

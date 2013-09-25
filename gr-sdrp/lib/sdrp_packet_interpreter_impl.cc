@@ -30,12 +30,12 @@ sdrp_packet_interpreter_impl::sdrp_packet_interpreter_impl ()
 {
 	//Message ports to/from socket interface
 	message_port_register_in(pmt::mp("socket_pdu_in"));
-	set_msg_handler(pmt::mp("socket_msg_in"), boost::bind(&sdrp_packet_interpreter_impl::inSocketMsg, this, _1));
+	set_msg_handler(pmt::mp("socket_pdu_in"), boost::bind(&sdrp_packet_interpreter_impl::inSocketMsg, this, _1));
 	message_port_register_out(pmt::mp("socket_pdu_out"));
 
 	//Message ports to/from flowgraph
 	message_port_register_in(pmt::mp("sdrp_pdu_in"));
-	set_msg_handler(pmt::mp("packet_msg_in"), boost::bind(&sdrp_packet_interpreter_impl::inPacketMsg, this, _1));
+	set_msg_handler(pmt::mp("sdrp_pdu_in"), boost::bind(&sdrp_packet_interpreter_impl::inPacketMsg, this, _1));
 	message_port_register_out(pmt::mp("sdrp_pdu_out"));
 
 }
@@ -98,6 +98,7 @@ void sdrp_packet_interpreter_impl::inSocketMsg(pmt::pmt_t msg){
 }
 
 void sdrp_packet_interpreter_impl::inPacketMsg(pmt::pmt_t msg){
+	std::cout << "GOT AN INCOMING PACKET MESSAGE" << std::endl;
 	//This should be a message containing a variety of key-value dictionary pairs
 	uint8_t *buf;
 	uint32_t total_buf_length = 4;
@@ -117,6 +118,7 @@ void sdrp_packet_interpreter_impl::inPacketMsg(pmt::pmt_t msg){
 			total_buf_length += pmt::length(pmt::nth(i, vals));
 		}
 	}
+	std::cout << "total_buf_length = " << total_buf_length << std::endl;
 
 	//Allocate the buffer now that we know how long it's going to be
 	buf = new uint8_t[total_buf_length];
@@ -139,6 +141,9 @@ void sdrp_packet_interpreter_impl::inPacketMsg(pmt::pmt_t msg){
 		}
 	}
 
+//	for(uint32_t ii=0; ii < total_buf_length; ii++){
+//		std::cout << (int)buf[ii] << std::endl;
+//	}
 
 	//Construct the resulting message
 	pmt::pmt_t vector = pmt::init_u8vector(total_buf_length, (const uint8_t*)&buf[0]);

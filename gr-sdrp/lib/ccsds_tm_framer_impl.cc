@@ -179,6 +179,7 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 				for(unsigned ii=0; ii < tags.size(); ii++){
 					if(tags[ii].key == d_correlate_key){
 						count = tags[ii].offset-nread;
+						count++;
 						enter_have_sync();
 						std::cout << "entered have_sync " << d_num_times++ << " times" << std::endl;
 						d_symbol_hist.clear();
@@ -246,6 +247,11 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 						pmt::pmt_t key = pmt::from_long((long)(d_packet_id));
 						pmt::pmt_t value = pmt::init_u8vector(packet_data.size(), (const uint8_t*)&packet_data[0]);
 						new_message_dict = pmt::dict_add(new_message_dict, key, value);
+						pmt::pmt_t new_message = pmt::cons(new_message_dict, pmt::PMT_NIL);
+						message_port_pub(pmt::mp("tm_frame_out"), new_message);
+					//	for(unsigned ii=0; ii < packet_data.size(); ii++)
+					//		std::cout << (int)packet_data[ii] << ", ";
+					//	std::cout << std::endl;
 					}
 					enter_search();
 				}
