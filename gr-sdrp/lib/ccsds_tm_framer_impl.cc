@@ -154,6 +154,7 @@ void ccsds_tm_framer_impl::performHardDecisions(std::vector<uint8_t> &packet_dat
 		if(d_symbol_hist[ii] >= 0)
 			cur_byte |= 1 << byte_pos;
 		if(byte_pos == 0){
+			printf("%02X",cur_byte);
 			packet_data.push_back(cur_byte);
 			cur_byte = 0;
 		}
@@ -233,11 +234,13 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 								deinterleaved_data[jj].push_back(hard_data[ii+jj]);
 
 						//Now decode each interleaved code separately
-						for(unsigned ii=0; ii < d_rs_i; ii++)
-							decode_rs_ccsds(&deinterleaved_data[ii][0], NULL, 0, 0);
-
-						for(unsigned ii=0; ii < hard_data.size(); ii++)
-							packet_data.push_back(deinterleaved_data[ii%d_rs_i][ii/d_rs_i]);
+						for(unsigned jj=0; jj < d_tot_bits/8/223; jj++){
+							for(unsigned ii=0; ii < d_rs_i; ii++)
+								decode_rs_ccsds(&deinterleaved_data[ii][jj*255], NULL, 0, 0);
+	
+							for(unsigned ii=0; ii < hard_data.size(); ii++)
+								packet_data.push_back(deinterleaved_data[ii%d_rs_i][ii/d_rs_i]);
+						}
 						valid_packet = true;
 					}
 
