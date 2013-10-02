@@ -144,7 +144,7 @@ int correlate_soft_access_tag_ff_impl::work(int noutput_items,
 		}
 
 		if(nwrong <= d_threshold || nwrong_n <= d_threshold){
-			if(nwrong_n < d_threshold)
+			if(nwrong_n <= d_threshold)
 				d_negate = true;
 			else
 				d_negate = false;

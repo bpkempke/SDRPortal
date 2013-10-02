@@ -26,7 +26,7 @@
 
 #include "pll_refout_freqout_ccf_impl.h"
 #include <gnuradio/io_signature.h>
-#include <gnuradio/sincos.h>
+#include <gnuradio/expj.h>
 #include <math.h>
 #include <gnuradio/math.h>
 
@@ -82,10 +82,11 @@ int pll_refout_freqout_ccf_impl::work(int noutput_items,
 	float error;
 	float t_imag, t_real;
 	int size = noutput_items;
+	gr_complex nco_out;
 
 	while(size-- > 0) {
-		gr::sincosf(d_phase, &t_imag, &t_real);
-		*o_ref++ = gr_complex(t_real, t_imag);
+		nco_out = gr_expj(-d_phase);
+		*o_ref++ = nco_out;
 		if(output_items.size() == 2)
 			*o_freq++ = d_freq;
 
