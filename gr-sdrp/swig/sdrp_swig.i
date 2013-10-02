@@ -18,6 +18,7 @@
 #include "sdrp/correlate_soft_access_tag_ff.h"
 #include "sdrp/sdrp_packet_interpreter.h"
 #include "sdrp/pll_refout_freqout_ccf.h"
+#include "sdrp/costas_refout_freqout_ccf.h"
 %}
 
 %include "sdrp/ccsds_aos_framer.h"
@@ -34,6 +35,9 @@ GR_SWIG_BLOCK_MAGIC2(sdrp, constellation_soft_receiver_cf);
 
 %include "sdrp/pll_refout_freqout_ccf.h"
 GR_SWIG_BLOCK_MAGIC2(sdrp, pll_refout_freqout_ccf);
+
+%include "sdrp/costas_refout_freqout_ccf.h"
+GR_SWIG_BLOCK_MAGIC2(sdrp, costas_refout_freqout_ccf);
 
 %include "sdrp/correlate_long_access_code_bb.h"
 GR_SWIG_BLOCK_MAGIC2(sdrp, correlate_long_access_code_bb);
