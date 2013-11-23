@@ -51,7 +51,7 @@ ccsds_tm_tx::sptr ccsds_tm_tx::make(){
 
 ccsds_tm_tx_impl::ccsds_tm_tx_impl()
 	: sync_block("ccsds_tm_tx",
-		io_signature::make(0, 0, 0),
+		io_signature::make(1, 1, sizeof(gr_complex)),
 		io_signature::make(1, 1, sizeof(gr_complex))){
 
 	//Incoming messages consist of arrays of uint8_t's corresponding to the desired data bytes
