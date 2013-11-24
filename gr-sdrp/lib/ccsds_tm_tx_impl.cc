@@ -38,6 +38,10 @@
 #include <iostream>
 #include <string.h>
 #include <pthread.h>
+#include <cmath>
+
+#define Pi 3.14159265358979323846
+#define INTERP 10000
 
 namespace gr {
 namespace sdrp {
@@ -45,11 +49,11 @@ namespace sdrp {
 pthread_mutex_t packet_queue_mutex;
 pthread_cond_t packet_queue_cv;
 
-ccsds_tm_tx::sptr ccsds_tm_tx::make(){
-	return gnuradio::get_initial_sptr(new ccsds_tm_tx_impl());
+ccsds_tm_tx::sptr ccsds_tm_tx::make(float out_amp, int num_hist){
+	return gnuradio::get_initial_sptr(new ccsds_tm_tx_impl(out_amp, num_hist));
 }
 
-ccsds_tm_tx_impl::ccsds_tm_tx_impl()
+ccsds_tm_tx_impl::ccsds_tm_tx_impl(float out_amp, int num_hist)
 	: sync_block("ccsds_tm_tx",
 		io_signature::make(1, 1, sizeof(gr_complex)),
 		io_signature::make(1, 1, sizeof(gr_complex))){
@@ -61,9 +65,31 @@ ccsds_tm_tx_impl::ccsds_tm_tx_impl()
 	//Default to uncoded modulation with frame length of 8920
 	d_coding_method = METHOD_NONE;
 	d_frame_len = 8920;
+	d_out_amp = out_amp;
+	d_num_hist = num_hist;
+	d_sinc_lookup = NULL;
+	d_frac_pos = 0.0;
 }
 
 ccsds_tm_tx_impl::~ccsds_tm_tx_impl(){
+}
+
+void ccsds_tm_tx_impl::setInterpRatio(float in_ratio){
+	d_frac_step = 1.0/in_ratio;
+
+	//Clear out the deque of samples and ready it again
+	sample_queue.assign(d_num_hist*2+1,0);
+
+	//Calculate sinc function for later use
+	if(d_sinc_lookup != NULL)
+		delete [] d_sinc_lookup;
+
+	int sinc_size = INTERP*d_num_hist*2+1;
+	d_sinc_lookup = new float[sinc_size];
+	for(int ii=0; ii < sinc_size; ii++){
+		float cur_position = (float)(ii)/INTERP-d_num_hist;
+		d_sinc_lookup[ii] = sin(Pi*cur_position)/(Pi*cur_position);
+	}
 }
 
 void ccsds_tm_tx_impl::inTXMsg(pmt::pmt_t msg){
@@ -171,62 +197,74 @@ int ccsds_tm_tx_impl::work(int noutput_items,
 	int nn = 0;
 
 	while(nn < noutput_items) {
-		if(d_historic_bits.size() > 0){
-			//Push out any bits that are waiting to go out...
-			while(nn < noutput_items && d_historic_bits.size() > 0){
-				out_sample = (d_historic_bits.front()) ? 1.0 : -1.0;
-				out[nn++] = out_sample;
-				d_historic_bits.pop();
+		//Update fractional position no matter what
+		d_frac_pos += d_frac_step;
+		if(d_frac_pos >= 1.0){
+			d_frac_pos--;
+
+			//Pop sample off front of deque
+			sample_queue.pop_front();
+
+			//Check to see if there's any packets which need to be enqueued...
+			if(d_packet_queue.size() > 0){
+				std::vector<uint8_t> cur_packet = d_packet_queue.front();
+				d_packet_queue.pop();
+	
+				//Put in logic here to unpack bits and encode in TM format......
+				for(unsigned int ii=0; ii < d_access_code.size(); ii++)
+					pushByte(d_access_code[ii]);
+	
+				//Pad cur_packet with X's until it's the size we want
+				for(unsigned int ii=cur_packet.size(); ii < d_frame_len/8; ii++)
+					cur_packet.push_back((uint8_t)('X'));
+	
+				//Encoding varies depending on the coding method used...
+				if(d_coding_method == METHOD_NONE){
+					//Nothing else needs to be done in the no-encoding case
+					for(unsigned int ii=0; ii < cur_packet.size(); ii++)
+						pushByte(cur_packet[ii]);
+				} else if(d_coding_method == METHOD_CONV){
+					//Encode using r=1/2 k=7 CCSDS code
+					std::vector<uint8_t> payload_bits = unpackBits(cur_packet);
+					std::vector<uint8_t> encoded_bits((payload_bits.size()+6)*2);
+					encode_viterbi27_port(&payload_bits[0], payload_bits.size(), &encoded_bits[0]);
+					for(unsigned int ii=0; ii < encoded_bits.size(); ii++)
+						d_historic_bits.push(encoded_bits[ii]);
+					
+				} else if(d_coding_method == METHOD_RS){
+					//Get the appropriate parity symbols for the data (E=16)
+					std::vector<uint8_t> cur_packet_parity(NROOTS);
+					encode_rs_ccsds(&cur_packet[0], &cur_packet_parity[0], 0);
+					for(unsigned int ii=0; ii < cur_packet.size(); ii++)
+						pushByte(cur_packet[ii]);
+					for(unsigned int ii=0; ii < NROOTS; ii++)
+						pushByte(cur_packet_parity[ii]);
+				} else {
+					//TODO: Implement the remaining coding methods...
+				}
+
+				//Push all bits from d_historic_bits onto the sample_queue using BPSK...
+				while(d_historic_bits.size() > 0){
+					sample_queue.push_back((d_historic_bits.front()) ? d_out_amp : -d_out_amp);
+					d_historic_bits.pop();
+				}
 			}
-		} else if(d_packet_queue.size() > 0){
-			std::vector<uint8_t> cur_packet = d_packet_queue.front();
-			d_packet_queue.pop();
 
-			//Put in logic here to unpack bits and encode in TM format......
-			for(unsigned int ii=0; ii < d_access_code.size(); ii++)
-				pushByte(d_access_code[ii]);
-
-			//Pad cur_packet with X's until it's the size we want
-			for(unsigned int ii=cur_packet.size(); ii < d_frame_len/8; ii++)
-				cur_packet.push_back((uint8_t)('X'));
-
-			//Encoding varies depending on the coding method used...
-			if(d_coding_method == METHOD_NONE){
-				//Nothing else needs to be done in the no-encoding case
-				for(unsigned int ii=0; ii < cur_packet.size(); ii++)
-					pushByte(cur_packet[ii]);
-			} else if(d_coding_method == METHOD_CONV){
-				//Encode using r=1/2 k=7 CCSDS code
-				std::vector<uint8_t> payload_bits = unpackBits(cur_packet);
-				std::vector<uint8_t> encoded_bits((payload_bits.size()+6)*2);
-				encode_viterbi27_port(&payload_bits[0], payload_bits.size(), &encoded_bits[0]);
-				for(unsigned int ii=0; ii < encoded_bits.size(); ii++)
-					d_historic_bits.push(encoded_bits[ii]);
-				
-			} else if(d_coding_method == METHOD_RS){
-				//Get the appropriate parity symbols for the data (E=16)
-				std::vector<uint8_t> cur_packet_parity(NROOTS);
-				encode_rs_ccsds(&cur_packet[0], &cur_packet_parity[0], 0);
-				for(unsigned int ii=0; ii < cur_packet.size(); ii++)
-					pushByte(cur_packet[ii]);
-				for(unsigned int ii=0; ii < NROOTS; ii++)
-					pushByte(cur_packet_parity[ii]);
-			} else {
-				//TODO: Implement the remaining coding methods...
-			}
-		} else {
-			if(d_packet_queue.size() == 0){
-				//Rest are all zeros
-				out_sample = 0.0;
-				while(nn < noutput_items)
-					out[nn++] = out_sample;
-				/*//Block waiting for incoming data
-				pthread_mutex_lock(&packet_queue_mutex);
-				while(d_packet_queue.size() == 0)
-					pthread_cond_wait(&packet_queue_cv, &packet_queue_mutex);
-				pthread_mutex_unlock(&packet_queue_mutex);*/
-			} else continue;
+			//Push 'zero' sample to back of deque if it's too small
+			if(sample_queue.size() < d_num_hist*2+1)
+				sample_queue.push_back(0.0);
 		}
+		
+		//Compute output sample based on neighboring samples
+		out[nn] = 0;
+		int cur_sinc_pos = (int)(d_frac_pos*INTERP);
+		for(int ii=0; ii < d_num_hist*2+1; ii++){
+			out[nn] += sample_queue[ii];
+			cur_sinc_pos += INTERP;
+		}
+
+		//Increment sample position and keep going...
+		nn++;
 	}
 
 

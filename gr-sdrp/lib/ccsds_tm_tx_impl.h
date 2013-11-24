@@ -27,6 +27,7 @@
 #include <gnuradio/message.h>
 #include <queue>
 #include <vector>
+#include <deque>
 
 namespace gr {
 namespace sdrp {
@@ -47,7 +48,7 @@ private:
 	void inTXMsg(pmt::pmt_t msg);
 	void pushByte(uint8_t in_byte);
 	std::vector<uint8_t> unpackBits(std::vector<uint8_t> in_packet);
-	
+
 	int d_frame_len;
 	coding_method_t  d_coding_method;
 	unsigned int d_r_mult, d_r_div;
@@ -55,15 +56,21 @@ private:
 	unsigned int d_turbo_k;
 	unsigned int d_ldpc_k;
 	std::vector<uint8_t> d_access_code;
-
+	
+	float d_out_amp, d_frac_step;
+	int d_num_hist;
+	float *d_sinc_lookup;
+	float d_frac_pos;
+	std::deque<gr_complex> sample_queue;
 
 public:
-	ccsds_tm_tx_impl();
+	ccsds_tm_tx_impl(float out_amp, int num_hist);
 
 	~ccsds_tm_tx_impl();
 
 	msg_queue::sptr msgq() const { return d_msgq; }
 
+	virtual void setInterpRatio(float in_ratio);
 	virtual void setCodeRate(unsigned int r_mult, unsigned int r_div);
 	virtual void setFrameLength(int in_frame_len);
 	virtual void setCodingMethod(const std::string in_method);
