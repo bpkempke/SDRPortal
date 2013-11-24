@@ -41,6 +41,7 @@ public:
 
 	static sptr make(float out_amp, int num_hist, msg_queue::sptr py_msgq);
 
+	virtual void setInterpRatio(float in_ratio) = 0;
 	virtual void setCodeRate(unsigned int r_mult, unsigned int r_div) = 0;
 	virtual void setFrameLength(int in_frame_len) = 0;
 	virtual void setCodingMethod(const std::string in_method) = 0;
