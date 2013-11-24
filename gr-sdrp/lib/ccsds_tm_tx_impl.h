@@ -35,8 +35,6 @@ namespace sdrp {
 class ccsds_tm_tx_impl : public ccsds_tm_tx {
 private:
 	size_t	 	d_itemsize;
-	msg_queue::sptr	d_msgq;
-	message::sptr	d_msg;
 	unsigned		d_msg_offset;
 	bool		d_eof;
 	bool              d_tags;
@@ -66,7 +64,7 @@ private:
 	std::deque<gr_complex> sample_queue;
 
 public:
-	ccsds_tm_tx_impl(float out_amp, int num_hist);
+	ccsds_tm_tx_impl(float out_amp, int num_hist, msg_queue::sptr py_msgq);
 
 	~ccsds_tm_tx_impl();
 

@@ -39,7 +39,7 @@ public:
 	// gr::blocks::ccsds_tm_tx::sptr
 	typedef boost::shared_ptr<ccsds_tm_tx> sptr;
 
-	static sptr make();
+	static sptr make(float out_amp, int num_hist, msg_queue::sptr py_msgq);
 
 	virtual void setCodeRate(unsigned int r_mult, unsigned int r_div) = 0;
 	virtual void setFrameLength(int in_frame_len) = 0;

@@ -208,7 +208,7 @@ int ccsds_tm_tx_impl::work(int noutput_items,
 			//Check to see if there's any packets which need to be enqueued...
 			if(d_msg = d_msgq->delete_head_nowait()){
 				std::vector<uint8_t> cur_packet(d_msg->msg(),d_msg->msg()+d_msg->length());
-				d_packet_queue.push_back(cur_packet);
+				d_packet_queue.push(cur_packet);
 			}
 			if(d_packet_queue.size() > 0){
 				std::vector<uint8_t> cur_packet = d_packet_queue.front();
