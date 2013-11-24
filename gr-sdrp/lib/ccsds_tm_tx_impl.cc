@@ -78,7 +78,7 @@ void ccsds_tm_tx_impl::setInterpRatio(float in_ratio){
 	d_frac_step = 1.0/in_ratio;
 
 	//Clear out the deque of samples and ready it again
-	sample_queue.assign(d_num_hist*2+1,0);
+	sample_queue.assign(d_num_hist*2+1,d_out_amp);
 
 	//Calculate sinc function for later use
 	if(d_sinc_lookup != NULL)
@@ -89,6 +89,8 @@ void ccsds_tm_tx_impl::setInterpRatio(float in_ratio){
 	for(int ii=0; ii < sinc_size; ii++){
 		float cur_position = (float)(ii)/INTERP-d_num_hist;
 		d_sinc_lookup[ii] = sin(Pi*cur_position)/(Pi*cur_position);
+		if(cur_position == 0.0)
+			d_sinc_lookup[ii] = 1.0;
 	}
 }
 
@@ -255,15 +257,16 @@ int ccsds_tm_tx_impl::work(int noutput_items,
 			}
 
 			//Push 'zero' sample to back of deque if it's too small
-			if(sample_queue.size() < d_num_hist*2+1)
-				sample_queue.push_back(0.0);
+			if(sample_queue.size() < d_num_hist*2+1){
+				sample_queue.push_back(d_out_amp);
+			}
 		}
 		
 		//Compute output sample based on neighboring samples
 		out[nn] = 0;
 		int cur_sinc_pos = (int)(d_frac_pos*INTERP);
 		for(int ii=0; ii < d_num_hist*2+1; ii++){
-			out[nn] += sample_queue[ii];
+			out[nn] += sample_queue[d_num_hist*2-ii]*d_sinc_lookup[cur_sinc_pos];
 			cur_sinc_pos += INTERP;
 		}
 
