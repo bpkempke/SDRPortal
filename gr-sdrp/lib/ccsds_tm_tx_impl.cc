@@ -49,14 +49,14 @@ namespace sdrp {
 pthread_mutex_t packet_queue_mutex;
 pthread_cond_t packet_queue_cv;
 
-ccsds_tm_tx::sptr ccsds_tm_tx::make(float out_amp, int num_hist){
-	return gnuradio::get_initial_sptr(new ccsds_tm_tx_impl(out_amp, num_hist));
+ccsds_tm_tx::sptr ccsds_tm_tx::make(float out_amp, int num_hist, msg_queue::sptr py_msgq){
+	return gnuradio::get_initial_sptr(new ccsds_tm_tx_impl(out_amp, num_hist, py_msgq));
 }
 
-ccsds_tm_tx_impl::ccsds_tm_tx_impl(float out_amp, int num_hist)
+ccsds_tm_tx_impl::ccsds_tm_tx_impl(float out_amp, int num_hist, msg_queue::sptr py_msgq)
 	: sync_block("ccsds_tm_tx",
 		io_signature::make(1, 1, sizeof(gr_complex)),
-		io_signature::make(1, 1, sizeof(gr_complex))){
+		io_signature::make(1, 1, sizeof(gr_complex))), d_msgq(py_msgq){
 
 	//Incoming messages consist of arrays of uint8_t's corresponding to the desired data bytes
 	message_port_register_in(pmt::mp("ccsds_tx_msg_in"));
@@ -206,6 +206,10 @@ int ccsds_tm_tx_impl::work(int noutput_items,
 			sample_queue.pop_front();
 
 			//Check to see if there's any packets which need to be enqueued...
+			if(d_msg = d_msgq->delete_head_nowait()){
+				std::vector<uint8_t> cur_packet(d_msg->msg(),d_msg->msg()+d_msg->length());
+				d_packet_queue.push_back(cur_packet);
+			}
 			if(d_packet_queue.size() > 0){
 				std::vector<uint8_t> cur_packet = d_packet_queue.front();
 				d_packet_queue.pop();

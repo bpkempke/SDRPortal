@@ -61,6 +61,8 @@ private:
 	int d_num_hist;
 	float *d_sinc_lookup;
 	float d_frac_pos;
+	msg_queue::sptr d_msgq;
+	message::sptr d_msg;
 	std::deque<gr_complex> sample_queue;
 
 public:
