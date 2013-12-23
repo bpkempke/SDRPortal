@@ -10,6 +10,7 @@
 %include "gnuradio/digital/constellation.h"
 
 %{
+#include "sdrp/sweep_generator_cc.h"
 #include "sdrp/ccsds_aos_framer.h"
 #include "sdrp/ccsds_tm_framer.h"
 #include "sdrp/ccsds_tm_tx.h"
@@ -20,6 +21,9 @@
 #include "sdrp/pll_refout_freqout_ccf.h"
 #include "sdrp/costas_refout_freqout_ccf.h"
 %}
+
+%include "sdrp/sweep_generator_cc.h"
+GR_SWIG_BLOCK_MAGIC2(sdrp, sweep_generator_cc);
 
 %include "sdrp/ccsds_aos_framer.h"
 GR_SWIG_BLOCK_MAGIC2(sdrp, ccsds_aos_framer);
@@ -47,3 +51,4 @@ GR_SWIG_BLOCK_MAGIC2(sdrp, correlate_soft_access_tag_ff);
 
 %include "sdrp/sdrp_packet_interpreter.h"
 GR_SWIG_BLOCK_MAGIC2(sdrp, sdrp_packet_interpreter);
+

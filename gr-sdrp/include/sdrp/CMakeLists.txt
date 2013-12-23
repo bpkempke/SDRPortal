@@ -22,6 +22,7 @@
 ########################################################################
 install(FILES
     api.h
+    sweep_generator_cc.h
     correlate_long_access_code_bb.h
     correlate_soft_access_tag_ff.h
     constellation_soft_receiver_cf.h

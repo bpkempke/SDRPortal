@@ -29,6 +29,7 @@ include_directories(${Boost_INCLUDE_DIR})
 link_directories(${Boost_LIBRARY_DIRS})
 
 list(APPEND sdrp_sources
+    sweep_generator_cc_impl.cc
     ccsds_aos_framer_impl.cc
     ccsds_tm_framer_impl.cc
     ccsds_tm_tx_impl.cc
