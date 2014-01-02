@@ -84,7 +84,7 @@ void ccsds_tm_tx_impl::setInterpRatio(float in_ratio){
 	if(d_sinc_lookup != NULL)
 		delete [] d_sinc_lookup;
 
-	int sinc_size = INTERP*d_num_hist*2+1;
+	int sinc_size = INTERP*(d_num_hist*2+1);
 	d_sinc_lookup = new float[sinc_size];
 	for(int ii=0; ii < sinc_size; ii++){
 		float cur_position = (float)(ii)/INTERP-d_num_hist;
@@ -211,6 +211,7 @@ int ccsds_tm_tx_impl::work(int noutput_items,
 			if(d_msg = d_msgq->delete_head_nowait()){
 				std::vector<uint8_t> cur_packet(d_msg->msg(),d_msg->msg()+d_msg->length());
 				d_packet_queue.push(cur_packet);
+				d_print = true;
 			}
 			if(d_packet_queue.size() > 0){
 				std::vector<uint8_t> cur_packet = d_packet_queue.front();
@@ -222,7 +223,7 @@ int ccsds_tm_tx_impl::work(int noutput_items,
 	
 				//Pad cur_packet with X's until it's the size we want
 				for(unsigned int ii=cur_packet.size(); ii < d_frame_len/8; ii++)
-					cur_packet.push_back((uint8_t)('X'));
+					cur_packet.push_back((uint8_t)(0x55));
 	
 				//Encoding varies depending on the coding method used...
 				if(d_coding_method == METHOD_NONE){
@@ -264,11 +265,17 @@ int ccsds_tm_tx_impl::work(int noutput_items,
 		
 		//Compute output sample based on neighboring samples
 		out[nn] = 0;
-		int cur_sinc_pos = (int)(d_frac_pos*INTERP);
+		float square_pos = d_frac_pos/d_frac_step;
+		square_pos -= (int)square_pos;
+		if(square_pos < 0 || square_pos >= 1.0)
+			std::cout << "square_pos = " << square_pos << std::endl;
+		int cur_sinc_pos = (int)(square_pos*INTERP);
 		for(int ii=0; ii < d_num_hist*2+1; ii++){
-			out[nn] += sample_queue[d_num_hist*2-ii]*d_sinc_lookup[cur_sinc_pos];
+			out[nn] += sample_queue[d_num_hist*2-ii*d_frac_step+d_frac_pos]*d_sinc_lookup[cur_sinc_pos];
 			cur_sinc_pos += INTERP;
 		}
+//		if(d_print)
+//			std::cout << out[nn] << std::endl;
 
 		//Increment sample position and keep going...
 		nn++;

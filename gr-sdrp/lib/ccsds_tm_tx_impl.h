@@ -36,7 +36,7 @@ class ccsds_tm_tx_impl : public ccsds_tm_tx {
 private:
 	size_t	 	d_itemsize;
 	unsigned		d_msg_offset;
-	bool		d_eof;
+	bool		d_print;
 	bool              d_tags;
 	// FIXME: Is this adequate tagname length.
 	std::string       d_lengthtagname;
