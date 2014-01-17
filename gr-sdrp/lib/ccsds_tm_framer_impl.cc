@@ -258,13 +258,6 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 
 					//If there's a valid packet, put it into a message to send off upstream
 					if(valid_packet){
-						pmt::pmt_t new_message_dict = pmt::make_dict();
-						pmt::pmt_t key = pmt::from_long((long)(d_packet_id));
-						pmt::pmt_t value = pmt::init_u8vector(packet_data.size(), (const uint8_t*)&packet_data[0]);
-						new_message_dict = pmt::dict_add(new_message_dict, key, value);
-						pmt::pmt_t new_message = pmt::cons(new_message_dict, pmt::PMT_NIL);
-						message_port_pub(pmt::mp("tm_frame_out"), new_message);
-						
 						//Print out decoded message to screen for debugging purposes
 						for(unsigned int ii=0; ii < packet_data.size(); ii++){
 							printf("%02X",packet_data[ii]);
@@ -272,6 +265,14 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 						std::cout << std::endl;
 					//	for(unsigned ii=0; ii < packet_data.size(); ii++)
 					//		std::cout << (int)packet_data[ii] << ", ";
+
+						pmt::pmt_t new_message_dict = pmt::make_dict();
+						pmt::pmt_t key = pmt::from_long((long)(d_packet_id));
+						pmt::pmt_t value = pmt::init_u8vector(packet_data.size(), (const uint8_t*)&packet_data[0]);
+						new_message_dict = pmt::dict_add(new_message_dict, key, value);
+						pmt::pmt_t new_message = pmt::cons(new_message_dict, pmt::PMT_NIL);
+						message_port_pub(pmt::mp("tm_frame_out"), new_message);
+						
 					}
 					enter_search();
 				}
