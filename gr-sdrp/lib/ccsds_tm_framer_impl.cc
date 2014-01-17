@@ -26,7 +26,9 @@
 
 #include "ccsds_tm_framer_impl.h"
 #include "fec/viterbi27_port.h"
+#include "fec/encode_rs_ccsds.h"
 #include "fec/decode_rs_ccsds.h"
+#include "fec/fixed.h"
 #include <gnuradio/io_signature.h>
 #include <cstdio>
 #include <string>
@@ -102,11 +104,12 @@ void ccsds_tm_framer_impl::setCodeRate(unsigned int r_mult, unsigned int r_div){
 }
 
 void ccsds_tm_framer_impl::setCodingMethod(std::string in_method){
-	if(in_method == "CONV")
+	if(in_method == "CONV"){
+		d_r_mult = 2;
+		d_r_div = 1;
 		d_coding_method = METHOD_CONV;
-	else if(in_method == "RS"){
+	}else if(in_method == "RS"){
 		d_coding_method = METHOD_RS;
-		d_frame_len = 223*8;
 		d_r_mult = 255;
 		d_r_div = 223;
 	}else if(in_method == "CC")
@@ -115,8 +118,11 @@ void ccsds_tm_framer_impl::setCodingMethod(std::string in_method){
 		d_coding_method = METHOD_TURBO;
 	else if(in_method == "LDPC")
 		d_coding_method = METHOD_LDPC;
-	else
+	else{
+		d_r_mult = 1;
+		d_r_div = 1;
 		d_coding_method = METHOD_NONE;
+	}
 	resetDecoder();
 }
 
@@ -236,15 +242,36 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 
 						//Now decode each interleaved code separately
 						valid_packet = true;
-						for(unsigned jj=0; jj < d_tot_bits/8/223; jj++){
+						int derrlocs[NROOTS];
+						for(unsigned jj=0; jj < d_tot_bits/8/255; jj++){
+							//Debug print received data out
 							for(unsigned ii=0; ii < d_rs_i; ii++){
-								int ret = decode_rs_ccsds(&deinterleaved_data[ii][jj*255], NULL, 0, 0);
+								std::cout << "Interleaved data set #" << ii << ": ";
+								for(unsigned kk=0; kk < 223; kk++)
+									printf("%02X", deinterleaved_data[ii][jj*255+kk]);
+								std::cout << std::endl;
+								std::cout << "RS check symbols:" << std::endl;
+								for(unsigned kk=223; kk < 255; kk++)
+									printf("%02X", deinterleaved_data[ii][jj*255+kk]);
+								std::cout << std::endl;
+								std::cout << "Expected RX check symbols:" << std::endl;
+								std::vector<uint8_t> cur_packet_parity(NROOTS);
+								encode_rs_ccsds(&(deinterleaved_data[ii][jj*255]), &cur_packet_parity[0], 0);
+								for(unsigned kk=0; kk < NROOTS; kk++)
+									printf("%02X", cur_packet_parity[kk]);
+								std::cout << std::endl;
+							}
+	
+							for(unsigned ii=0; ii < d_rs_i; ii++){
+								memset(derrlocs,0,sizeof(derrlocs));
+								int ret = decode_rs_ccsds(&(deinterleaved_data[ii][jj*255]), derrlocs, 0, 0);
+								std::cout << "RX Interleave #" << ii << " check: " << ((ret == -1) ? "FAIL" : "SUCCESS") << std::endl;
 								if(ret == -1)
 									valid_packet = false;
 							}
 	
-							for(unsigned ii=0; ii < hard_data.size(); ii++)
-								packet_data.push_back(deinterleaved_data[ii%d_rs_i][ii/d_rs_i]);
+							for(unsigned ii=0; ii < 223; ii++)
+								packet_data.push_back(deinterleaved_data[ii%d_rs_i][jj*255+ii]);
 						}
 					}
 					if(valid_packet)
@@ -259,6 +286,7 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 					//If there's a valid packet, put it into a message to send off upstream
 					if(valid_packet){
 						//Print out decoded message to screen for debugging purposes
+						std::cout << "PACKET DATA: ";
 						for(unsigned int ii=0; ii < packet_data.size(); ii++){
 							printf("%02X",packet_data[ii]);
 						}

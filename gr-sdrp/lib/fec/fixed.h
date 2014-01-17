@@ -29,7 +29,7 @@ static inline int mod255(int x){
 
 extern unsigned char Taltab[];
 extern unsigned char Tal1tab[];
-extern char CCSDS_alpha_to[];
-extern char CCSDS_index_of[];
-extern char CCSDS_poly[];
+extern unsigned char CCSDS_alpha_to[];
+extern unsigned char CCSDS_index_of[];
+extern unsigned char CCSDS_poly[];
 
