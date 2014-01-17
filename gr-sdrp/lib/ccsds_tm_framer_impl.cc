@@ -69,6 +69,8 @@ ccsds_tm_framer_impl::ccsds_tm_framer_impl(unsigned packet_id, const std::string
 	d_ldpc_k(7136),
 	d_vp(NULL),
 	d_num_times(0),
+	d_frames_correct(0),
+	d_frames_incorrect(0),
 	d_packet_id(packet_id)
 {
 	d_correlate_key = pmt::string_to_symbol(tag_name);
@@ -154,7 +156,6 @@ void ccsds_tm_framer_impl::performHardDecisions(std::vector<uint8_t> &packet_dat
 		if(d_symbol_hist[ii] >= 0)
 			cur_byte |= 1 << byte_pos;
 		if(byte_pos == 0){
-			printf("%02X",cur_byte);
 			packet_data.push_back(cur_byte);
 			cur_byte = 0;
 		}
@@ -234,15 +235,26 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 								deinterleaved_data[jj].push_back(hard_data[ii+jj]);
 
 						//Now decode each interleaved code separately
+						valid_packet = true;
 						for(unsigned jj=0; jj < d_tot_bits/8/223; jj++){
-							for(unsigned ii=0; ii < d_rs_i; ii++)
-								decode_rs_ccsds(&deinterleaved_data[ii][jj*255], NULL, 0, 0);
+							for(unsigned ii=0; ii < d_rs_i; ii++){
+								int ret = decode_rs_ccsds(&deinterleaved_data[ii][jj*255], NULL, 0, 0);
+								if(ret == -1)
+									valid_packet = false;
+							}
 	
 							for(unsigned ii=0; ii < hard_data.size(); ii++)
 								packet_data.push_back(deinterleaved_data[ii%d_rs_i][ii/d_rs_i]);
 						}
-						valid_packet = true;
 					}
+					if(valid_packet)
+						d_frames_correct++;
+					else
+						d_frames_incorrect++;
+
+					//Spit out a statistic reporting the number of correct and incorrect frames
+					std::cout << "PACKET STATISTICS: " << d_frames_correct << " of " << d_frames_correct+d_frames_incorrect << " correct" << std::endl;
+					
 
 					//If there's a valid packet, put it into a message to send off upstream
 					if(valid_packet){
@@ -252,9 +264,14 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 						new_message_dict = pmt::dict_add(new_message_dict, key, value);
 						pmt::pmt_t new_message = pmt::cons(new_message_dict, pmt::PMT_NIL);
 						message_port_pub(pmt::mp("tm_frame_out"), new_message);
+						
+						//Print out decoded message to screen for debugging purposes
+						for(unsigned int ii=0; ii < packet_data.size(); ii++){
+							printf("%02X",packet_data[ii]);
+						}
+						std::cout << std::endl;
 					//	for(unsigned ii=0; ii < packet_data.size(); ii++)
 					//		std::cout << (int)packet_data[ii] << ", ";
-					//	std::cout << std::endl;
 					}
 					enter_search();
 				}

@@ -51,6 +51,7 @@ namespace gr {
       int	       d_packetlen_cnt;	           // how many so far
 
       int d_frame_len;
+      int d_frames_correct, d_frames_incorrect;
       coding_method_t  d_coding_method;
       unsigned int d_r_mult, d_r_div;
       unsigned int d_rs_e, d_rs_i, d_rs_q;
