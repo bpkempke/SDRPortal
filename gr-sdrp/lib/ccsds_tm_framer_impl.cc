@@ -62,7 +62,7 @@ ccsds_tm_framer::sptr ccsds_tm_framer::make(unsigned packet_id, const std::strin
 
 ccsds_tm_framer_impl::ccsds_tm_framer_impl(unsigned packet_id, const std::string &tag_name)
 	: sync_block("ccsds_tm_framer",
-			io_signature::make(1, 1, sizeof(float)),
+			io_signature::make(1, 1, sizeof(char)),
 			io_signature::make(0, 0, 0)),
 	d_frame_len(223*8),
 	d_r_mult(1), d_r_div(1),
@@ -159,7 +159,7 @@ void ccsds_tm_framer_impl::performHardDecisions(std::vector<uint8_t> &packet_dat
 	for(unsigned ii=0; ii < d_symbol_hist.size(); ii++){
 		unsigned cur_bit_pos = d_symbol_hist.size() - ii - 1;
 		unsigned byte_pos = cur_bit_pos % 8;
-		if(d_symbol_hist[ii] >= 0)
+		if(d_symbol_hist[ii])
 			cur_byte |= 1 << byte_pos;
 		if(byte_pos == 0){
 			packet_data.push_back(cur_byte);
@@ -209,24 +209,6 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 					if(d_coding_method == METHOD_NONE){
 						//No coding required, push out all the bits regardless of whether they're right!
 						performHardDecisions(packet_data);
-						valid_packet = true;
-					} else if(d_coding_method == METHOD_CONV){
-						//Initialize decoder
-						init_viterbi27_port(d_vp,0);
-
-						//Change floats to symbols (in this case uint8's)
-						std::vector<uint8_t> symbols;
-						for(int ii=0; ii < d_symbol_hist.size(); ii++){
-							float cur_sample = d_symbol_hist[ii];
-							if(cur_sample < -1.0) cur_sample = -1.0;
-							if(cur_sample > 1.0) cur_sample = 1.0;
-							symbols.push_back((uint8_t)(cur_sample*127.0+127.5));
-						}
-
-						//Now decode the block
-						update_viterbi27_blk_port(d_vp, &symbols[0], d_frame_len+6);
-						packet_data.resize((d_frame_len+7)/8);
-						chainback_viterbi27_port(d_vp, &packet_data[0], d_frame_len, 0);
 						valid_packet = true;
 					} else if(d_coding_method == METHOD_RS){
 						//Need to pay attention to the interleaving depth here...

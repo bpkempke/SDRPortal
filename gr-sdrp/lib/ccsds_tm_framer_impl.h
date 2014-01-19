@@ -60,7 +60,7 @@ namespace gr {
       unsigned int d_tot_bits;
       pmt::pmt_t d_correlate_key;
       unsigned int d_packet_id;
-      std::vector<float> d_symbol_hist;
+      std::vector<char> d_symbol_hist;
       unsigned long d_num_times;
 
       void *d_vp;
