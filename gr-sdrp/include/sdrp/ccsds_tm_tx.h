@@ -41,12 +41,14 @@ public:
 
 	static sptr make(float out_amp, int num_hist, msg_queue::sptr py_msgq);
 
+	virtual void setConvEn(bool conv_en) = 0;
 	virtual void setInterpRatio(float in_ratio) = 0;
 	virtual void setCodeRate(unsigned int r_mult, unsigned int r_div) = 0;
 	virtual void setFrameLength(int in_frame_len) = 0;
 	virtual void setCodingMethod(const std::string in_method) = 0;
 	virtual void setCodingParameter(std::string param_name, std::string param_val) = 0;
 	virtual void setAccessCode(std::string access_code) = 0;
+	virtual void setIdleSequence(std::string idle_sequence) = 0;
 
 
 	virtual gr::msg_queue::sptr msgq() const = 0;

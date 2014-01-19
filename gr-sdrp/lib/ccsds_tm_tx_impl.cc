@@ -28,6 +28,7 @@
 #include "fec/viterbi27_port.h"
 #include "fec/encode_rs_ccsds.h"
 #include "fec/fixed.h"
+#include "fec/fec.h"
 #include <gnuradio/io_signature.h>
 #include <cstdio>
 #include <errno.h>
@@ -42,6 +43,26 @@
 
 #define Pi 3.14159265358979323846
 #define INTERP 10000
+
+/********************************
+ * Convolutional Encoding Logic *
+ ********************************/
+#define	POLYA	0x6d
+#define	POLYB	0x4f
+
+void
+encode(unsigned char *symbols,
+       unsigned char *data,
+       unsigned int nbits,
+       unsigned char &encstate)
+{
+  while(nbits-- != 0){
+    encstate = (encstate << 1) | (*data);
+    *symbols++ = parityb(encstate & POLYA);
+    *symbols++ = ~parityb(encstate & POLYB);
+    data++;
+  }
+}
 
 namespace gr {
 namespace sdrp {
@@ -69,9 +90,17 @@ ccsds_tm_tx_impl::ccsds_tm_tx_impl(float out_amp, int num_hist, msg_queue::sptr 
 	d_num_hist = num_hist;
 	d_sinc_lookup = NULL;
 	d_frac_pos = 0.0;
+	d_enc_state = 0;
+
+	//Set up fast parity lookup table
+	partab_init();
 }
 
 ccsds_tm_tx_impl::~ccsds_tm_tx_impl(){
+}
+
+void ccsds_tm_tx_impl::setConvEn(bool conv_en){
+	d_conv_en = conv_en;
 }
 
 void ccsds_tm_tx_impl::setInterpRatio(float in_ratio){
@@ -159,6 +188,14 @@ void ccsds_tm_tx_impl::setCodingParameter(std::string param_name, std::string pa
 		if(param_name == "K")
 			d_ldpc_k = (unsigned int)atoi(param_val.c_str());
 	}
+}
+
+void ccsds_tm_tx_impl::setIdleSequence(std::string idle_sequence){
+
+	//Convert everything into uint8_t and store into allocated vector
+	d_idle_sequence.clear();
+	for(int ii=0; ii < idle_sequence.size(); ii++)
+		d_idle_sequence.push_back((uint8_t)idle_sequence[ii]);
 }
 
 void ccsds_tm_tx_impl::setAccessCode(std::string access_code){
@@ -250,16 +287,24 @@ int ccsds_tm_tx_impl::work(int noutput_items,
 					//TODO: Implement the remaining coding methods...
 				}
 
-				//Push all bits from d_historic_bits onto the sample_queue using BPSK...
-				while(d_historic_bits.size() > 0){
-					sample_queue.push_back((d_historic_bits.front()) ? d_out_amp : -d_out_amp);
-					d_historic_bits.pop();
-				}
 			}
 
 			//Push 'zero' sample to back of deque if it's too small
 			if(sample_queue.size() < d_num_hist*2+1){
-				sample_queue.push_back(d_out_amp);
+				for(unsigned int ii=0; ii < d_idle_sequence.size(); ii++)
+					pushByte(d_idle_sequence[ii]);
+			}
+
+			//Push all bits from d_historic_bits onto the sample_queue using BPSK...
+			while(d_historic_bits.size() > 0){
+				//If doing conv encoding, there are two bits output for every data bit
+				if(d_conv_en){
+    					d_enc_state = (d_enc_state << 1) | d_historic_bits.front();
+ 					sample_queue.push_back((parityb(d_enc_state & POLYA)) ? d_out_amp : -d_out_amp);
+					sample_queue.push_back((!parityb(d_enc_state & POLYB)) ? d_out_amp : -d_out_amp);
+				} else
+					sample_queue.push_back((d_historic_bits.front()) ? d_out_amp : -d_out_amp);
+				d_historic_bits.pop();
 			}
 		}
 		

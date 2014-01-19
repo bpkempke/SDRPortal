@@ -54,6 +54,7 @@ private:
 	unsigned int d_turbo_k;
 	unsigned int d_ldpc_k;
 	std::vector<uint8_t> d_access_code;
+	std::vector<uint8_t> d_idle_sequence;
 	
 	float d_out_amp, d_frac_step;
 	int d_num_hist;
@@ -62,6 +63,8 @@ private:
 	msg_queue::sptr d_msgq;
 	message::sptr d_msg;
 	std::deque<gr_complex> sample_queue;
+	unsigned char d_enc_state;
+	bool d_conv_en;
 
 public:
 	ccsds_tm_tx_impl(float out_amp, int num_hist, msg_queue::sptr py_msgq);
@@ -70,12 +73,14 @@ public:
 
 	msg_queue::sptr msgq() const { return d_msgq; }
 
+	virtual void setConvEn(bool conv_en);
 	virtual void setInterpRatio(float in_ratio);
 	virtual void setCodeRate(unsigned int r_mult, unsigned int r_div);
 	virtual void setFrameLength(int in_frame_len);
 	virtual void setCodingMethod(const std::string in_method);
 	virtual void setCodingParameter(std::string param_name, std::string param_val);
 	virtual void setAccessCode(std::string access_code);
+	virtual void setIdleSequence(std::string idle_sequence);
 
 	int work(int noutput_items,
 			gr_vector_const_void_star &input_items,

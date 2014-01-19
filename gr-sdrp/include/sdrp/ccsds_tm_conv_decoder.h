@@ -49,7 +49,7 @@ namespace gr {
      * from the corresponding inputs.
      */
     
-    class SDRP_API ccsds_tm_conv_decoder : virtual public sync_decimator
+    class SDRP_API ccsds_tm_conv_decoder : virtual public block
     {
     public:
       
@@ -57,6 +57,7 @@ namespace gr {
       typedef boost::shared_ptr<ccsds_tm_conv_decoder> sptr;
 
       static sptr make();
+      virtual void setConvEn(bool conv_en) = 0;
     };
 
   } /* namespace sdrp */
