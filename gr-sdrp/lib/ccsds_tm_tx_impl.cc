@@ -47,22 +47,9 @@
 /********************************
  * Convolutional Encoding Logic *
  ********************************/
-#define	POLYA	0x6d
-#define	POLYB	0x4f
+#define	POLYA	0x4f
+#define	POLYB	0x6d
 
-void
-encode(unsigned char *symbols,
-       unsigned char *data,
-       unsigned int nbits,
-       unsigned char &encstate)
-{
-  while(nbits-- != 0){
-    encstate = (encstate << 1) | (*data);
-    *symbols++ = parityb(encstate & POLYA);
-    *symbols++ = ~parityb(encstate & POLYB);
-    data++;
-  }
-}
 
 namespace gr {
 namespace sdrp {
@@ -304,7 +291,7 @@ int ccsds_tm_tx_impl::work(int noutput_items,
     					d_enc_state = (d_enc_state << 1) | d_historic_bits.front();
  					sample_queue.push_back((parityb(d_enc_state & POLYA)) ? d_out_amp : -d_out_amp);
 					//sample_queue.push_back(!(parityb(d_enc_state & POLYB)) ? d_out_amp : -d_out_amp);
-					sample_queue.push_back((parityb(d_enc_state & POLYB)) ? d_out_amp : -d_out_amp);
+					sample_queue.push_back(!(parityb(d_enc_state & POLYB)) ? d_out_amp : -d_out_amp);
 				} else
 					sample_queue.push_back((d_historic_bits.front()) ? d_out_amp : -d_out_amp);
 				d_historic_bits.pop();
