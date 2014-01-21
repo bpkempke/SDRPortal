@@ -77,7 +77,7 @@ ccsds_tm_tx::sptr ccsds_tm_tx::make(float out_amp, int num_hist, msg_queue::sptr
 ccsds_tm_tx_impl::ccsds_tm_tx_impl(float out_amp, int num_hist, msg_queue::sptr py_msgq)
 	: sync_block("ccsds_tm_tx",
 		io_signature::make(0, 0, 0),
-		io_signature::make(1, 1, sizeof(char))), d_msgq(py_msgq){
+		io_signature::make(1, 1, sizeof(gr_complex))), d_msgq(py_msgq){
 
 	//Incoming messages consist of arrays of uint8_t's corresponding to the desired data bytes
 	message_port_register_in(pmt::mp("ccsds_tx_msg_in"));
@@ -291,8 +291,10 @@ int ccsds_tm_tx_impl::work(int noutput_items,
 
 			//Push 'zero' sample to back of deque if it's too small
 			if(sample_queue.size() < d_num_hist*2+1){
-				for(unsigned int ii=0; ii < d_idle_sequence.size(); ii++)
+				for(unsigned int ii=0; ii < d_idle_sequence.size(); ii++){
 					pushByte(d_idle_sequence[ii]);
+					//std::cout << (int)(d_idle_sequence[ii]);
+				}
 			}
 
 			//Push all bits from d_historic_bits onto the sample_queue using BPSK...
@@ -301,7 +303,8 @@ int ccsds_tm_tx_impl::work(int noutput_items,
 				if(d_conv_en){
     					d_enc_state = (d_enc_state << 1) | d_historic_bits.front();
  					sample_queue.push_back((parityb(d_enc_state & POLYA)) ? d_out_amp : -d_out_amp);
-					sample_queue.push_back((!parityb(d_enc_state & POLYB)) ? d_out_amp : -d_out_amp);
+					//sample_queue.push_back(!(parityb(d_enc_state & POLYB)) ? d_out_amp : -d_out_amp);
+					sample_queue.push_back((parityb(d_enc_state & POLYB)) ? d_out_amp : -d_out_amp);
 				} else
 					sample_queue.push_back((d_historic_bits.front()) ? d_out_amp : -d_out_amp);
 				d_historic_bits.pop();

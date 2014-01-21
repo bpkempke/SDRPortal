@@ -174,7 +174,7 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 
 	std::vector<tag_t> tags;
 	const uint64_t nread = nitems_read(0);
-	const float *in = (const float *) input_items[0];
+	const char *in = (const char *) input_items[0];
 	int count=0;
 	bool found_tag;
 

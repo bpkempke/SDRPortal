@@ -45,8 +45,8 @@ correlate_soft_access_tag_ff::sptr
 correlate_soft_access_tag_ff_impl::correlate_soft_access_tag_ff_impl(
 		const std::string &access_code, int threshold, const std::string &tag_name)
 	: sync_block("correlate_soft_access_tag_ff",
-			io_signature::make(1, 1, sizeof(float)),
-			io_signature::make(1, 1, sizeof(float))),
+			io_signature::make(1, 1, sizeof(char)),
+			io_signature::make(1, 1, sizeof(char))),
 	d_access_code(NULL), d_data_reg(NULL), d_mask(NULL), d_len_64(0),
 	d_threshold(threshold)
 {
@@ -110,8 +110,8 @@ int correlate_soft_access_tag_ff_impl::work(int noutput_items,
 		gr_vector_const_void_star &input_items,
 		gr_vector_void_star &output_items)
 {
-	const float *in = (float*)input_items[0];
-	float *out = (float*)output_items[0];
+	const char *in = (char*)input_items[0];
+	char *out = (char*)output_items[0];
 
 	uint64_t abs_out_sample_cnt = nitems_written(0);
 
@@ -122,10 +122,10 @@ int correlate_soft_access_tag_ff_impl::work(int noutput_items,
 			if(ii > 0 && (d_data_reg[ii-1] & 0x8000000000000000ULL))
 				d_data_reg[ii] |= 1ULL;
 		}
-		if(in[i] > 0.0)
+		if(in[i])
 			d_data_reg[0] |= 1ULL;
 		if(d_negate)
-			out[i] = -in[i];
+			out[i] = 1-in[i];
 		else
 			out[i] = in[i];
 

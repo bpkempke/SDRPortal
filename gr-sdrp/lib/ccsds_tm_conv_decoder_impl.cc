@@ -84,6 +84,7 @@ namespace gr {
       
       for (int i = 0; i < consume_count; i++) {
         if(d_conv_en){
+          //Negate every other bit (???)
           // Translate and clip [-1.0..1.0] to [28..228]
           float sample = in[i]*100.0+128.0;
           if (sample > 255.0)

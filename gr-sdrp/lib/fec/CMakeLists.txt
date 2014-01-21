@@ -22,6 +22,8 @@ set(fec_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/decode_rs_ccsds.c
     ${CMAKE_CURRENT_SOURCE_DIR}/encode_rs_ccsds.c
     ${CMAKE_CURRENT_SOURCE_DIR}/fec.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/metrics.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/viterbi.c
 )
 
 list(APPEND sdrp_sources ${fec_sources})
