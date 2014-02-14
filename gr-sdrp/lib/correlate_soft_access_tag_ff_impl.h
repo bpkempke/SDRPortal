@@ -40,6 +40,8 @@ namespace gr {
       unsigned int d_threshold; 	// how many bits may be wrong in sync vector
       unsigned int d_len_64;
       bool d_negate;
+      bool d_conv_en;
+      std::string d_cur_access_code;
 
       pmt::pmt_t d_key, d_me;
 
@@ -52,7 +54,8 @@ namespace gr {
 	       gr_vector_const_void_star &input_items,
 	       gr_vector_void_star &output_items);
 
-      bool set_access_code(const std::string &access_code);
+      void set_conv_en(bool conv_en);
+      bool set_access_code(std::string access_code);
       void set_threshold(unsigned int new_threshold);
     };
 

@@ -26,6 +26,7 @@
 
 #include "ccsds_tm_conv_decoder_impl.h"
 #include <gnuradio/io_signature.h>
+#include <cstdio>
 
 namespace gr {
   namespace sdrp {
@@ -50,6 +51,8 @@ namespace gr {
       gen_met(d_mettab, 100, esn0, 0.0, 256);
       viterbi_chunks_init(d_state0);
       viterbi_chunks_init(d_state1);
+
+      nwritten = 0;
     }
 
     //Enable/disable Convolutional decoding functionality
@@ -82,6 +85,19 @@ namespace gr {
       else if(!d_conv_en && (consume_count > noutput_items))
         consume_count = noutput_items;
       
+      //Re-index all tags passing through appropriately
+      std::vector<tag_t> tags;
+      const uint64_t nread = this->nitems_read(0);
+      this->get_tags_in_range(tags, 0, nread, nread+consume_count);
+      for(int ii=0; ii < tags.size(); ii++){
+        remove_item_tag(0,tags[ii]);
+        if(d_conv_en)
+          tags[ii].offset = nwritten+(tags[ii].offset-nread)/2;
+        else
+          tags[ii].offset += nwritten-nread;
+        add_item_tag(0,tags[ii]);
+      }
+
       for (int i = 0; i < consume_count; i++) {
         if(d_conv_en){
           //Negate every other bit (???)
@@ -105,6 +121,7 @@ namespace gr {
             if (d_count % 16 == 11) {
               unsigned char cur_byte;
               viterbi_get_output(d_state0, &cur_byte);
+              //printf("%02X",cur_byte);
               for(int ii=0; ii<8; ii++)
                 out[noutput_ret++] = (cur_byte & (0x80 >> ii)) ? 1 : 0;
             }
@@ -121,6 +138,7 @@ namespace gr {
       consume(0,consume_count);
 
       //Variable number of output symbols in the case of convolutional encoding
+      nwritten += noutput_ret;
       return noutput_ret;
     }
 

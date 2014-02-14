@@ -43,6 +43,7 @@ namespace gr {
       
       int d_count;
       bool d_conv_en;
+      uint64_t nwritten;
 
     public:
       ccsds_tm_conv_decoder_impl();

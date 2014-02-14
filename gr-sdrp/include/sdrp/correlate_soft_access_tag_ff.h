@@ -66,7 +66,8 @@ namespace gr {
        * \param access_code is represented with 1 byte per bit,
        *                    e.g., "010101010111000100"
        */
-      virtual bool set_access_code(const std::string &access_code) = 0;
+      virtual void set_conv_en(bool conv_en) = 0;
+      virtual bool set_access_code(std::string access_code) = 0;
 
       virtual void set_threshold(unsigned int new_threshold) = 0;
     };

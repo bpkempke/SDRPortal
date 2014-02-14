@@ -27,8 +27,15 @@
 #include "correlate_soft_access_tag_ff_impl.h"
 #include <gnuradio/io_signature.h>
 #include <gnuradio/blocks/count_bits.h>
+#include "fec/fec.h"
 #include <stdexcept>
 #include <cstdio>
+
+/********************************
+ * Convolutional Encoding Logic *
+ ********************************/
+#define	POLYA	0x4f
+#define	POLYB	0x6d
 
 namespace gr {
 namespace sdrp {
@@ -45,10 +52,10 @@ correlate_soft_access_tag_ff::sptr
 correlate_soft_access_tag_ff_impl::correlate_soft_access_tag_ff_impl(
 		const std::string &access_code, int threshold, const std::string &tag_name)
 	: sync_block("correlate_soft_access_tag_ff",
-			io_signature::make(1, 1, sizeof(char)),
-			io_signature::make(1, 1, sizeof(char))),
-	d_access_code(NULL), d_data_reg(NULL), d_mask(NULL), d_len_64(0),
-	d_threshold(threshold)
+			io_signature::make(1, 1, sizeof(float)),
+			io_signature::make(1, 1, sizeof(float))),
+	d_access_code(NULL), d_data_reg(NULL), d_mask(NULL), d_len_64(0), d_conv_en(false),
+	d_cur_access_code(""), d_threshold(threshold)
 {
 	//Check to make sure there IS an access code first
 	if(access_code.length() == 0)
@@ -62,15 +69,48 @@ correlate_soft_access_tag_ff_impl::correlate_soft_access_tag_ff_impl(
 	d_key = pmt::string_to_symbol(tag_name);
 
 	d_negate = false;
+	
+	//Set up fast parity lookup table
+	partab_init();
 }
 
 correlate_soft_access_tag_ff_impl::~correlate_soft_access_tag_ff_impl()
 {
 }
 
-bool correlate_soft_access_tag_ff_impl::set_access_code(
-		const std::string &access_code)
+void correlate_soft_access_tag_ff_impl::set_conv_en(bool conv_en){
+	d_conv_en = conv_en;
+	set_access_code(d_cur_access_code);
+}
+
+bool correlate_soft_access_tag_ff_impl::set_access_code(std::string access_code)
 {
+	d_cur_access_code = access_code;
+	if(d_conv_en){
+		//Start from scratch with string
+		access_code = "";
+
+		//If doing conv encoding, encode to bitstream and chop first and last 16 bits off since they won't be fixed
+		unsigned char d_enc_state = 0;
+		unsigned char new_access_code_char = 0;
+		for(int ii=0; ii < d_cur_access_code.size(); ii++){
+    			d_enc_state = (d_enc_state << 1) | (d_cur_access_code[ii] & 1);
+			access_code.push_back((parityb(d_enc_state & POLYA)) ? 0x31 : 0x30);
+			access_code.push_back((1-parityb(d_enc_state & POLYB)) ? 0x31 : 0x30);
+		}
+
+		//First two and last two bytes are constant...
+		access_code.erase(0,16);
+		access_code.erase(access_code.size()-16,16);
+	}
+
+	//Print to stdout to verify...
+	/*printf("access_code = ");
+	for(int ii=0; ii < access_code.size(); ii++){
+		printf("%02X",access_code[ii]);
+	}
+	printf("\n");*/
+
 	unsigned len = access_code.length();	// # of bytes in string
 	d_len_64 = (len+63)/64;
 
@@ -110,8 +150,8 @@ int correlate_soft_access_tag_ff_impl::work(int noutput_items,
 		gr_vector_const_void_star &input_items,
 		gr_vector_void_star &output_items)
 {
-	const char *in = (char*)input_items[0];
-	char *out = (char*)output_items[0];
+	const float *in = (float*)input_items[0];
+	float *out = (float*)output_items[0];
 
 	uint64_t abs_out_sample_cnt = nitems_written(0);
 
@@ -122,10 +162,10 @@ int correlate_soft_access_tag_ff_impl::work(int noutput_items,
 			if(ii > 0 && (d_data_reg[ii-1] & 0x8000000000000000ULL))
 				d_data_reg[ii] |= 1ULL;
 		}
-		if(in[i])
+		if(in[i] > 0)
 			d_data_reg[0] |= 1ULL;
 		if(d_negate)
-			out[i] = 1-in[i];
+			out[i] = -in[i];
 		else
 			out[i] = in[i];
 
@@ -149,8 +189,9 @@ int correlate_soft_access_tag_ff_impl::work(int noutput_items,
 			else
 				d_negate = false;
 
+			uint64_t offset = (d_conv_en) ? 80 : 0;
 			add_item_tag(0, //stream ID
-				abs_out_sample_cnt + i, //sample
+				abs_out_sample_cnt + i + offset, //sample
 				d_key,      //frame info
 				pmt::pmt_t(), //data (unused)
 				d_me        //block src id
