@@ -92,6 +92,9 @@ namespace gr {
           else if (sample < 0.0)
             sample = 0.0;
           unsigned char sym = (unsigned char)(floor(sample));
+
+	  //sym == 128 means erased, so let's avoid that
+	  sym = (sym == 128) ? 129 : sym;
           
           d_viterbi_in[d_count % 4] = sym;
           if ((d_count % 4) == 3) {
