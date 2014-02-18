@@ -31,24 +31,35 @@ namespace sdrp {
 class square_sub_tracker_ff_impl : public square_sub_tracker_ff
 {
 private:
-	double d_freq;
-	double d_phase;
-	double d_freq_loop_bw;
-	double d_phase_loop_bw;
 
 protected:
 
 public:
-	square_sub_tracker_ff_impl(double freq, double phase_loop_bw, double freq_loop_bw);
+	square_sub_tracker_ff_impl(float loop_bw, float max_freq, float min_freq);
 	~square_sub_tracker_ff_impl(){};
+
+	void set_loop_bandwidth(float bw);
+	void set_damping_factor(float df);
+	void set_alpha(float alpha);
+	void set_beta(float beta);
+	void set_frequency(float freq);
+	void set_phase(float phase);
+	void set_min_freq(float freq);
+	void set_max_freq(float freq);
+	
+	float get_loop_bandwidth() const;
+	float get_damping_factor() const;
+	float get_alpha() const;
+	float get_beta() const;
+	float get_frequency() const;
+	float get_phase() const;
+	float get_min_freq() const;
+	float get_max_freq() const;
 
 	int work(int noutput_items,
 			gr_vector_const_void_star &input_items,
 			gr_vector_void_star &output_items);
 
-	virtual void setFreq(double freq);
-	virtual void setPhaseLoopBW(double loop_bw);
-	virtual void setFreqLoopBW(double loop_bw);
 };
 
 } /* namespace sdrp */

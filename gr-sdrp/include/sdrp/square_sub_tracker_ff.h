@@ -24,21 +24,37 @@
 #define INCLUDED_SDRP_SQUARE_SUB_TRACKER_FF_H
 
 #include <sdrp/api.h>
+#include <gnuradio/blocks/control_loop.h>
 #include <gnuradio/sync_block.h>
 #include <gnuradio/msg_queue.h>
 
 namespace gr {
 namespace sdrp {
 
-class SDRP_API square_sub_tracker_ff : virtual public gr::sync_block {
+class SDRP_API square_sub_tracker_ff : virtual public gr::sync_block, virtual public blocks::control_loop {
 public:
 	typedef boost::shared_ptr<square_sub_tracker_ff> sptr;
 
-	static sptr make(double freq, double phase_loop_bw, double freq_loop_bw);
+	static sptr make(float loop_bw, float max_freq, float min_freq);
 
-	virtual void setFreq(double freq) = 0;
-	virtual void setPhaseLoopBW(double loop_bw) = 0;
-	virtual void setFreqLoopBW(double loop_bw) = 0;
+	virtual void set_loop_bandwidth(float bw) = 0;
+	virtual void set_damping_factor(float df) = 0;
+	virtual void set_alpha(float alpha) = 0;
+	virtual void set_beta(float beta) = 0;
+	virtual void set_frequency(float freq) = 0;
+	virtual void set_phase(float phase) = 0;
+	virtual void set_min_freq(float freq) = 0;
+	virtual void set_max_freq(float freq) = 0;
+	
+	virtual float get_loop_bandwidth() const = 0;
+	virtual float get_damping_factor() const = 0;
+	virtual float get_alpha() const = 0;
+	virtual float get_beta() const = 0;
+	virtual float get_frequency() const = 0;
+	virtual float get_phase() const = 0;
+	virtual float get_min_freq() const = 0;
+	virtual float get_max_freq() const = 0;
+
 };
 
 } /* namespace sdrp */
