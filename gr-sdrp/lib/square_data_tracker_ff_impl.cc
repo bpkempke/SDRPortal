@@ -41,33 +41,83 @@ square_data_tracker_ff::sptr square_data_tracker_ff::make(float loop_bw, float m
 }
 
 square_data_tracker_ff_impl::square_data_tracker_ff_impl(float loop_bw, float max_freq, float min_freq)
-	: sync_block("square_data_tracker_ff",
+	: block("square_data_tracker_ff",
 			io_signature::make(1, 1, sizeof(float)),
 			io_signature::make(1, 1, sizeof(float))),
 	blocks::control_loop(loop_bw, max_freq, min_freq)
 {	
+	d_phase_last = 0;
+	id_filter_idx = 0;
+	for(int ii=0; ii < 4; ii++)
+		id_filter[ii] = 0.0;
 }
 
-int square_data_tracker_ff_impl::work(int noutput_items,
+void square_data_tracker_ff_impl::forecast(int noutput_items, gr_vector_int &ninput_items_required){
+        ninput_items_required[0] = (int)((float)(noutput_items)/d_freq*M_PI); 
+}
+
+int square_data_tracker_ff_impl::general_work(int noutput_items,
+		gr_vector_int &ninput_items,
 		gr_vector_const_void_star &input_items,
 		gr_vector_void_star &output_items){
 
 	const float *in = (float *) input_items[0];
 	float *out = (float *) output_items[0];
 	int count=0;
-	float error;
+	int out_count = 0;
+	float error;//Error (in radians) corresponds to how far off the current estimate of phase is observed to be
 
-	while(count < noutput_items){
-		//TODO: Logic goes here!
-		//error = ???;
+	while(count < ninput_items[0]){
+		float in_bit = (in[count]) ? 1.0 : -1.0;
+		error = 0.0;
 
+		if((d_phase >= 0 && d_phase_last < 0) || (d_phase < M_PI && d_phase_last > M_PI)){
+
+			//Check if we should update the filter (once every bit period)
+			if(~(id_filter_idx & 1)){
+				int id_idx_first = (id_filter_idx == 0) ? 2 : 0;
+				int id_idx_second = (id_filter_idx == 0) ? 3 : 1;
+
+				error = id_filter[id_idx_second]*d_freq;
+				if(id_filter[id_idx_first] < 0)
+					error = -error;
+
+				//The current id filter has our bit, push it out
+				out[out_count++] = id_filter[id_idx_first]*d_freq/M_PI;
+
+				id_filter[id_idx_first] = 0.0;
+				id_filter[id_idx_second] = 0.0;
+			}
+
+			id_filter_idx++;
+		}
+
+		//Increment integrate and dump filters depending on current position
+		if(id_filter_idx == 0){
+			id_filter[0] += in_bit;
+			id_filter[3] += in_bit;
+		} else if(id_filter_idx == 1){
+			id_filter[0] += in_bit;
+			id_filter[1] += in_bit;
+		} else if(id_filter_idx == 2){
+			id_filter[2] += in_bit;
+			id_filter[1] += in_bit;
+		} else {
+			id_filter[2] += in_bit;
+			id_filter[3] += in_bit;
+		}
+
+		//Save phase for next loop's comparison
+		d_phase_last = d_phase;
 		advance_loop(error);
 		phase_wrap();
 		frequency_limit();
 
 		count++;
 	}
-	return noutput_items;
+
+	consume(0,ninput_items[0]);
+	return out_count;
 }
 
 void square_data_tracker_ff_impl::set_loop_bandwidth(float bw) {

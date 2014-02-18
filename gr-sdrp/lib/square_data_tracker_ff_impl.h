@@ -31,6 +31,9 @@ namespace sdrp {
 class square_data_tracker_ff_impl : public square_data_tracker_ff
 {
 private:
+	float id_filter[4];
+	int id_filter_idx;
+	float d_phase_last;
 
 protected:
 
@@ -56,9 +59,11 @@ public:
 	float get_min_freq() const;
 	float get_max_freq() const;
 
-	int work(int noutput_items,
-			gr_vector_const_void_star &input_items,
-			gr_vector_void_star &output_items);
+	void forecast(int noutput_items, gr_vector_int &ninput_items_required);
+	int general_work(int noutput_items,
+		gr_vector_int &ninput_items,
+		gr_vector_const_void_star &input_items,
+		gr_vector_void_star &output_items);
 
 };
 

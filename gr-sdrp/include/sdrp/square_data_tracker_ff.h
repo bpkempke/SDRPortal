@@ -31,7 +31,7 @@
 namespace gr {
 namespace sdrp {
 
-class SDRP_API square_data_tracker_ff : virtual public gr::sync_block, virtual public blocks::control_loop {
+class SDRP_API square_data_tracker_ff : virtual public gr::block, virtual public blocks::control_loop {
 public:
 	typedef boost::shared_ptr<square_data_tracker_ff> sptr;
 
