@@ -10,6 +10,8 @@
 %include "gnuradio/digital/constellation.h"
 
 %{
+#include "sdrp/square_sub_tracker_ff.h"
+#include "sdrp/square_data_tracker_ff.h"
 #include "sdrp/sweep_generator_cc.h"
 #include "sdrp/ccsds_aos_framer.h"
 #include "sdrp/ccsds_tm_framer.h"
@@ -22,6 +24,12 @@
 #include "sdrp/pll_refout_freqout_ccf.h"
 #include "sdrp/costas_refout_freqout_ccf.h"
 %}
+
+%include "sdrp/square_sub_tracker_ff.h"
+GR_SWIG_BLOCK_MAGIC2(sdrp, square_sub_tracker_ff);
+
+%include "sdrp/square_data_tracker_ff.h"
+GR_SWIG_BLOCK_MAGIC2(sdrp, square_data_tracker_ff);
 
 %include "sdrp/sweep_generator_cc.h"
 GR_SWIG_BLOCK_MAGIC2(sdrp, sweep_generator_cc);

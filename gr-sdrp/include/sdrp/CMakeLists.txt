@@ -22,6 +22,8 @@
 ########################################################################
 install(FILES
     api.h
+    square_sub_tracker_ff.h
+    square_data_tracker_ff.h
     sweep_generator_cc.h
     correlate_long_access_code_bb.h
     correlate_soft_access_tag_ff.h
