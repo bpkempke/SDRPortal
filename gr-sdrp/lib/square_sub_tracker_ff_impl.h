@@ -31,6 +31,10 @@ namespace sdrp {
 class square_sub_tracker_ff_impl : public square_sub_tracker_ff
 {
 private:
+	float id_filter[4];
+	int id_filter_idx;
+	float d_phase_last;
+	float d_cur_bit;
 
 protected:
 
