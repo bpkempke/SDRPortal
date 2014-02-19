@@ -44,8 +44,9 @@ square_data_tracker_ff_impl::square_data_tracker_ff_impl(float loop_bw, float ma
 	: block("square_data_tracker_ff",
 			io_signature::make(1, 1, sizeof(float)),
 			io_signature::make(1, 1, sizeof(float))),
-	blocks::control_loop(loop_bw, max_freq, min_freq)
+	blocks::control_loop(loop_bw, max_freq*M_TWOPI, min_freq*M_TWOPI)
 {	
+	std::cout << "max_freq = " << max_freq*M_TWOPI << " min_freq = " << min_freq*M_TWOPI << std::endl;
 	d_phase_last = 0;
 	id_filter_idx = 0;
 	for(int ii=0; ii < 4; ii++)
@@ -53,7 +54,7 @@ square_data_tracker_ff_impl::square_data_tracker_ff_impl(float loop_bw, float ma
 }
 
 void square_data_tracker_ff_impl::forecast(int noutput_items, gr_vector_int &ninput_items_required){
-        ninput_items_required[0] = (int)((float)(noutput_items)/d_freq*M_PI); 
+        ninput_items_required[0] = (int)((float)(noutput_items)/d_freq*M_TWOPI); 
 }
 
 int square_data_tracker_ff_impl::general_work(int noutput_items,
@@ -68,28 +69,34 @@ int square_data_tracker_ff_impl::general_work(int noutput_items,
 	float error;//Error (in radians) corresponds to how far off the current estimate of phase is observed to be
 
 	while(count < ninput_items[0]){
-		float in_bit = (in[count]) ? 1.0 : -1.0;
+		float in_bit = (in[count] > 0.0) ? 1.0 : -1.0;
 		error = 0.0;
 
 		if((d_phase >= 0 && d_phase_last < 0) || (d_phase < M_PI && d_phase_last > M_PI)){
+			//std::cout << "id_filter[1] = " << id_filter[1] << std::endl;
 
 			//Check if we should update the filter (once every bit period)
-			if(~(id_filter_idx & 1)){
+			if(!(id_filter_idx & 1)){
 				int id_idx_first = (id_filter_idx == 0) ? 2 : 0;
 				int id_idx_second = (id_filter_idx == 0) ? 3 : 1;
 
 				error = id_filter[id_idx_second]*d_freq;
-				if(id_filter[id_idx_first] < 0)
+				if(id_filter[id_idx_first] > 0)
 					error = -error;
 
 				//The current id filter has our bit, push it out
-				out[out_count++] = id_filter[id_idx_first]*d_freq/M_PI;
+				out[out_count++] = id_filter[id_idx_first]*d_freq/M_TWOPI;
+
+				//printf debugging
+				d_sample_count++;
+				if((d_sample_count % 1001) == 0)
+					std::cout << "d_freq = " << d_freq << " error = " << error << " id_filter_idx = " << id_filter_idx << " id_idx_second = " << id_idx_second << " id_filter[id_idx_second] = " << id_filter[id_idx_second] << std::endl;
 
 				id_filter[id_idx_first] = 0.0;
 				id_filter[id_idx_second] = 0.0;
 			}
 
-			id_filter_idx++;
+			id_filter_idx = (id_filter_idx == 3) ? 0 : id_filter_idx+1;
 		}
 
 		//Increment integrate and dump filters depending on current position
@@ -110,13 +117,15 @@ int square_data_tracker_ff_impl::general_work(int noutput_items,
 		//Save phase for next loop's comparison
 		d_phase_last = d_phase;
 		advance_loop(error);
+		//std::cout << "count = " << count << " error = " << error << " d_phase = " << d_phase << " d_freq = " << d_freq << std::endl;
 		phase_wrap();
 		frequency_limit();
 
 		count++;
+
 	}
 
-	consume(0,ninput_items[0]);
+	consume_each(count);
 	return out_count;
 }
 
@@ -137,7 +146,7 @@ void square_data_tracker_ff_impl::set_beta(float beta) {
 }
 
 void square_data_tracker_ff_impl::set_frequency(float freq) {
-	blocks::control_loop::set_frequency(freq);
+	blocks::control_loop::set_frequency(freq*M_TWOPI);
 }
 
 void square_data_tracker_ff_impl::set_phase(float phase) {

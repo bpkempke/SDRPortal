@@ -44,7 +44,7 @@ square_sub_tracker_ff_impl::square_sub_tracker_ff_impl(float loop_bw, float max_
 	: sync_block("square_sub_tracker_ff",
 			io_signature::make(1, 1, sizeof(float)),
 			io_signature::make(1, 1, sizeof(float))),
-	blocks::control_loop(loop_bw, max_freq, min_freq)
+	blocks::control_loop(loop_bw, max_freq*M_TWOPI, min_freq*M_TWOPI)
 {	
 	d_cur_bit = 1.0;
 	d_phase_last = 0;
@@ -60,28 +60,36 @@ int square_sub_tracker_ff_impl::work(int noutput_items,
 	const float *in = (float *) input_items[0];
 	float *out = (float *) output_items[0];
 	int count=0;
-	float error;
 
 	while(count < noutput_items){
-		float in_bit = (in[count]) ? 1.0 : -1.0;
-		error = 0.0;
+		float in_bit = (in[count] > 0.0) ? 1.0 : -1.0;
+		d_error = 0.0;
 
 		if((d_phase >= 0 && d_phase_last < 0) || (d_phase < M_PI && d_phase_last > M_PI)){
 
 			//Check if we should update the filter (once every bit period)
-			if(~(id_filter_idx & 1)){
+			if(!(id_filter_idx & 1)){
 				int id_idx_first = (id_filter_idx == 0) ? 2 : 0;
 				int id_idx_second = (id_filter_idx == 0) ? 3 : 1;
 
-				error = id_filter[id_idx_second]*d_freq;
+				d_error = id_filter[id_idx_second]*d_freq/100;
 				if(id_filter[id_idx_first] < 0)
-					error = -error;
+					d_error = -d_error;
+
+				//printf debugging
+				d_sample_count++;
+				if((d_sample_count % 10001) == 0){
+					std::cout << "d_freq = " << d_freq << " d_error = " << d_error << " id_filter_idx = " << id_filter_idx << " id_idx_second = " << id_idx_second << " id_filter[id_idx_second] = " << id_filter[id_idx_second] << std::endl;
+					//for(int ii=0; ii < 40; ii++){
+					//	std::cout << in[ii] << std::endl;
+					//}
+				}
 
 				id_filter[id_idx_first] = 0.0;
 				id_filter[id_idx_second] = 0.0;
 			}
 
-			id_filter_idx++;
+			id_filter_idx = (id_filter_idx == 3) ? 0 : id_filter_idx+1;
 		}
 
 		//Increment integrate and dump filters depending on current position
@@ -104,7 +112,7 @@ int square_sub_tracker_ff_impl::work(int noutput_items,
 
 		//Save phase for next loop's comparison
 		d_phase_last = d_phase;
-		advance_loop(error);
+		advance_loop(d_error);
 		phase_wrap();
 		frequency_limit();
 
@@ -130,7 +138,7 @@ void square_sub_tracker_ff_impl::set_beta(float beta) {
 }
 
 void square_sub_tracker_ff_impl::set_frequency(float freq) {
-	blocks::control_loop::set_frequency(freq);
+	blocks::control_loop::set_frequency(freq*M_TWOPI);
 }
 
 void square_sub_tracker_ff_impl::set_phase(float phase) {

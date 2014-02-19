@@ -34,6 +34,7 @@ private:
 	float id_filter[4];
 	int id_filter_idx;
 	float d_phase_last;
+	int d_sample_count;
 
 protected:
 

@@ -35,6 +35,8 @@ private:
 	int id_filter_idx;
 	float d_phase_last;
 	float d_cur_bit;
+	int d_sample_count;
+	float d_error;
 
 protected:
 
