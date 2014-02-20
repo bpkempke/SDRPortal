@@ -65,7 +65,12 @@ int square_sub_tracker_ff_impl::work(int noutput_items,
 		float in_bit = (in[count] > 0.0) ? 1.0 : -1.0;
 		d_error = 0.0;
 
-		if((d_phase >= 0 && d_phase_last < 0) || (d_phase < M_PI && d_phase_last > M_PI)){
+		//for(int ii=0; ii < 4; ii++){
+		//	if(id_filter[ii] > 20)
+		//		std::cout << "id_filter[" << ii << "] = " << id_filter[ii] << std::endl;
+		//}
+
+		if((d_phase <= M_PI/2 && d_phase_last > 3*M_PI/2) || (d_phase >= M_PI && d_phase_last < M_PI)){
 
 			//Check if we should update the filter (once every bit period)
 			if(!(id_filter_idx & 1)){
@@ -73,13 +78,13 @@ int square_sub_tracker_ff_impl::work(int noutput_items,
 				int id_idx_second = (id_filter_idx == 0) ? 3 : 1;
 
 				d_error = id_filter[id_idx_second]*d_freq/100;
-				if(id_filter[id_idx_first] < 0)
+				if(id_filter[id_idx_first] > 0)
 					d_error = -d_error;
 
 				//printf debugging
 				d_sample_count++;
 				if((d_sample_count % 10001) == 0){
-					std::cout << "d_freq = " << d_freq << " d_error = " << d_error << " id_filter_idx = " << id_filter_idx << " id_idx_second = " << id_idx_second << " id_filter[id_idx_second] = " << id_filter[id_idx_second] << std::endl;
+					std::cout << "d_phase = " << d_phase << " d_phase_last = " << d_phase_last << " d_freq = " << d_freq << " d_error = " << d_error << " id_filter_idx = " << id_filter_idx << " id_idx_second = " << id_idx_second << " id_filter[id_idx_second] = " << id_filter[id_idx_second] << std::endl;
 					//for(int ii=0; ii < 40; ii++){
 					//	std::cout << in[ii] << std::endl;
 					//}

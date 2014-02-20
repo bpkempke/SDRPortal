@@ -72,7 +72,7 @@ int square_data_tracker_ff_impl::general_work(int noutput_items,
 		float in_bit = (in[count] > 0.0) ? 1.0 : -1.0;
 		error = 0.0;
 
-		if((d_phase >= 0 && d_phase_last < 0) || (d_phase < M_PI && d_phase_last > M_PI)){
+		if((d_phase <= M_PI/2 && d_phase_last > 3*M_PI/2) || (d_phase >= M_PI && d_phase_last < M_PI)){
 			//std::cout << "id_filter[1] = " << id_filter[1] << std::endl;
 
 			//Check if we should update the filter (once every bit period)
@@ -88,9 +88,9 @@ int square_data_tracker_ff_impl::general_work(int noutput_items,
 				out[out_count++] = id_filter[id_idx_first]*d_freq/M_TWOPI;
 
 				//printf debugging
-				d_sample_count++;
-				if((d_sample_count % 1001) == 0)
-					std::cout << "d_freq = " << d_freq << " error = " << error << " id_filter_idx = " << id_filter_idx << " id_idx_second = " << id_idx_second << " id_filter[id_idx_second] = " << id_filter[id_idx_second] << std::endl;
+				//d_sample_count++;
+				//if((d_sample_count % 1001) == 0)
+				//	std::cout << "d_freq = " << d_freq << " error = " << error << " id_filter_idx = " << id_filter_idx << " id_idx_second = " << id_idx_second << " id_filter[id_idx_second] = " << id_filter[id_idx_second] << std::endl;
 
 				id_filter[id_idx_first] = 0.0;
 				id_filter[id_idx_second] = 0.0;
