@@ -29,6 +29,10 @@ include_directories(${Boost_INCLUDE_DIR})
 link_directories(${Boost_LIBRARY_DIRS})
 
 list(APPEND sdrp_sources
+    dsn_pn_tx_impl.cc
+    dsn_pn_rx_impl.cc
+    dsn_sequential_tx_impl.cc
+    dsn_sequential_rx_impl.cc
     square_sub_tracker_ff_impl.cc
     square_data_tracker_ff_impl.cc
     sweep_generator_cc_impl.cc

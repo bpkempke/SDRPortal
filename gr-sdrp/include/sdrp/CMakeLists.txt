@@ -22,6 +22,10 @@
 ########################################################################
 install(FILES
     api.h
+    dsn_pn_tx.h
+    dsn_pn_rx.h
+    dsn_sequential_tx.h
+    dsn_sequential_rx.h
     square_sub_tracker_ff.h
     square_data_tracker_ff.h
     sweep_generator_cc.h

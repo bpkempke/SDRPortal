@@ -23,7 +23,23 @@
 #include "sdrp/sdrp_packet_interpreter.h"
 #include "sdrp/pll_refout_freqout_ccf.h"
 #include "sdrp/costas_refout_freqout_ccf.h"
+#include "sdrp/dsn_pn_tx.h"
+#include "sdrp/dsn_pn_rx.h"
+#include "sdrp/dsn_sequential_tx.h"
+#include "sdrp/dsn_sequential_rx.h"
 %}
+
+%include "sdrp/dsn_pn_tx.h"
+GR_SWIG_BLOCK_MAGIC2(sdrp, dsn_pn_tx);
+
+%include "sdrp/dsn_pn_rx.h"
+GR_SWIG_BLOCK_MAGIC2(sdrp, dsn_pn_rx);
+
+%include "sdrp/dsn_sequential_tx.h"
+GR_SWIG_BLOCK_MAGIC2(sdrp, dsn_sequential_tx);
+
+%include "sdrp/dsn_sequential_rx.h"
+GR_SWIG_BLOCK_MAGIC2(sdrp, dsn_sequential_rx);
 
 %include "sdrp/square_sub_tracker_ff.h"
 GR_SWIG_BLOCK_MAGIC2(sdrp, square_sub_tracker_ff);
