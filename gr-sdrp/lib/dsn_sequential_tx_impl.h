@@ -28,6 +28,32 @@
 namespace gr {
 namespace sdrp {
 
+//Refer to DSN document for terminology used in this block:
+// deepspace.jpl.nasa.gov/dsndocs/810-005/203/203C.pdf
+enum sequenceState {
+	SEQ_T1_PRE, SEQ_T1, SEQ_T1_POST, SEQ_T2_PRE, SEQ_T2, SEQ_T2_POST
+};
+
+struct sequenceType {
+	double f0;
+	uint64_t XMIT;
+	uint64_t T1;
+	uint64_t T2;
+	int range_clk_component;
+	int chop_component;
+	int end_component;
+	bool done;
+	bool running;
+	sequenceState state;
+};
+
+bool compare_sequence_start(const sequenceType &first, const sequence_type &second){
+	if(first.XMIT < second.XMIT)
+		return true;
+	else
+		return false;
+}
+
 class dsn_sequential_tx_impl : public dsn_sequential_tx
 {
 private:
@@ -35,8 +61,13 @@ private:
 	double d_cur_time;
 	double d_freq;
 	double d_phase;
-	int d_cur_profile_idx;
-	std::vector<double> d_profile_times, d_profile_freqs;
+	int d_cur_component;
+	std::list<sequenceType> sequence_queue;
+	sequenceType cur_sequence;
+
+	uint64_t d_cal_time_count;
+	uint64_t d_cal_time_seconds;
+	double d_cal_time_frac;
 
 protected:
 
@@ -48,8 +79,7 @@ public:
 			gr_vector_const_void_star &input_items,
 			gr_vector_void_star &output_items);
 
-	virtual void setProfile(std::vector<double> profile_times, std::vector<double> profile_freqs);
-	virtual void sweep();
+	virtual void queueSequence(double f0, uint64_t XMIT, uint64_t T1, uint64_t T2, int range_clk_component, int chop_component, int end_component);
 };
 
 } /* namespace sdrp */
