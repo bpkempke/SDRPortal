@@ -31,7 +31,7 @@ namespace sdrp {
 //Refer to DSN document for terminology used in this block:
 // deepspace.jpl.nasa.gov/dsndocs/810-005/203/203C.pdf
 enum sequenceState {
-	SEQ_T1_PRE, SEQ_T1, SEQ_T1_POST, SEQ_T2_PRE, SEQ_T2, SEQ_T2_POST
+	SEQ_T1, SEQ_T1_POST, SEQ_T2_PRE, SEQ_T2, SEQ_T2_POST
 };
 
 struct sequenceType {
@@ -42,12 +42,13 @@ struct sequenceType {
 	int range_clk_component;
 	int chop_component;
 	int end_component;
+	bool range_is_square;
 	bool done;
 	bool running;
 	sequenceState state;
 };
 
-bool compare_sequence_start(const sequenceType &first, const sequence_type &second){
+bool compare_sequence_start(const sequenceType &first, const sequenceType &second){
 	if(first.XMIT < second.XMIT)
 		return true;
 	else
@@ -57,16 +58,17 @@ bool compare_sequence_start(const sequenceType &first, const sequence_type &seco
 class dsn_sequential_tx_impl : public dsn_sequential_tx
 {
 private:
-	double d_time_step;
 	double d_cur_time;
 	double d_freq;
 	double d_phase;
 	int d_cur_component;
 	std::list<sequenceType> sequence_queue;
 	sequenceType cur_sequence;
+	float d_out1_phase_last;
 
 	uint64_t d_cal_time_count;
 	uint64_t d_cal_time_seconds;
+	uint64_t d_samples_per_second;
 	double d_cal_time_frac;
 
 protected:
@@ -79,7 +81,7 @@ public:
 			gr_vector_const_void_star &input_items,
 			gr_vector_void_star &output_items);
 
-	virtual void queueSequence(double f0, uint64_t XMIT, uint64_t T1, uint64_t T2, int range_clk_component, int chop_component, int end_component);
+	virtual void queueSequence(double f0, uint64_t XMIT, uint64_t T1, uint64_t T2, int range_clk_component, int chop_component, int end_component, bool range_is_square);
 };
 
 } /* namespace sdrp */

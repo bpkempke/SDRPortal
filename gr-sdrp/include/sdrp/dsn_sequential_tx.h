@@ -36,7 +36,7 @@ public:
 
 	static sptr make(double samples_per_second);
 
-	virtual void queueSequence(double f0, uint64_t XMIT, uint64_t T1, uint64_t T2, int range_clk_component, int chop_component, int end_component) = 0;
+	virtual void queueSequence(double f0, uint64_t XMIT, uint64_t T1, uint64_t T2, int range_clk_component, int chop_component, int end_component, bool range_is_square) = 0;
 };
 
 } /* namespace sdrp */

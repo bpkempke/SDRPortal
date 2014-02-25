@@ -29,6 +29,7 @@
 #include <gnuradio/expj.h>
 #include <math.h>
 #include <gnuradio/math.h>
+#include <locale>
 
 #define M_TWOPI 2.0f*M_PI
 
@@ -49,23 +50,27 @@ dsn_pn_tx_impl::dsn_pn_tx_impl(double samples_per_second)
 	d_phase(0.0),
 	d_time_step(1.0/samples_per_second)
 {
-	//TODO: Anything needed here?
-	d_profile_times.clear();
-	d_profile_freqs.clear();
+	d_composite_queue.clear();
 }
 
-void dsn_pn_tx_impl::setProfile(std::vector<double> profile_times, std::vector<double> profile_freqs){
-	//Convert times to integer times to disallow loss-of-precision with doubles
-	d_profile_times.clear();
-	for(unsigned int ii=0; ii < profile_times.size(); ii++){
-		d_profile_times.push_back(profile_times[ii] / d_time_step);
-	}
+void dsn_pn_tx_impl::setProfile(std::string combination_method, uint64_t xmit_time, double T, std::vector<std::vector<bool> > components, double chip_rate){
+	//First switch combination_method to lowercase for later ease
+	std::locale loc;
+	for(int ii=0; ii < combination_method.size(); ii++)
+		combination_method[ii] = std::tolower(combination_method[ii], loc);
 
-	//Convert frequencies to radians per sample
-	d_profile_freqs.clear();
-	for(unsigned int ii=0; ii < profile_freqs.size(); ii++){
-		d_profile_freqs.push_back(profile_freqs[ii] * d_time_step * M_TWOPI);
-	}
+	//NOTE: combination_method is expected to be 'and', 'or', 'xor', or 'vote'
+	PNComposite new_composite;
+	new_composite.cm = (combination_method == "and") ? CM_AND :
+	                  (combination_method == "or") ? CM_OR :
+	                  (combination_method == "xor") ? CM_XOR : CM_VOTE;
+	new_composite.xmit_time = xmit_time;
+	new_composite.components = components;
+	new_composite.chip_rate = chip_rate;
+
+	//Push new composite onto queue and sort
+	d_composite_queue.push_back(new_composite);
+	d_composite_queue.sort(compare_composite_start);
 }
 
 void dsn_pn_tx_impl::sweep(){

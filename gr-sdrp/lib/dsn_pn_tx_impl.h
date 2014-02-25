@@ -28,6 +28,25 @@
 namespace gr {
 namespace sdrp {
 
+enum combinationMethod {
+	CM_AND, CM_OR, CM_XOR, CM_VOTE
+};
+
+struct PNComposite {
+	combinationMethod cm;
+	uint64_t xmit_time;
+	double T;
+	std::vector<std::vector<bool> > components;
+	double chip_rate;
+};
+
+bool compare_composite_start(const PNComposite &first, const PNComposite &second){
+	if(first.xmit_time < second.xmit_time)
+		return true;
+	else
+		return false;
+}
+
 class dsn_pn_tx_impl : public dsn_pn_tx
 {
 private:
@@ -36,7 +55,7 @@ private:
 	double d_freq;
 	double d_phase;
 	int d_cur_profile_idx;
-	std::vector<double> d_profile_times, d_profile_freqs;
+	std::list<PNComposite> d_composite_queue;
 
 protected:
 
@@ -48,7 +67,7 @@ public:
 			gr_vector_const_void_star &input_items,
 			gr_vector_void_star &output_items);
 
-	virtual void setProfile(std::vector<double> profile_times, std::vector<double> profile_freqs);
+	virtual void queueRanging(std::string combination_method, uint64_t xmit_time, double T, std::vector<std::vector<bool> > components, double chip_rate);
 	virtual void sweep();
 };
 

@@ -36,7 +36,7 @@ public:
 
 	static sptr make(double samples_per_second);
 
-	virtual void setProfile(std::vector<double> profile_times, std::vector<double> profile_freqs) = 0;
+	virtual void queueRanging(std::string combination_method, uint64_t xmit_time, double T, std::vector<std::vector<bool> > components, double chip_rate) = 0;
 	virtual void sweep() = 0;
 };
 
