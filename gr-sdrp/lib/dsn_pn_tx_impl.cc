@@ -45,15 +45,18 @@ dsn_pn_tx_impl::dsn_pn_tx_impl(double samples_per_second)
 	: sync_block("dsn_pn_tx",
 			io_signature::make(1, 1, sizeof(gr_complex)),
 			io_signature::make(1, 1, sizeof(gr_complex))),
-	d_cur_profile_idx(0),
 	d_freq(0.0),
 	d_phase(0.0),
-	d_time_step(1.0/samples_per_second)
+	d_cal_time_count(0),
+	d_cal_time_seconds(0),
+	d_cal_time_frac(0.0),
+	d_samples_per_second(samples_per_second)
 {
 	d_composite_queue.clear();
+	d_cur_composite.done = true;
 }
 
-void dsn_pn_tx_impl::setProfile(std::string combination_method, uint64_t xmit_time, double T, std::vector<std::vector<bool> > components, double chip_rate){
+void dsn_pn_tx_impl::queueRanging(std::string combination_method, uint64_t xmit_time, double T, std::vector<std::vector<bool> > components, double range_freq, bool range_is_square){
 	//First switch combination_method to lowercase for later ease
 	std::locale loc;
 	for(int ii=0; ii < combination_method.size(); ii++)
@@ -65,18 +68,16 @@ void dsn_pn_tx_impl::setProfile(std::string combination_method, uint64_t xmit_ti
 	                  (combination_method == "or") ? CM_OR :
 	                  (combination_method == "xor") ? CM_XOR : CM_VOTE;
 	new_composite.xmit_time = xmit_time;
+	new_composite.T = T;
 	new_composite.components = components;
-	new_composite.chip_rate = chip_rate;
+	new_composite.range_freq = range_freq;
+	new_composite.range_is_square = range_is_square;
+	new_composite.done = false;
+	new_composite.running = false;
 
 	//Push new composite onto queue and sort
 	d_composite_queue.push_back(new_composite);
 	d_composite_queue.sort(compare_composite_start);
-}
-
-void dsn_pn_tx_impl::sweep(){
-	//Just need to set the sweep profile index to the beginning to restart
-	d_cur_profile_idx = 0;
-	d_cur_time = 0.0;
 }
 
 int dsn_pn_tx_impl::work(int noutput_items,
@@ -88,36 +89,94 @@ int dsn_pn_tx_impl::work(int noutput_items,
 	int count=0;
 	gr_complex nco_out;
 
+	//Synchronize with a timed TX if there are any in the stream
+	std::vector<tag_t> tags;
+	const uint64_t nread = this->nitems_read(0);
+	this->get_tags_in_range(tags, 0, nread, nread+noutput_items, pmt::string_to_symbol("tx_time"));
+	if(tags.size() > 0){
+		const pmt::pmt_t &value = tags[tags.size()-1].value;
+		d_cal_time_count = tags[tags.size()-1].offset-nread;
+		d_cal_time_seconds = pmt::to_uint64(pmt::tuple_ref(value, 0));
+		d_cal_time_frac = pmt::to_double(pmt::tuple_ref(value, 1));
+		//Always make sure it is just synchronizing to a second boundary.  Otherwise this block gets confused
+		assert(d_cal_time_frac == 0.0);
+	}
+
+	//TODO: make square more perfect in this band-limited case
+
 	while(count < noutput_items){
-		//If we're in the middle of a frequency sweep, calculate current frequency
-		if(d_cur_profile_idx < (int)(d_profile_times.size())-1){
-			//Check to see if we've transitioned to a new slope
-			if(d_cur_time > d_profile_times[d_cur_profile_idx+1]){
-				std::cout << "switching legs of sweep..." << std::endl;
-				d_cur_profile_idx++;
-				d_freq = 0.0;
-				continue;
+		if(d_cur_composite.done){
+			//Nothing to do if there's no valid sequence, just pass samples through instead
+			if(d_composite_queue.size() > 0){
+				d_cur_composite = d_composite_queue.pop_front();
+			}
+			out[count] = in[count];
+		} else {
+			float out_phase = 0.0;
+			bool out_square = false;
+
+			//Figure out where we are in time
+			uint64_t cur_time_sec = (nread+count-d_cal_time_count)/d_samples_per_second + d_cal_time_seconds;
+			uint64_t cur_time_frac = (nread+count-d_cal_time_count)%d_samples_per_second;
+
+			//Figure out where we are in the current sequence
+			int64_t cur_seq_sec = cur_time_sec - d_cur_composite.xmit_time;
+			uint64_t cur_seq_frac = cur_time_frac;
+
+			//Convert to number of range clock cycles
+			double range_clk_phase = (double)cur_seq_sec*d_cur_composite.range_freq + cur_seq_frac*d_cur_composite.range_freq/d_samples_per_second;
+			int64_t range_clk_cycles = (int64_t)(range_clk_phase);
+
+			//Check if the current sequence is running or not
+			if(d_cur_composite.running == false){
+				if(cur_time_sec >= d_cur_composite.xmit_time-1){
+					//Time to get this sequence running!
+					d_cur_composite.running = true;
+				}
+			} else {
+				out_phase = (range_clk_phase/pow%1.0)*M_TWOPI;
+				out_square = d_cur_composite.range_is_square;
+				int64_t pn_composite_idx = range_clk_cycles*2;
+				if(out_phase > M_PI)
+					pn_composite_idx++;
+
+				bool cur_bit = (d_cur_composite.cm == CM_AND) ? true : false;
+				int vote_count = 0;
+				for(unsigned int ii=0; ii < d_cur_composite.components.size(); ii++){
+					int cur_component_idx = pn_composite_idx % d_cur_composite.components[ii].size();
+					switch(d_cur_composite.cm){
+						case CM_AND:
+							cur_bit &= d_cur_composite.components[ii][cur_component_idx];
+							break;
+						case CM_OR:
+							cur_bit |= d_cur_composite.components[ii][cur_component_idx];
+							break;
+						case CM_XOR:
+							cur_bit ^= d_cur_composite.components[ii][cur_component_idx];
+							break;
+						case CM_VOTE:
+							if(d_cur_composite.components[ii][cur_component_idx]) vote_count++;
+							break;
+					}
+				}
+
+				//set the current bit according to vote if needed
+				if(d_cur_composite.cm == CM_VOTE)
+					cur_bit = (vote_count > d_cur_composite.components.size()/2);
+
+				//1 corresponds to positive half-cycle, 0 corresponds to negative half-cycle
+				if(cur_bit == false){
+					out_phase += M_PI;
+					out_phase %= M_TWOPI;
+				}
 			}
 
-			//Otherwise figure out where we are within the slope
-			d_freq = ((d_cur_time-d_profile_times[d_cur_profile_idx])*d_profile_freqs[d_cur_profile_idx+1] + 
-			          (d_profile_times[d_cur_profile_idx+1]-d_cur_time)*d_profile_freqs[d_cur_profile_idx]) / 
-			         (d_profile_times[d_cur_profile_idx+1]-d_profile_times[d_cur_profile_idx]);
-			
-			d_cur_time += 1.0;
+			gr_complex out_sample;
+			out_sample.real = (out_square) ? 
+				((out_phase > M_PI) ? -1.0 : 1.0) : sin(out1_phase);
+			out_sample.imag = 0.0;
+			out[count] = in[count] + out_sample;
 		}
-
-		//Increment phase based on calculated current frequency
-		d_phase += d_freq;
-		if(d_phase > M_TWOPI)
-			d_phase -= M_TWOPI;
-		else if(d_phase < 0)
-			d_phase += M_TWOPI;
-
-
-		nco_out = gr_expj(d_phase);
-		out[count] = in[count] * nco_out;
-		
 
 		count++;
 	}

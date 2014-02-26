@@ -37,7 +37,10 @@ struct PNComposite {
 	uint64_t xmit_time;
 	double T;
 	std::vector<std::vector<bool> > components;
-	double chip_rate;
+	double range_freq;
+	bool range_is_square;
+	bool done;
+	bool running;
 };
 
 bool compare_composite_start(const PNComposite &first, const PNComposite &second){
@@ -56,6 +59,11 @@ private:
 	double d_phase;
 	int d_cur_profile_idx;
 	std::list<PNComposite> d_composite_queue;
+	PNComposite d_cur_composite;
+	uint64_t d_cal_time_count;
+	uint64_t d_cal_time_seconds;
+	uint64_t d_samples_per_second;
+	double d_cal_time_frac;
 
 protected:
 
@@ -67,7 +75,7 @@ public:
 			gr_vector_const_void_star &input_items,
 			gr_vector_void_star &output_items);
 
-	virtual void queueRanging(std::string combination_method, uint64_t xmit_time, double T, std::vector<std::vector<bool> > components, double chip_rate);
+	virtual void queueRanging(std::string combination_method, uint64_t xmit_time, double T, std::vector<std::vector<bool> > components, double range_freq, bool range_square);
 	virtual void sweep();
 };
 

@@ -36,7 +36,7 @@ public:
 
 	static sptr make(double samples_per_second);
 
-	virtual void queueRanging(std::string combination_method, uint64_t xmit_time, double T, std::vector<std::vector<bool> > components, double chip_rate) = 0;
+	virtual void queueRanging(std::string combination_method, uint64_t xmit_time, double T, std::vector<std::vector<bool> > components, double range_freq, bool range_square) = 0;
 	virtual void sweep() = 0;
 };
 
