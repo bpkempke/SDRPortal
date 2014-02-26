@@ -24,39 +24,16 @@
 #define INCLUDED_SDRP_DSN_PN_TX_IMPL_H
 
 #include <sdrp/dsn_pn_tx.h>
+#include <dsn_pn_common.h>
 
 namespace gr {
 namespace sdrp {
-
-enum combinationMethod {
-	CM_AND, CM_OR, CM_XOR, CM_VOTE
-};
-
-struct PNComposite {
-	combinationMethod cm;
-	uint64_t xmit_time;
-	double T;
-	std::vector<std::vector<bool> > components;
-	double range_freq;
-	bool range_is_square;
-	bool done;
-	bool running;
-};
-
-bool compare_composite_start(const PNComposite &first, const PNComposite &second){
-	if(first.xmit_time < second.xmit_time)
-		return true;
-	else
-		return false;
-}
 
 class dsn_pn_tx_impl : public dsn_pn_tx
 {
 private:
 	double d_time_step;
 	double d_cur_time;
-	double d_freq;
-	double d_phase;
 	int d_cur_profile_idx;
 	std::list<PNComposite> d_composite_queue;
 	PNComposite d_cur_composite;

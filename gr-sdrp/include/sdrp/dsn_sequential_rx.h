@@ -38,7 +38,7 @@ namespace gr {
       // gr::analog::dsn_sequential_rx::sptr
       typedef boost::shared_ptr<dsn_sequential_rx> sptr;
       
-      static sptr make(float loop_bw, float max_freq, float min_freq);
+      static sptr make(double samples_per_second, float loop_bw, float max_freq, float min_freq);
 
       virtual void set_loop_bandwidth(float bw) = 0;
       virtual void set_damping_factor(float df) = 0;

@@ -24,43 +24,15 @@
 #define INCLUDED_SDRP_DSN_SEQUENTIAL_TX_IMPL_H
 
 #include <sdrp/dsn_sequential_tx.h>
+#include <dsn_sequential_common.h>
 
 namespace gr {
 namespace sdrp {
-
-//Refer to DSN document for terminology used in this block:
-// deepspace.jpl.nasa.gov/dsndocs/810-005/203/203C.pdf
-enum sequenceState {
-	SEQ_T1, SEQ_T1_POST, SEQ_T2_PRE, SEQ_T2, SEQ_T2_POST
-};
-
-struct sequenceType {
-	double f0;
-	uint64_t XMIT;
-	uint64_t T1;
-	uint64_t T2;
-	int range_clk_component;
-	int chop_component;
-	int end_component;
-	bool range_is_square;
-	bool done;
-	bool running;
-	sequenceState state;
-};
-
-bool compare_sequence_start(const sequenceType &first, const sequenceType &second){
-	if(first.XMIT < second.XMIT)
-		return true;
-	else
-		return false;
-}
 
 class dsn_sequential_tx_impl : public dsn_sequential_tx
 {
 private:
 	double d_cur_time;
-	double d_freq;
-	double d_phase;
 	int d_cur_component;
 	std::list<sequenceType> sequence_queue;
 	sequenceType cur_sequence;

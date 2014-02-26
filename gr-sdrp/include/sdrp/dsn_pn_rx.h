@@ -38,7 +38,8 @@ namespace gr {
       // gr::analog::dsn_pn_rx::sptr
       typedef boost::shared_ptr<dsn_pn_rx> sptr;
       
-      static sptr make(float loop_bw, float max_freq, float min_freq);
+      static sptr make(double samples_per_second, float loop_bw, float max_freq, float min_freq);
+	virtual void queueRanging(std::string combination_method, uint64_t rx_time, double T, std::vector<std::vector<bool> > components, double range_freq, bool range_square) = 0;
 
       virtual void set_loop_bandwidth(float bw) = 0;
       virtual void set_damping_factor(float df) = 0;

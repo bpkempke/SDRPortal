@@ -44,8 +44,6 @@ dsn_sequential_tx_impl::dsn_sequential_tx_impl(double samples_per_second)
 	: sync_block("dsn_sequential_tx",
 			io_signature::make(1, 1, sizeof(gr_complex)),
 			io_signature::make(1, 1, sizeof(gr_complex))),
-	d_freq(0.0),
-	d_phase(0.0),
 	d_cal_time_count(0),
 	d_cal_time_seconds(0),
 	d_cal_time_frac(0.0),
