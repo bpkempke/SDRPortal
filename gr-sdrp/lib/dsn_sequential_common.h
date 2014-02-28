@@ -9,6 +9,7 @@ enum sequenceState {
 
 struct sequenceType {
 	double f0;
+	double downlink_freq;
 	uint64_t XMIT;
 	uint64_t RXTIME;
 	uint64_t T1;

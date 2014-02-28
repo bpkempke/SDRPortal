@@ -37,6 +37,8 @@ private:
 	uint64_t d_cal_time_seconds;
 	uint64_t d_samples_per_second;
 	double d_cal_time_frac;
+	float d_phase_last;
+	double d_combined_carrier_phase_error;
 
 	std::list<sequenceType> sequence_queue;
 	sequenceType cur_sequence;

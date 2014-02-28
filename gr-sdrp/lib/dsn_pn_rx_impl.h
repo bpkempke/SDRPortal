@@ -38,7 +38,17 @@ private:
 	uint64_t d_cal_time_count;
 	uint64_t d_cal_time_seconds;
 	uint64_t d_samples_per_second;
+	std::vector<float> d_history_circ_queue;
+	unsigned int d_history_circ_queue_idx;
+	std::vector<float> d_matched_filter_coeffs;
 	double d_cal_time_frac;
+
+	std::vector<std::vector<double> > d_correlator_matrix;
+	std::vector<std::vector<double> > d_range_clk_corr;
+	int d_range_clk_corr_idx;
+	double d_range_clk_corr_max;
+	int d_range_clk_corr_max_idx;
+	int d_last_max_trigger_idx;
 
 public:
 	dsn_pn_rx_impl(double samples_per_second, float loop_bw, float max_freq, float min_freq);

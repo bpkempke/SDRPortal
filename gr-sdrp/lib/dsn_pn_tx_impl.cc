@@ -127,14 +127,14 @@ int dsn_pn_tx_impl::work(int noutput_items,
 
 			//Check if the current sequence is running or not
 			if(d_cur_composite.running == false){
-				if(cur_time_sec >= d_cur_composite.xmit_time-1){
+				if(cur_time_sec >= d_cur_composite.xmit_time){
 					//Time to get this sequence running!
 					d_cur_composite.running = true;
 				}
 			} else {
 				out_phase = (range_clk_phase/pow%1.0)*M_TWOPI;
 				out_square = d_cur_composite.range_is_square;
-				int64_t pn_composite_idx = range_clk_cycles*2;
+				int64_t pn_composite_idx = (int64_t)(range_clk_phase*2);
 				if(out_phase > M_PI)
 					pn_composite_idx++;
 
@@ -166,6 +166,12 @@ int dsn_pn_tx_impl::work(int noutput_items,
 				if(cur_bit == false){
 					out_phase += M_PI;
 					out_phase %= M_TWOPI;
+				}
+
+				//Check to make sure we are still running
+				if(cur_seq_sec > d_cur_composite.T){
+					d_cur_composite.running = false;
+					d_cur_composite.done = true;
 				}
 			}
 

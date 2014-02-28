@@ -64,6 +64,7 @@ void dsn_sequential_rx_impl::queueSequence(double f0, double RXTIME, double T1, 
 
 	sequenceType new_sequence;
 	new_sequence.f0 = f0;
+	new_sequence.downlink_freq = f0*128/221*880;
 	new_sequence.RXTIME = RXTIME;
 	new_sequence.T1 = T1;
 	new_sequence.T2 = T2;
@@ -106,12 +107,23 @@ int dsn_sequential_rx_impl::work(int noutput_items,
 	gr_complex nco_out;
 
 	//Synchronize with a timed RX if there are any in the stream
-	//TODO: Figure out how timed RX works with USRP...
+	std::vector<tag_t> tags;
+	const uint64_t nread = this->nitems_read(0);
+	this->get_tags_in_range(tags, 0, nread, nread+noutput_items, pmt::string_to_symbol("rx_time"));
+	if(tags.size() > 0){
+		const pmt::pmt_t &value = tags[tags.size()-1].value;
+		d_cal_time_count = tags[tags.size()-1].offset-nread;
+		d_cal_time_seconds = pmt::to_uint64(pmt::tuple_ref(value, 0));
+		d_cal_time_frac = pmt::to_double(pmt::tuple_ref(value, 1));
+		//Always make sure it is just synchronizing to a second boundary.  Otherwise this block gets confused
+		assert(d_cal_time_frac == 0.0);
+	}
 
 	while(size-- > 0) {
-		nco_out = gr_expj(-d_phase);
-		*o_ref++ = nco_out;
-		error = phase_detector(*iptr++, d_phase);
+		gr::sincosf(d_phase, &t_imag, &t_real);
+		*optr = *iptr * gr_complex(t_real, -t_imag);
+		
+		error = phase_detector(*iptr, d_phase);
 
 		//TODO: Convert this code to do RX instead of TX...
 		if(cur_sequence.done){
@@ -120,7 +132,6 @@ int dsn_sequential_rx_impl::work(int noutput_items,
 				cur_sequence = sequence_queue.pop_front();
 				d_cur_component = cur_sequence.range_clk_component;
 			}
-			out[count] = in[count];
 		} else {
 			//TODO: Check amplitude and phase of output modulation
 			float out_real = 0.0;
@@ -136,19 +147,26 @@ int dsn_sequential_rx_impl::work(int noutput_items,
 			uint64_t cur_time_frac = (nread+count-d_cal_time_count)%d_samples_per_second;
 
 			//Figure out where we are in the current sequence
-			int64_t cur_seq_sec = cur_time_sec - cur_sequence.XMIT;
+			int64_t cur_seq_sec = cur_time_sec - cur_sequence.RXTIME;
 			uint64_t cur_seq_frac = cur_time_frac;
 
+			double phase_step = (d_phase < M_PI/2 && d_phase_last > 3*M_PI/2) ? M_TWOPI-d_phase_last+d_phase : 
+			                    (d_phase > 3*M_PI/2 && d_phase_last < M_PI/2) ? d_phase-M_TWOPI-d_phase_last :
+			                    d_phase-d_phase_last;
+			d_combined_carrier_phase_error += phase_step;
+
 			//Convert to number of range clock cycles
-			double range_clk_phase = (double)cur_seq_sec*pow(2.0, -range_clk_component)*cur_sequence.f0 + cur_seq_frac*pow(2.0, -range_clk_component)*cur_sequence.f0/d_samples_per_second;
+			double range_clk_phase = (double)cur_seq_sec*pow(2.0, -range_clk_component)*cur_sequence.f0 + cur_seq_frac*pow(2.0, -range_clk_component)*cur_sequence.f0/d_samples_per_second + d_combined_carrier_phase_error/M_TWOPI/cur_sequence.downlink_freq*pow(2.0, -range_clk_component)*cur_sequence.f0;
 			int64_t range_clk_cycles = (int64_t)(range_clk_phase);
 
 			//Check if the current sequence is running or not
 			if(cur_sequence.running == false){
-				if(cur_time_sec >= cur_sequence.XMIT-1){
+				if(cur_time_sec >= cur_sequence.RXTIME){
 					//Time to get this sequence running!
 					cur_sequence.running = true;
 					cur_sequence.state = SEQ_T1;
+
+					d_combined_carrier_phase_error;
 				}
 			} else {
 				//out1 --> primary component
@@ -162,10 +180,16 @@ int dsn_sequential_rx_impl::work(int noutput_items,
 
 				//Current sequence is running, figure out where we are in the sequence and react accordingly
 				switch(cur_sequence.state){
-					case SEQ_T1: //Includes 1-second padding before
+					case SEQ_T1: //Does not include 1-second padding before
 						//Don't need to wait for phase continuity here, just go if it's time
-						if(cur_seq_sec >= cur_sequence.T1)
+						if(out1_square)
+							correlateSquare(*optr, out1_phase);
+						else
+							correlateSine(*optr, out1_phase);
+						if(cur_seq_sec >= cur_sequence.T1){
+							recordPhase(d_cur_component);
 							cur_sequence.state = SEQ_T1_POST;
+						}
 						break;
 
 					case SEQ_T1_POST:
@@ -182,9 +206,20 @@ int dsn_sequential_rx_impl::work(int noutput_items,
 						break;
 
 					case SEQ_T2:
+
+						//Record phase and de-chop if necessary
+						if(d_cur_component >= cur_sequence.chop_component){
+							//TODO: How do I deal with chop components??
+						} else {
+							if(out1_square)
+								correlateSquare(*optr, out1_phase);
+							else
+								correlateSine(*optr, out1_phase);
+						}
 						//Check to see if the sequence is done yet
 						if(cur_seq_sec >= cur_sequence.T1+1+(cur_sequence.T2+1)*(d_cur_component-cur_sequence.range_clk_component)){
 							if(out1_phase >= 0.0 && d_out1_phase_last > M_PI){
+								recordPhase(d_cur_component);
 								cur_sequence.state = (d_cur_component == cur_sequence.end_component) ? SEQ_T2_POST : SEQ_T2_PRE;
 								d_cur_component++;
 							}
@@ -215,6 +250,11 @@ int dsn_sequential_rx_impl::work(int noutput_items,
 
 
 
+		d_phase_last = d_phase;
+
+		iptr++;
+		optr++;
+		
 		advance_loop(error);
 		phase_wrap();
 		frequency_limit();

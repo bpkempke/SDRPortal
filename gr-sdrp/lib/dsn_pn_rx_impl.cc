@@ -113,12 +113,24 @@ int dsn_pn_rx_impl::work(int noutput_items,
 	gr_complex nco_out;
 
 	//Synchronize with a timed RX if there are any in the stream
-	//TODO: Figure out how timed RX works with USRP...
+	std::vector<tag_t> tags;
+	const uint64_t nread = this->nitems_read(0);
+	this->get_tags_in_range(tags, 0, nread, nread+noutput_items, pmt::string_to_symbol("rx_time"));
+	if(tags.size() > 0){
+		const pmt::pmt_t &value = tags[tags.size()-1].value;
+		d_cal_time_count = tags[tags.size()-1].offset-nread;
+		d_cal_time_seconds = pmt::to_uint64(pmt::tuple_ref(value, 0));
+		d_cal_time_frac = pmt::to_double(pmt::tuple_ref(value, 1));
+		//Always make sure it is just synchronizing to a second boundary.  Otherwise this block gets confused
+		assert(d_cal_time_frac == 0.0);
+	}
+
 
 	while(size-- > 0) {
-		nco_out = gr_expj(-d_phase);
-		*o_ref++ = nco_out;
-		error = phase_detector(*iptr++, d_phase);
+		gr::sincosf(d_phase, &t_imag, &t_real);
+		*optr = *iptr * gr_complex(t_real, -t_imag);
+		
+		error = phase_detector(*iptr, d_phase);
 
 		//TODO: Make this work as RX not TX
 		if(d_cur_composite.done){
@@ -126,7 +138,6 @@ int dsn_pn_rx_impl::work(int noutput_items,
 			if(d_composite_queue.size() > 0){
 				d_cur_composite = d_composite_queue.pop_front();
 			}
-			out[count] = in[count];
 		} else {
 			float out_phase = 0.0;
 			bool out_square = false;
@@ -139,8 +150,13 @@ int dsn_pn_rx_impl::work(int noutput_items,
 			int64_t cur_seq_sec = cur_time_sec - d_cur_composite.xmit_time;
 			uint64_t cur_seq_frac = cur_time_frac;
 
+			double phase_step = (d_phase < M_PI/2 && d_phase_last > 3*M_PI/2) ? M_TWOPI-d_phase_last+d_phase : 
+			                    (d_phase > 3*M_PI/2 && d_phase_last < M_PI/2) ? d_phase-M_TWOPI-d_phase_last :
+			                    d_phase-d_phase_last;
+			d_combined_carrier_phase_error += phase_step;
+
 			//Convert to number of range clock cycles
-			double range_clk_phase = (double)cur_seq_sec*d_cur_composite.range_freq + cur_seq_frac*d_cur_composite.range_freq/d_samples_per_second;
+			double range_clk_phase = (double)cur_seq_sec*d_cur_composite.range_freq + cur_seq_frac*d_cur_composite.range_freq/d_samples_per_second + d_combined_carrier_phase_error/M_TWOPI/cur_sequence.downlink_freq*d_cur_composite.range_freq;
 			int64_t range_clk_cycles = (int64_t)(range_clk_phase);
 
 			//Check if the current sequence is running or not
@@ -148,42 +164,127 @@ int dsn_pn_rx_impl::work(int noutput_items,
 				if(cur_time_sec >= d_cur_composite.xmit_time-1){
 					//Time to get this sequence running!
 					d_cur_composite.running = true;
+
+					//Resize and initialize correlator matrix vectors
+					d_range_clk_corr_max = 0.0;
+					d_range_clk_corr_max_idx = 0;
+					d_last_max_trigger_idx = -1;
+					d_range_clk_corr_idx = 0;
+					d_range_clk_corr.resize(d_samples_per_second/d_cur_composite.range_freq/2);
+					for(unsigned int ii=0; ii < d_range_clk_corr.size(); ii++)
+						d_range_clk_corr[ii] = 0.0;
+					d_correlator_matrix.resize(d_cur_composite.components.size());
+					for(unsigned int ii=0; ii < d_cur_composite.components.size(); ii++){
+						d_correlator_matrix[ii].resize(d_cur_composite.components[ii].size());
+						for(unsigned int jj=0; jj < d_cur_composite.components[ii].size(); jj++){
+							d_correlator_matrix[ii][jj] = 0.0;
+						}
+					}
+
+					//Change the amount of history for matched filtering
+					d_history_circ_queue_idx = 0;
+					d_history_circ_queue.resize(d_samples_per_second/d_cur_composite.range_freq/2);
+					d_matched_filter_coeffs.resize(d_samples_per_second/d_cur_composite.range_freq/2);
+
+					//Initialize the matched filter coefficients
+					for(unsigned int ii=0; ii < d_matched_filter_coeffs.size(); ii++){
+						d_matched_filter_coeffs[ii] = sin((float)ii/d_cur_composite.range_freq);
+						d_history_circ_queue[ii] = 0.0;
+					}
+
 				}
 			} else {
 				out_phase = (range_clk_phase/pow%1.0)*M_TWOPI;
 				out_square = d_cur_composite.range_is_square;
-				int64_t pn_composite_idx = range_clk_cycles*2;
+				int64_t pn_composite_idx = (int64_t)(range_clk_phase*2);
 				if(out_phase > M_PI)
 					pn_composite_idx++;
 
-				bool cur_bit = (d_cur_composite.cm == CM_AND) ? true : false;
-				int vote_count = 0;
-				for(unsigned int ii=0; ii < d_cur_composite.components.size(); ii++){
-					int cur_component_idx = pn_composite_idx % d_cur_composite.components[ii].size();
-					switch(d_cur_composite.cm){
-						case CM_AND:
-							cur_bit &= d_cur_composite.components[ii][cur_component_idx];
-							break;
-						case CM_OR:
-							cur_bit |= d_cur_composite.components[ii][cur_component_idx];
-							break;
-						case CM_XOR:
-							cur_bit ^= d_cur_composite.components[ii][cur_component_idx];
-							break;
-						case CM_VOTE:
-							if(d_cur_composite.components[ii][cur_component_idx]) vote_count++;
-							break;
+				//Do matched filtering
+				float matched_filter_result = 0.0;
+				d_history_circ_queue[d_history_circ_queue_idx] = *optr.imag;
+				int history_idx = (int)d_history_circ_queue_idx;
+				for(unsigned int ii=0; ii < d_history_circ_queue.size(); ii++){
+					matched_filter_result += d_history_circ_queue[history_idx]*d_matched_filter_coeffs[ii];
+					history_idx--;
+					if(history_idx < 0)
+						history_idx = d_history_circ_queue.size()-1;
+				}
+				d_history_circ_queue_idx++;
+				if(d_history_circ_queue_idx >= d_history_circ_queue.size())
+					d_history_circ_queue_idx = 0;
+
+				//Update range clock correlator
+				//This is so that we known when to update the correlator matrix
+				bool max_trigger = false;
+				int new_range_clk_corr_idx = ((range_clk_phase*2) % 1) * .9999 * d_range_
+				while(d_range_clk_corr_idx != new_range_clk_corr_idx){
+					d_range_clk_corr[d_range_clk_corr_idx] += abs(matched_filter_result);
+					if(d_range_clk_corr[d_range_clk_corr_idx] > d_range_clk_corr_max){
+						d_range_clk_corr_max = d_range_clk_corr[d_range_clk_corr_idx];
+						d_range_clk_corr_max_idx = d_range_clk_corr_idx;
+						max_trigger = true;
+					} else if(d_range_clk_corr_idx == d_range_clk_corr_max_idx){
+						max_trigger = true;
+					}
+					d_range_clk_corr_idx = (d_range_clk_corr_idx + 1) % d_range_clk_corr.size();
+				}
+
+				//If we hit a max in the clock correlation and we haven't trigger for this bit before, go ahead and update correlator matrices
+				if(max_trigger && pn_composite_idx != d_last_max_trigger_idx){
+					d_last_max_trigger_idx = pn_composite_idx;
+					for(unsigned int ii=0; ii < d_cur_composite.components.size(); ii++){
+						//Update d_correlator_matrix with new matched filter measurements
+						d_correlator_matrix[ii][pn_composite_idx % d_cur_composite.components[ii].size()] += matched_filter_result;
 					}
 				}
 
-				//set the current bit according to vote if needed
-				if(d_cur_composite.cm == CM_VOTE)
-					cur_bit = (vote_count > d_cur_composite.components.size()/2);
+				//Check to make sure we are still running
+				if(cur_seq_sec > d_cur_composite.T){
+					d_cur_composite.running = false;
+					d_cur_composite.done = true;
 
-				//1 corresponds to positive half-cycle, 0 corresponds to negative half-cycle
-				if(cur_bit == false){
-					out_phase += M_PI;
-					out_phase %= M_TWOPI;
+					//Figure out what the range was by first determining each component's delay, then applying the chinese remainder theorem
+					std::vector<int> best_component_delay(d_cur_composite.components.size());
+					for(unsigned int ii=0; ii < d_cur_composite.components.size(); ii++){
+						double best_corr = 0.0;
+						int best_corr_shift = 0;
+						//Try every possible shift and find the best fit
+						for(unsigned int shift=0; shift < d_cur_composite.components[ii].size(); shift++){
+							double total_corr = 0.0;
+							for(unsigned int kk=0; kk < d_cur_composite.components[ii].size(); kk++){
+								double cur_corr = d_correlator_matrix[ii][(shift+kk) % d_cur_composite.components[ii].size()];
+								//Flip correlation if it's supposed to be a negative cycle
+								if(!d_cur_composite.components[ii][kk]) cur_corr = -cur_corr;
+								total_corr += cur_corr;
+							}
+							if(total_corr > best_corr){
+								best_corr = total_corr;
+								best_corr_shift = shift;
+								best_component_delay[ii] = shift;
+							}
+						}
+					}
+
+					//Calculate overall PN pattern length
+					unsigned int pn_length = 1;
+					for(unsigned int ii=0; ii < d_cur_composite.components.size(); ii++)
+						pn_length *= d_cur_composite.components[ii].size();
+					//Figure out range using brute-force (would be better with generalized chinese remainder theorem...)
+					for(unsigned int ii=0; ii < pn_length; ii++){
+						unsigned int num_matching = 0;
+						for(unsigned int jj=0; jj < d_cur_composite.components.size(); jj++){
+							if(ii % jj == best_component_delay[jj])
+								num_matching++;
+						}
+						if(num_matching == d_cur_composite.components.size()){
+							//Found delay!
+							//TODO: Figure out what to do with result....
+							//TODO: Figure out what the inherent delay is within this gnuradio implementation
+						}
+					}
+
+					//TODO: Could get better accuracy if we included range clock phase measurements in as well...
 				}
 			}
 
@@ -195,6 +296,11 @@ int dsn_pn_rx_impl::work(int noutput_items,
 		}
 
 
+		d_phase_last = d_phase;
+
+		iptr++;
+		optr++;
+		
 		advance_loop(error);
 		phase_wrap();
 		frequency_limit();
