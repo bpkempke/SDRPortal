@@ -60,7 +60,7 @@ dsn_sequential_rx_impl::~dsn_sequential_rx_impl() {
 
 }
 
-void dsn_sequential_rx_impl::queueSequence(double f0, double RXTIME, double T1, double T2, int range_clk_component, int chop_component, int end_component, bool range_is_square){
+void dsn_sequential_rx_impl::queueSequence(double f0, unsigned int interp_factor, double RXTIME, double T1, double T2, int range_clk_component, int chop_component, int end_component, bool range_is_square){
 
 	sequenceType new_sequence;
 	new_sequence.f0 = f0;
@@ -71,6 +71,7 @@ void dsn_sequential_rx_impl::queueSequence(double f0, double RXTIME, double T1, 
 	new_sequence.range_clk_component = range_clk_component;
 	new_sequence.chop_component = chop_component;
 	new_sequence.end_component = end_component;
+	new_sequence.interp_factor = interp_factor;
 	new_sequence.range_is_square = range_is_square;
 	new_sequence.done = false;
 	new_sequence.running = false;
@@ -93,6 +94,73 @@ float dsn_sequential_rx_impl::phase_detector(gr_complex sample, float ref_phase)
 	float sample_phase;
 	sample_phase = gr::fast_atan2f(sample.imag(), sample.real());
 	return mod_2pi(sample_phase - ref_phase);
+}
+
+void dsn_sequential_rx_impl::recordPhase(int component1, int component2, bool c1_is_square, bool c2_is_square){
+	//Save for readability
+	unsigned int interp_factor = cur_sequence.interp_factor;
+
+	//Only use component2 if it's lower than component1
+	bool use_c2 = true;
+	if(component1 < component2)
+		use_c2 = false;
+
+	//Come up with the expected sequence
+	std::vector<double> expected_sequence(cur_sequence.interp_factor, 0.0);
+	for(unsigned int ii=0; ii < cur_sequence.interp_factor; ii++){
+		double c1_phase = (double)(ii)/cur_sequence.interp_factor*M_TWOPI;
+		expected_sequence[ii] = sin(c1_phase);
+		if(c1_is_square)
+			expected_sequence[ii] = (expected_sequence[ii] > 0.0) ? 1.0 : -1.0;
+		if(use_c2){
+			double c2_phase = c1_phase*pow(2, component1-component2);
+			double c2_val = sin(c2_phase);
+			if(c2_is_square)
+				c2_val = (c2_val > 0.0) ? 1.0 : -1.0;
+			expected_sequence[ii] = expected_sequence[ii] * c2_val;
+		}
+	}
+
+	//Perform actual correlation to get phase
+	double max_corr = 0.0;
+	unsigned int max_corr_shift = 0;
+	for(unsigned int shift=0; shift < cur_sequence.interp_factor; shift++){
+		double cur_corr = 0.0;
+		for(unsigned int ii=0; ii < cur_sequence.interp_factor; ii++){
+			cur_corr += expected_sequence[ii]*d_correlator[(ii+shift)%cur_sequence.interp_factor];
+		}
+		if(cur_corr > max_corr){
+			max_corr = cur_corr;
+			max_corr_shift = shift;
+		}
+	}
+
+	//Save max correlation and return
+	d_corr_results[component1] = max_corr_shift;
+}
+
+void dsn_sequential_rx_impl::resetCorrelator(){
+	//Resize and fill with zeros
+	d_correlator.resize(cur_sequence.interp_factor);
+	for(unsigned int ii=0; ii < d_correlator.size(); ii++){
+		d_correlator[ii] = 0.0;
+	}
+	d_correlator_idx = 0;
+	d_corr_results.resize(cur_sequence.end_component);
+	for(unsigned int ii=0; ii < d_corr_results.size(); ii++){
+		d_corr_results[ii] = 0;
+	}
+}
+
+void dsn_sequential_rx_impl::updateCorrelator(float in, float phase){
+	//This isn't ideal but assuming interp_factor is high enough, it's close enough...
+	unsigned int new_correlator_idx = (unsigned int)((phase % 1) * d_correlator.size());
+	while(d_correlator_idx != new_correlator_idx){
+		d_correlator[d_correlator_idx] += in;
+		d_correlator_idx++;
+		if(d_correlator_idx >= d_correlator.size())
+			d_correlator_idx = 0;
+	}
 }
 
 int dsn_sequential_rx_impl::work(int noutput_items,
@@ -131,6 +199,7 @@ int dsn_sequential_rx_impl::work(int noutput_items,
 			if(sequence_queue.size() > 0){
 				cur_sequence = sequence_queue.pop_front();
 				d_cur_component = cur_sequence.range_clk_component;
+				resetCorrelator();
 			}
 		} else {
 			//TODO: Check amplitude and phase of output modulation
@@ -182,21 +251,11 @@ int dsn_sequential_rx_impl::work(int noutput_items,
 				switch(cur_sequence.state){
 					case SEQ_T1: //Does not include 1-second padding before
 						//Don't need to wait for phase continuity here, just go if it's time
-						if(out1_square)
-							correlateSquare(*optr, out1_phase);
-						else
-							correlateSine(*optr, out1_phase);
+						updateCorrelator(*optr.imag, out1_phase);
 						if(cur_seq_sec >= cur_sequence.T1){
-							recordPhase(d_cur_component);
-							cur_sequence.state = SEQ_T1_POST;
-						}
-						break;
-
-					case SEQ_T1_POST:
-						//Frequency equals range clock until a switch can be made to the next component
-						if(out1_phase >= 0.0 && d_out1_phase_last > M_PI){
-							d_cur_component++;
-							cur_sequence.state = STATE_T2_PRE;
+							recordPhase(d_cur_component, cur_sequence.chop_component, out1_square, out2_square);
+							resetCorrelator();
+							cur_sequence.state = SEQ_T2_PRE;
 						}
 						break;
 
@@ -207,22 +266,13 @@ int dsn_sequential_rx_impl::work(int noutput_items,
 
 					case SEQ_T2:
 
-						//Record phase and de-chop if necessary
-						if(d_cur_component >= cur_sequence.chop_component){
-							//TODO: How do I deal with chop components??
-						} else {
-							if(out1_square)
-								correlateSquare(*optr, out1_phase);
-							else
-								correlateSine(*optr, out1_phase);
-						}
+						updateCorrelator(*optr.imag, out1_phase);
+
 						//Check to see if the sequence is done yet
 						if(cur_seq_sec >= cur_sequence.T1+1+(cur_sequence.T2+1)*(d_cur_component-cur_sequence.range_clk_component)){
-							if(out1_phase >= 0.0 && d_out1_phase_last > M_PI){
-								recordPhase(d_cur_component);
-								cur_sequence.state = (d_cur_component == cur_sequence.end_component) ? SEQ_T2_POST : SEQ_T2_PRE;
-								d_cur_component++;
-							}
+							recordPhase(d_cur_component, cur_seuence.chop_component, out1_square, out2_square);
+							cur_sequence.state = (d_cur_component == cur_sequence.end_component) ? SEQ_T2_POST : SEQ_T2_PRE;
+							d_cur_component++;
 						}
 
 						break;
@@ -231,23 +281,15 @@ int dsn_sequential_rx_impl::work(int noutput_items,
 						if(cur_seq_sec >= cur_sequence.T1+2+(cur_sequence.T2+1)*(d_cur_component-cur_sequence.range_clk_component-1)){
 							cur_sequence.done = true;
 							cur_sequence.running = false;
+							//TODO: Report correlator results somewhere!
 						}
 
 						break;
 				}
 
-				d_out1_phase_last = out1_phase;
 			}
 
-			gr_complex out_sample;
-			out_sample.real = (out1_square) ? 
-				((out1_phase > M_PI/2 && out1_phase < 3*M_PI/2) ? -1.0 : 1.0) : cos(out1_phase);
-			out_sample.real += (out2_square) ? 
-				((out2_phase  M_PI/2 && out2_phase < 3*M_PI/2) ? -1.0 : 1.0) : cos(out2_phase);
-			out_sample.imag = 0.0;
-			out[count] = in[count] + out_sample;
 		}
-
 
 
 		d_phase_last = d_phase;

@@ -40,6 +40,8 @@ namespace gr {
       
       static sptr make(double samples_per_second, float loop_bw, float max_freq, float min_freq);
 
+	virtual void queueSequence(double f0, unsigned int interp_factor, uint64_t RXTIME, uint64_t T1, uint64_t T2, int range_clk_component, int chop_component, int end_component, bool range_is_square) = 0;
+
       virtual void set_loop_bandwidth(float bw) = 0;
       virtual void set_damping_factor(float df) = 0;
       virtual void set_alpha(float alpha) = 0;

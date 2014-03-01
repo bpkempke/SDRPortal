@@ -17,6 +17,7 @@ struct sequenceType {
 	int range_clk_component;
 	int chop_component;
 	int end_component;
+	unsigned int interp_factor;
 	bool range_is_square;
 	bool done;
 	bool running;

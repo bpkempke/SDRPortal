@@ -39,16 +39,25 @@ private:
 	double d_cal_time_frac;
 	float d_phase_last;
 	double d_combined_carrier_phase_error;
+	int d_cur_component;
 
 	std::list<sequenceType> sequence_queue;
 	sequenceType cur_sequence;
+
+	std::vector<double> d_correlator;
+	unsigned int d_correlator_idx;
+	std::vector<unsigned int> d_corr_results;
+
+	void recordPhase(int component1, int component2, bool c1_is_square, bool c2_is_square);
+	void resetCorrelator();
+	void updateCorrelator(float in, float phase);
 
 public:
 	dsn_sequential_rx_impl(double samples_per_second, float loop_bw, float max_freq, float min_freq);
 	~dsn_sequential_rx_impl();
 
 	float mod_2pi(float in);
-	virtual void queueSequence(double f0, uint64_t RXTIME, uint64_t T1, uint64_t T2, int range_clk_component, int chop_component, int end_component, bool range_is_square);
+	virtual void queueSequence(double f0, unsigned int interp_factor, uint64_t RXTIME, uint64_t T1, uint64_t T2, int range_clk_component, int chop_component, int end_component, bool range_is_square);
 
 	void set_loop_bandwidth(float bw);
 	void set_damping_factor(float df);
