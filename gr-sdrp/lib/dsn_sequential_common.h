@@ -1,3 +1,6 @@
+#ifndef INCLUDED_SDRP_DSN_SEQUENTIAL_COMMON_H
+#define INCLUDEd_SDRP_DSN_SEQUENTIAL_COMMON_H
+
 namespace gr {
 namespace sdrp {
 
@@ -24,7 +27,7 @@ struct sequenceType {
 	sequenceState state;
 };
 
-bool compare_sequence_start(const sequenceType &first, const sequenceType &second){
+inline bool compare_sequence_start(const sequenceType &first, const sequenceType &second){
 	if(first.XMIT < second.XMIT)
 		return true;
 	else
@@ -33,3 +36,5 @@ bool compare_sequence_start(const sequenceType &first, const sequenceType &secon
 
 } /* namespace sdrp */
 } /* namespace gr */
+
+#endif

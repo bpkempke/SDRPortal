@@ -62,7 +62,7 @@ dsn_pn_rx_impl::~dsn_pn_rx_impl() {
 
 }
 
-void dsn_pn_tx_impl::queueRanging(std::string combination_method, uint64_t rx_time, double T, std::vector<std::vector<bool> > components, double range_freq, bool range_is_square){
+void dsn_pn_rx_impl::queueRanging(std::string combination_method, double downlink_freq, uint64_t rx_time, double T, std::vector<std::vector<bool> > components, double range_freq, bool range_is_square){
 	//First switch combination_method to lowercase for later ease
 	std::locale loc;
 	for(int ii=0; ii < combination_method.size(); ii++)
@@ -73,6 +73,7 @@ void dsn_pn_tx_impl::queueRanging(std::string combination_method, uint64_t rx_ti
 	new_composite.cm = (combination_method == "and") ? CM_AND :
 	                  (combination_method == "or") ? CM_OR :
 	                  (combination_method == "xor") ? CM_XOR : CM_VOTE;
+	new_composite.downlink_freq = downlink_freq;
 	new_composite.rx_time = rx_time;
 	new_composite.T = T;
 	new_composite.components = components;
@@ -105,7 +106,8 @@ int dsn_pn_rx_impl::work(int noutput_items,
 		gr_vector_const_void_star &input_items,
 		gr_vector_void_star &output_items) {
 	const gr_complex *iptr = (gr_complex*)input_items[0];
-	gr_complex *o_ref = (gr_complex*)output_items[0];
+	gr_complex *optr = (gr_complex*)output_items[0];
+	int count=0;
 
 	float error;
 	float t_imag, t_real;
@@ -126,7 +128,7 @@ int dsn_pn_rx_impl::work(int noutput_items,
 	}
 
 
-	while(size-- > 0) {
+	while(count < noutput_items) {
 		gr::sincosf(d_phase, &t_imag, &t_real);
 		*optr = *iptr * gr_complex(t_real, -t_imag);
 		
@@ -136,7 +138,8 @@ int dsn_pn_rx_impl::work(int noutput_items,
 		if(d_cur_composite.done){
 			//Nothing to do if there's no valid sequence, just pass samples through instead
 			if(d_composite_queue.size() > 0){
-				d_cur_composite = d_composite_queue.pop_front();
+				d_cur_composite = d_composite_queue.front();
+				d_composite_queue.pop_front();
 			}
 		} else {
 			float out_phase = 0.0;
@@ -156,7 +159,7 @@ int dsn_pn_rx_impl::work(int noutput_items,
 			d_combined_carrier_phase_error += phase_step;
 
 			//Convert to number of range clock cycles
-			double range_clk_phase = (double)cur_seq_sec*d_cur_composite.range_freq + cur_seq_frac*d_cur_composite.range_freq/d_samples_per_second + d_combined_carrier_phase_error/M_TWOPI/cur_sequence.downlink_freq*d_cur_composite.range_freq;
+			double range_clk_phase = (double)cur_seq_sec*d_cur_composite.range_freq + cur_seq_frac*d_cur_composite.range_freq/d_samples_per_second + d_combined_carrier_phase_error/M_TWOPI/d_cur_composite.downlink_freq*d_cur_composite.range_freq;
 			int64_t range_clk_cycles = (int64_t)(range_clk_phase);
 
 			//Check if the current sequence is running or not
@@ -170,9 +173,11 @@ int dsn_pn_rx_impl::work(int noutput_items,
 					d_range_clk_corr_max_idx = 0;
 					d_last_max_trigger_idx = -1;
 					d_range_clk_corr_idx = 0;
+
 					d_range_clk_corr.resize(d_samples_per_second/d_cur_composite.range_freq/2);
 					for(unsigned int ii=0; ii < d_range_clk_corr.size(); ii++)
 						d_range_clk_corr[ii] = 0.0;
+
 					d_correlator_matrix.resize(d_cur_composite.components.size());
 					for(unsigned int ii=0; ii < d_cur_composite.components.size(); ii++){
 						d_correlator_matrix[ii].resize(d_cur_composite.components[ii].size());
@@ -194,7 +199,7 @@ int dsn_pn_rx_impl::work(int noutput_items,
 
 				}
 			} else {
-				out_phase = (range_clk_phase/pow%1.0)*M_TWOPI;
+				out_phase = fmod(range_clk_phase,1.0)*M_TWOPI;
 				out_square = d_cur_composite.range_is_square;
 				int64_t pn_composite_idx = (int64_t)(range_clk_phase*2);
 				if(out_phase > M_PI)
@@ -202,7 +207,7 @@ int dsn_pn_rx_impl::work(int noutput_items,
 
 				//Do matched filtering
 				float matched_filter_result = 0.0;
-				d_history_circ_queue[d_history_circ_queue_idx] = *optr.imag;
+				d_history_circ_queue[d_history_circ_queue_idx] = optr->imag();
 				int history_idx = (int)d_history_circ_queue_idx;
 				for(unsigned int ii=0; ii < d_history_circ_queue.size(); ii++){
 					matched_filter_result += d_history_circ_queue[history_idx]*d_matched_filter_coeffs[ii];
@@ -217,7 +222,7 @@ int dsn_pn_rx_impl::work(int noutput_items,
 				//Update range clock correlator
 				//This is so that we known when to update the correlator matrix
 				bool max_trigger = false;
-				int new_range_clk_corr_idx = ((range_clk_phase*2) % 1) * .9999 * d_range_
+				int new_range_clk_corr_idx = fmod((range_clk_phase*2),1.0) * d_range_clk_corr.size();
 				while(d_range_clk_corr_idx != new_range_clk_corr_idx){
 					d_range_clk_corr[d_range_clk_corr_idx] += abs(matched_filter_result);
 					if(d_range_clk_corr[d_range_clk_corr_idx] > d_range_clk_corr_max){
@@ -288,11 +293,8 @@ int dsn_pn_rx_impl::work(int noutput_items,
 				}
 			}
 
-			gr_complex out_sample;
-			out_sample.real = (out_square) ? 
-				((out_phase > M_PI) ? -1.0 : 1.0) : sin(out1_phase);
-			out_sample.imag = 0.0;
-			out[count] = in[count] + out_sample;
+			float real_out = (out_square) ? ((out_phase > M_PI) ? -1.0 : 1.0) : sin(out_phase);
+			gr_complex out_sample(real_out, 0.0);
 		}
 
 
@@ -304,6 +306,8 @@ int dsn_pn_rx_impl::work(int noutput_items,
 		advance_loop(error);
 		phase_wrap();
 		frequency_limit();
+
+		count++;
 	}
 	return noutput_items;
 }

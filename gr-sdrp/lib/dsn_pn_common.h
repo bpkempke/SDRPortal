@@ -1,3 +1,6 @@
+#ifndef INCLUDED_SDRP_DSN_PN_COMMON_H
+#define INCLUDED_SDRP_DSN_PN_COMMON_H
+
 namespace gr {
 namespace sdrp {
 
@@ -7,6 +10,7 @@ enum combinationMethod {
 
 struct PNComposite {
 	combinationMethod cm;
+	double downlink_freq;
 	uint64_t xmit_time;
 	uint64_t rx_time;
 	double T;
@@ -17,7 +21,7 @@ struct PNComposite {
 	bool running;
 };
 
-bool compare_composite_start(const PNComposite &first, const PNComposite &second){
+inline bool compare_composite_start(const PNComposite &first, const PNComposite &second){
 	if(first.xmit_time < second.xmit_time)
 		return true;
 	else
@@ -26,3 +30,5 @@ bool compare_composite_start(const PNComposite &first, const PNComposite &second
 
 } /* namespace sdrp */
 } /* namespace gr */
+
+#endif

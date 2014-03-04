@@ -42,9 +42,11 @@ private:
 	unsigned int d_history_circ_queue_idx;
 	std::vector<float> d_matched_filter_coeffs;
 	double d_cal_time_frac;
+	double d_phase_last;
+	double d_combined_carrier_phase_error;
 
 	std::vector<std::vector<double> > d_correlator_matrix;
-	std::vector<std::vector<double> > d_range_clk_corr;
+	std::vector<double> d_range_clk_corr;
 	int d_range_clk_corr_idx;
 	double d_range_clk_corr_max;
 	int d_range_clk_corr_max_idx;
@@ -55,7 +57,7 @@ public:
 	~dsn_pn_rx_impl();
 	
 	float mod_2pi(float in);
-	virtual void queueRanging(std::string combination_method, uint64_t rx_time, double T, std::vector<std::vector<bool> > components, double range_freq, bool range_square);
+	virtual void queueRanging(std::string combination_method, double downlink_freq, uint64_t rx_time, double T, std::vector<std::vector<bool> > components, double range_freq, bool range_square);
 	
 	void set_loop_bandwidth(float bw);
 	void set_damping_factor(float df);

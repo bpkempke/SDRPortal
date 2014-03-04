@@ -60,7 +60,7 @@ dsn_sequential_rx_impl::~dsn_sequential_rx_impl() {
 
 }
 
-void dsn_sequential_rx_impl::queueSequence(double f0, unsigned int interp_factor, double RXTIME, double T1, double T2, int range_clk_component, int chop_component, int end_component, bool range_is_square){
+void dsn_sequential_rx_impl::queueSequence(double f0, unsigned int interp_factor, uint64_t RXTIME, uint64_t T1, uint64_t T2, int range_clk_component, int chop_component, int end_component, bool range_is_square){
 
 	sequenceType new_sequence;
 	new_sequence.f0 = f0;
@@ -154,7 +154,7 @@ void dsn_sequential_rx_impl::resetCorrelator(){
 
 void dsn_sequential_rx_impl::updateCorrelator(float in, float phase){
 	//This isn't ideal but assuming interp_factor is high enough, it's close enough...
-	unsigned int new_correlator_idx = (unsigned int)((phase % 1) * d_correlator.size());
+	unsigned int new_correlator_idx = (unsigned int)(fmod(phase, 1.0) * d_correlator.size());
 	while(d_correlator_idx != new_correlator_idx){
 		d_correlator[d_correlator_idx] += in;
 		d_correlator_idx++;
@@ -167,7 +167,8 @@ int dsn_sequential_rx_impl::work(int noutput_items,
 		gr_vector_const_void_star &input_items,
 		gr_vector_void_star &output_items) {
 	const gr_complex *iptr = (gr_complex*)input_items[0];
-	gr_complex *o_ref = (gr_complex*)output_items[0];
+	gr_complex *optr = (gr_complex*)output_items[0];
+	int count=0;
 
 	float error;
 	float t_imag, t_real;
@@ -187,7 +188,7 @@ int dsn_sequential_rx_impl::work(int noutput_items,
 		assert(d_cal_time_frac == 0.0);
 	}
 
-	while(size-- > 0) {
+	while(count < noutput_items) {
 		gr::sincosf(d_phase, &t_imag, &t_real);
 		*optr = *iptr * gr_complex(t_real, -t_imag);
 		
@@ -197,7 +198,8 @@ int dsn_sequential_rx_impl::work(int noutput_items,
 		if(cur_sequence.done){
 			//Nothing to do if there's no valid sequence, just pass samples through instead
 			if(sequence_queue.size() > 0){
-				cur_sequence = sequence_queue.pop_front();
+				cur_sequence = sequence_queue.front();
+				sequence_queue.pop_front();
 				d_cur_component = cur_sequence.range_clk_component;
 				resetCorrelator();
 			}
@@ -225,7 +227,7 @@ int dsn_sequential_rx_impl::work(int noutput_items,
 			d_combined_carrier_phase_error += phase_step;
 
 			//Convert to number of range clock cycles
-			double range_clk_phase = (double)cur_seq_sec*pow(2.0, -range_clk_component)*cur_sequence.f0 + cur_seq_frac*pow(2.0, -range_clk_component)*cur_sequence.f0/d_samples_per_second + d_combined_carrier_phase_error/M_TWOPI/cur_sequence.downlink_freq*pow(2.0, -range_clk_component)*cur_sequence.f0;
+			double range_clk_phase = (double)cur_seq_sec*pow(2.0, -cur_sequence.range_clk_component)*cur_sequence.f0 + cur_seq_frac*pow(2.0, -cur_sequence.range_clk_component)*cur_sequence.f0/d_samples_per_second + d_combined_carrier_phase_error/M_TWOPI/cur_sequence.downlink_freq*pow(2.0, -cur_sequence.range_clk_component)*cur_sequence.f0;
 			int64_t range_clk_cycles = (int64_t)(range_clk_phase);
 
 			//Check if the current sequence is running or not
@@ -240,18 +242,18 @@ int dsn_sequential_rx_impl::work(int noutput_items,
 			} else {
 				//out1 --> primary component
 				//out2 --> chop component (if any)
-				out1_phase = ((range_clk_phase/pow(2.0, d_cur_component-cur_sequence.range_clk_component))%1.0)*M_TWOPI;
+				out1_phase = fmod((range_clk_phase/pow(2.0, d_cur_component-cur_sequence.range_clk_component)),1.0)*M_TWOPI;
 				out2_phase = (d_cur_component >= cur_sequence.chop_component) ? 
-					((range_clk_phase/pow(2.0, cur_sequence.chop_component-cur_sequence.range_clk_component))%1.0)*M_TWOPI : 
+					fmod((range_clk_phase/pow(2.0, cur_sequence.chop_component-cur_sequence.range_clk_component)),1.0)*M_TWOPI : 
 					0.0;
-				out1_square = cur_component.range_is_square | (d_cur_component >= cur_sequence.chop_component);
+				out1_square = cur_sequence.range_is_square | (d_cur_component >= cur_sequence.chop_component);
 				out2_square = false; //Don't think there's any case where the chop component isn't square...
 
 				//Current sequence is running, figure out where we are in the sequence and react accordingly
 				switch(cur_sequence.state){
 					case SEQ_T1: //Does not include 1-second padding before
 						//Don't need to wait for phase continuity here, just go if it's time
-						updateCorrelator(*optr.imag, out1_phase);
+						updateCorrelator(optr->imag(), out1_phase);
 						if(cur_seq_sec >= cur_sequence.T1){
 							recordPhase(d_cur_component, cur_sequence.chop_component, out1_square, out2_square);
 							resetCorrelator();
@@ -266,11 +268,11 @@ int dsn_sequential_rx_impl::work(int noutput_items,
 
 					case SEQ_T2:
 
-						updateCorrelator(*optr.imag, out1_phase);
+						updateCorrelator(optr->imag(), out1_phase);
 
 						//Check to see if the sequence is done yet
 						if(cur_seq_sec >= cur_sequence.T1+1+(cur_sequence.T2+1)*(d_cur_component-cur_sequence.range_clk_component)){
-							recordPhase(d_cur_component, cur_seuence.chop_component, out1_square, out2_square);
+							recordPhase(d_cur_component, cur_sequence.chop_component, out1_square, out2_square);
 							cur_sequence.state = (d_cur_component == cur_sequence.end_component) ? SEQ_T2_POST : SEQ_T2_PRE;
 							d_cur_component++;
 						}
@@ -300,6 +302,8 @@ int dsn_sequential_rx_impl::work(int noutput_items,
 		advance_loop(error);
 		phase_wrap();
 		frequency_limit();
+
+		count++;
 	}
 	return noutput_items;
 }

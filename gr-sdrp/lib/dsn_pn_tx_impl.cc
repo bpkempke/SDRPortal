@@ -106,7 +106,8 @@ int dsn_pn_tx_impl::work(int noutput_items,
 		if(d_cur_composite.done){
 			//Nothing to do if there's no valid sequence, just pass samples through instead
 			if(d_composite_queue.size() > 0){
-				d_cur_composite = d_composite_queue.pop_front();
+				d_cur_composite = d_composite_queue.front();
+				d_composite_queue.pop_front();
 			}
 			out[count] = in[count];
 		} else {
@@ -132,7 +133,7 @@ int dsn_pn_tx_impl::work(int noutput_items,
 					d_cur_composite.running = true;
 				}
 			} else {
-				out_phase = (range_clk_phase/pow%1.0)*M_TWOPI;
+				out_phase = fmod(range_clk_phase,1.0)*M_TWOPI;
 				out_square = d_cur_composite.range_is_square;
 				int64_t pn_composite_idx = (int64_t)(range_clk_phase*2);
 				if(out_phase > M_PI)
@@ -165,7 +166,7 @@ int dsn_pn_tx_impl::work(int noutput_items,
 				//1 corresponds to positive half-cycle, 0 corresponds to negative half-cycle
 				if(cur_bit == false){
 					out_phase += M_PI;
-					out_phase %= M_TWOPI;
+					out_phase = fmod(out_phase,M_TWOPI);
 				}
 
 				//Check to make sure we are still running
@@ -175,10 +176,9 @@ int dsn_pn_tx_impl::work(int noutput_items,
 				}
 			}
 
-			gr_complex out_sample;
-			out_sample.real = (out_square) ? 
-				((out_phase > M_PI) ? -1.0 : 1.0) : sin(out1_phase);
-			out_sample.imag = 0.0;
+			float real_part = (out_square) ? 
+				((out_phase > M_PI) ? -1.0 : 1.0) : sin(out_phase);
+			gr_complex out_sample(real_part, 0.0);
 			out[count] = in[count] + out_sample;
 		}
 

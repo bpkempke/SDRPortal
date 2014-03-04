@@ -53,7 +53,7 @@ dsn_sequential_tx_impl::dsn_sequential_tx_impl(double samples_per_second)
 	cur_sequence.done = true;
 }
 
-void dsn_sequential_tx_impl::queueSequence(double f0, double XMIT, double T1, double T2, int range_clk_component, int chop_component, int end_component, bool range_is_square){
+void dsn_sequential_tx_impl::queueSequence(double f0, uint64_t XMIT, uint64_t T1, uint64_t T2, int range_clk_component, int chop_component, int end_component, bool range_is_square){
 
 	sequenceType new_sequence;
 	new_sequence.f0 = f0;
@@ -98,7 +98,8 @@ int dsn_sequential_tx_impl::work(int noutput_items,
 		if(cur_sequence.done){
 			//Nothing to do if there's no valid sequence, just pass samples through instead
 			if(sequence_queue.size() > 0){
-				cur_sequence = sequence_queue.pop_front();
+				cur_sequence = sequence_queue.front();
+				sequence_queue.pop_front();
 				d_cur_component = cur_sequence.range_clk_component;
 			}
 			out[count] = in[count];
@@ -121,7 +122,7 @@ int dsn_sequential_tx_impl::work(int noutput_items,
 			uint64_t cur_seq_frac = cur_time_frac;
 
 			//Convert to number of range clock cycles
-			double range_clk_phase = (double)cur_seq_sec*pow(2.0, -range_clk_component)*cur_sequence.f0 + cur_seq_frac*pow(2.0, -range_clk_component)*cur_sequence.f0/d_samples_per_second;
+			double range_clk_phase = (double)cur_seq_sec*pow(2.0, -cur_sequence.range_clk_component)*cur_sequence.f0 + cur_seq_frac*pow(2.0, -cur_sequence.range_clk_component)*cur_sequence.f0/d_samples_per_second;
 			int64_t range_clk_cycles = (int64_t)(range_clk_phase);
 
 			//Check if the current sequence is running or not
@@ -134,11 +135,11 @@ int dsn_sequential_tx_impl::work(int noutput_items,
 			} else {
 				//out1 --> primary component
 				//out2 --> chop component (if any)
-				out1_phase = ((range_clk_phase/pow(2.0, d_cur_component-cur_sequence.range_clk_component))%1.0)*M_TWOPI;
+				out1_phase = fmod((range_clk_phase/pow(2.0, d_cur_component-cur_sequence.range_clk_component)),1.0)*M_TWOPI;
 				out2_phase = (d_cur_component >= cur_sequence.chop_component) ? 
-					((range_clk_phase/pow(2.0, cur_sequence.chop_component-cur_sequence.range_clk_component))%1.0)*M_TWOPI : 
+					fmod((range_clk_phase/pow(2.0, cur_sequence.chop_component-cur_sequence.range_clk_component)),1.0)*M_TWOPI : 
 					0.0;
-				out1_square = cur_component.range_is_square | (d_cur_component >= cur_sequence.chop_component);
+				out1_square = cur_sequence.range_is_square || (d_cur_component >= cur_sequence.chop_component);
 				out2_square = false; //Don't think there's any case where the chop component isn't square...
 
 				//Current sequence is running, figure out where we are in the sequence and react accordingly
@@ -153,7 +154,7 @@ int dsn_sequential_tx_impl::work(int noutput_items,
 						//Frequency equals range clock until a switch can be made to the next component
 						if(out1_phase >= 0.0 && d_out1_phase_last > M_PI){
 							d_cur_component++;
-							cur_sequence.state = STATE_T2_PRE;
+							cur_sequence.state = SEQ_T2_PRE;
 						}
 						break;
 
@@ -185,12 +186,11 @@ int dsn_sequential_tx_impl::work(int noutput_items,
 				d_out1_phase_last = out1_phase;
 			}
 
-			gr_complex out_sample;
-			out_sample.real = (out1_square) ? 
+			float real_out = (out1_square) ? 
 				((out1_phase > M_PI/2 && out1_phase < 3*M_PI/2) ? -1.0 : 1.0) : cos(out1_phase);
-			out_sample.real += (out2_square) ? 
-				((out2_phase  M_PI/2 && out2_phase < 3*M_PI/2) ? -1.0 : 1.0) : cos(out2_phase);
-			out_sample.imag = 0.0;
+			real_out += (out2_square) ? 
+				((out2_phase > M_PI/2 && out2_phase < 3*M_PI/2) ? -1.0 : 1.0) : cos(out2_phase);
+			gr_complex out_sample(real_out, 0.0);
 			out[count] = in[count] + out_sample;
 		}
 
