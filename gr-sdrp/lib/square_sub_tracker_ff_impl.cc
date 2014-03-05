@@ -82,13 +82,13 @@ int square_sub_tracker_ff_impl::work(int noutput_items,
 					d_error = -d_error;
 
 				//printf debugging
-				d_sample_count++;
+				/*d_sample_count++;
 				if((d_sample_count % 10001) == 0){
 					std::cout << "d_phase = " << d_phase << " d_phase_last = " << d_phase_last << " d_freq = " << d_freq << " d_error = " << d_error << " id_filter_idx = " << id_filter_idx << " id_idx_second = " << id_idx_second << " id_filter[id_idx_second] = " << id_filter[id_idx_second] << std::endl;
 					//for(int ii=0; ii < 40; ii++){
 					//	std::cout << in[ii] << std::endl;
 					//}
-				}
+				}*/
 
 				id_filter[id_idx_first] = 0.0;
 				id_filter[id_idx_second] = 0.0;

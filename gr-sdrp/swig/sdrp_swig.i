@@ -10,6 +10,10 @@
 %include "gnuradio/digital/constellation.h"
 
 %{
+#include "sdrp/dsn_pn_tx.h"
+#include "sdrp/dsn_pn_rx.h"
+#include "sdrp/dsn_sequential_tx.h"
+#include "sdrp/dsn_sequential_rx.h"
 #include "sdrp/square_sub_tracker_ff.h"
 #include "sdrp/square_data_tracker_ff.h"
 #include "sdrp/sweep_generator_cc.h"
@@ -23,10 +27,6 @@
 #include "sdrp/sdrp_packet_interpreter.h"
 #include "sdrp/pll_refout_freqout_ccf.h"
 #include "sdrp/costas_refout_freqout_ccf.h"
-#include "sdrp/dsn_pn_tx.h"
-#include "sdrp/dsn_pn_rx.h"
-#include "sdrp/dsn_sequential_tx.h"
-#include "sdrp/dsn_sequential_rx.h"
 %}
 
 %include "sdrp/dsn_pn_tx.h"

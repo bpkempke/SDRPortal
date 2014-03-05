@@ -53,7 +53,6 @@ public:
 			gr_vector_void_star &output_items);
 
 	virtual void queueRanging(std::string combination_method, uint64_t xmit_time, double T, std::vector<std::vector<bool> > components, double range_freq, bool range_square);
-	virtual void sweep();
 };
 
 } /* namespace sdrp */
