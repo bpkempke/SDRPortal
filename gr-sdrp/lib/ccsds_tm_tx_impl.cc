@@ -64,7 +64,7 @@ ccsds_tm_tx::sptr ccsds_tm_tx::make(float out_amp, int num_hist, msg_queue::sptr
 ccsds_tm_tx_impl::ccsds_tm_tx_impl(float out_amp, int num_hist, msg_queue::sptr py_msgq)
 	: sync_block("ccsds_tm_tx",
 		io_signature::make(0, 0, 0),
-		io_signature::make(1, 1, sizeof(gr_complex))), d_msgq(py_msgq){
+		io_signature::make(0, 1, sizeof(gr_complex))), d_msgq(py_msgq){
 
 	//Incoming messages consist of arrays of uint8_t's corresponding to the desired data bytes
 	message_port_register_in(pmt::mp("ccsds_tx_msg_in"));

@@ -48,6 +48,7 @@ square_sub_tracker_ff_impl::square_sub_tracker_ff_impl(float loop_bw, float max_
 {	
 	d_cur_bit = 1.0;
 	d_phase_last = 0;
+	d_num_cycles = 0;
 	id_filter_idx = 0;
 	for(int ii=0; ii < 4; ii++)
 		id_filter[ii] = 0.0;
@@ -69,6 +70,9 @@ int square_sub_tracker_ff_impl::work(int noutput_items,
 		//	if(id_filter[ii] > 20)
 		//		std::cout << "id_filter[" << ii << "] = " << id_filter[ii] << std::endl;
 		//}
+
+		if(d_phase < d_phase_last)
+			d_num_cycles++;
 
 		if((d_phase <= M_PI/2 && d_phase_last > 3*M_PI/2) || (d_phase >= M_PI && d_phase_last < M_PI)){
 
@@ -94,8 +98,8 @@ int square_sub_tracker_ff_impl::work(int noutput_items,
 				id_filter[id_idx_second] = 0.0;
 			}
 
-			id_filter_idx = (id_filter_idx == 3) ? 0 : id_filter_idx+1;
 		}
+		id_filter_idx = (d_num_cycles & 1)*2 + (int)(d_phase > M_PI);//(id_filter_idx == 3) ? 0 : id_filter_idx+1;
 
 		//Increment integrate and dump filters depending on current position
 		if(id_filter_idx == 0){

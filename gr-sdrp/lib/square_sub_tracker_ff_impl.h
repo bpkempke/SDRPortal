@@ -36,6 +36,7 @@ private:
 	float d_phase_last;
 	float d_cur_bit;
 	int d_sample_count;
+	int d_num_cycles;
 	float d_error;
 
 protected:
