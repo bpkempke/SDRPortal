@@ -255,6 +255,7 @@ int ccsds_tm_tx_impl::work(int noutput_items,
 					for(unsigned int ii=0; ii < cur_packet.size(); ii++)
 						pushByte(cur_packet[ii]);
 				} else if(d_coding_method == METHOD_CONV){
+					//NOTE: Shouldn't get here at any point since conv is handled separately
 					//Encode using r=1/2 k=7 CCSDS code
 					std::vector<uint8_t> payload_bits = unpackBits(cur_packet);
 					std::vector<uint8_t> encoded_bits((payload_bits.size()+6)*2);

@@ -56,7 +56,7 @@ namespace gr {
       // gr::fec::ccsds_tm_conv_decoder::sptr
       typedef boost::shared_ptr<ccsds_tm_conv_decoder> sptr;
 
-      static sptr make();
+      static sptr make(const std::string &tag_name);
       virtual void setConvEn(bool conv_en) = 0;
     };
 

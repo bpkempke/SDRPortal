@@ -30,35 +30,37 @@ extern "C" {
 }
 
 namespace gr {
-  namespace sdrp {
+namespace sdrp {
 
-    class SDRP_API ccsds_tm_conv_decoder_impl : public ccsds_tm_conv_decoder
-    {
-    private:
-      // Viterbi state
-      int d_mettab[2][256];
-      struct viterbi_state d_state0[64];
-      struct viterbi_state d_state1[64];
-      unsigned char d_viterbi_in[16];
-      
-      int d_count;
-      bool d_conv_en;
-      uint64_t nwritten;
+class SDRP_API ccsds_tm_conv_decoder_impl : public ccsds_tm_conv_decoder
+{
+private:
+	// Viterbi state
+	int d_mettab[2][256];
+	struct viterbi_state d_state0[64];
+	struct viterbi_state d_state1[64];
+	unsigned char d_viterbi_in[16];
 
-    public:
-      ccsds_tm_conv_decoder_impl();
+	int d_count;
+	bool d_conv_en;
+	bool d_negate;
+	uint64_t nwritten;
+	pmt::pmt_t d_correlate_key;
 
-      //Member functions callable from python
-      virtual void setConvEn(bool conv_en);
+public:
+	ccsds_tm_conv_decoder_impl(const std::string &tag_name);
 
-      void forecast(int noutput_items, gr_vector_int &ninput_items_required);
-      int general_work(int noutput_items,
-	       gr_vector_int &ninput_items,
-	       gr_vector_const_void_star &input_items,
-	       gr_vector_void_star &output_items);
-    };
+	//Member functions callable from python
+	virtual void setConvEn(bool conv_en);
 
-  } /* namespace sdrp */
+	void forecast(int noutput_items, gr_vector_int &ninput_items_required);
+	int general_work(int noutput_items,
+			gr_vector_int &ninput_items,
+			gr_vector_const_void_star &input_items,
+			gr_vector_void_star &output_items);
+};
+
+} /* namespace sdrp */
 } /* namespace gr */
 
 #endif /* INCLUDED_FEC_DECODE_CCSDS_27_FB_IMPL_H */

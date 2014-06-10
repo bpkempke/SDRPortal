@@ -164,10 +164,7 @@ int correlate_soft_access_tag_ff_impl::work(int noutput_items,
 		}
 		if(in[i] > 0)
 			d_data_reg[0] |= 1ULL;
-		if(d_negate)
-			out[i] = -in[i];
-		else
-			out[i] = in[i];
+		out[i] = in[i];
 
 		// compute hamming distance between desired access code and current data
 		unsigned long long wrong_bits = 0;
@@ -180,7 +177,7 @@ int correlate_soft_access_tag_ff_impl::work(int noutput_items,
 
 			//Also calculate negated bitcount in case constellation is off
 			wrong_bits = (~(d_data_reg[ii] ^ d_access_code[ii])) & d_mask[ii];
-			nwrong_n = gr::blocks::count_bits64(wrong_bits);
+			nwrong_n += gr::blocks::count_bits64(wrong_bits);
 		}
 
 		if(nwrong <= d_threshold || nwrong_n <= d_threshold){
@@ -193,7 +190,7 @@ int correlate_soft_access_tag_ff_impl::work(int noutput_items,
 			add_item_tag(0, //stream ID
 				abs_out_sample_cnt + i + offset, //sample
 				d_key,      //frame info
-				pmt::pmt_t(), //data (unused)
+				pmt::from_bool(d_negate), //data (unused)
 				d_me        //block src id
 				);
 		}

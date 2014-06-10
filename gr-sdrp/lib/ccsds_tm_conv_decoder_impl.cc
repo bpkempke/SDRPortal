@@ -28,119 +28,145 @@
 #include <gnuradio/io_signature.h>
 #include <cstdio>
 
+#define NUM_HISTORY 64
+
 namespace gr {
-  namespace sdrp {
+namespace sdrp {
 
-    ccsds_tm_conv_decoder::sptr ccsds_tm_conv_decoder::make()
-    {
-      return gnuradio::get_initial_sptr(new ccsds_tm_conv_decoder_impl());
-    }
+ccsds_tm_conv_decoder::sptr ccsds_tm_conv_decoder::make(const std::string &tag_name){
+	return gnuradio::get_initial_sptr(new ccsds_tm_conv_decoder_impl(tag_name));
+}
 
-    ccsds_tm_conv_decoder_impl::ccsds_tm_conv_decoder_impl()
-      : block("ccsds_tm_conv_decoder",
-			  io_signature::make (1, 1, sizeof(float)),
-			  io_signature::make (1, 1, sizeof(char))), d_count(0)  // Rate 1/2 code
-    {
-      float RATE = 0.5;
-      float ebn0 = 12.0;
-      float esn0 = RATE*pow(10.0, ebn0/10.0);
-      
-      //Start off with convolutional decoding disabled
-      d_conv_en = false;
-      
-      gen_met(d_mettab, 100, esn0, 0.0, 256);
-      viterbi_chunks_init(d_state0);
-      viterbi_chunks_init(d_state1);
+ccsds_tm_conv_decoder_impl::ccsds_tm_conv_decoder_impl(const std::string &tag_name)
+	: block("ccsds_tm_conv_decoder",
+			io_signature::make (1, 1, sizeof(float)),
+			io_signature::make (1, 1, sizeof(char)))
+{
+	d_correlate_key = pmt::string_to_symbol(tag_name);
 
-      nwritten = 0;
-    }
+	//Start off with convolutional decoding disabled
+	d_conv_en = false;
 
-    //Enable/disable Convolutional decoding functionality
-    void ccsds_tm_conv_decoder_impl::setConvEn(bool conv_en){
-      d_conv_en = conv_en;
-    }
+	resetViterbi();
 
-    void ccsds_tm_conv_decoder_impl::forecast(int noutput_items, gr_vector_int &ninput_items_required){
-      if(d_conv_en)
-        ninput_items_required[0] = noutput_items*2; //Rate 1/2 code
-      else
-        ninput_items_required[0] = noutput_items; //Either uncoded or coded after binary slicing
-    }
+	nwritten = 0;
 
-    int
-    ccsds_tm_conv_decoder_impl::general_work(int noutput_items,
-				  gr_vector_int &ninput_items,
-				  gr_vector_const_void_star &input_items,
-				  gr_vector_void_star &output_items)
-    {
-      const float *in = (const float *)input_items[0];
-      unsigned char *out = (unsigned char *)output_items[0];
+	set_history(NUM_HISTORY+1);
+	d_negate = false;
+}
 
-      int noutput_ret = 0;
-      int consume_count = ninput_items[0];
+//Enable/disable Convolutional decoding functionality
+void ccsds_tm_conv_decoder_impl::setConvEn(bool conv_en){
+	d_conv_en = conv_en;
+}
 
-      //Handle corner case of inconvenient mode switch timing
-      if(d_conv_en && (consume_count > (noutput_items-8)*2))
-        consume_count = (noutput_items-8)*2;
-      else if(!d_conv_en && (consume_count > noutput_items))
-        consume_count = noutput_items;
-      
-      //Re-index all tags passing through appropriately
-      std::vector<tag_t> tags;
-      const uint64_t nread = this->nitems_read(0);
-      this->get_tags_in_range(tags, 0, nread, nread+consume_count);
-      for(int ii=0; ii < tags.size(); ii++){
-        remove_item_tag(0,tags[ii]);
-        if(d_conv_en)
-          tags[ii].offset = nwritten+(tags[ii].offset-nread)/2;
-        else
-          tags[ii].offset += nwritten-nread;
-        add_item_tag(0,tags[ii]);
-      }
+void ccsds_tm_conv_decoder_impl::resetViterbi(){
+	d_count = 0;
+	float RATE = 0.5;
+	float ebn0 = 12.0;
+	float esn0 = RATE*pow(10.0, ebn0/10.0);
+	gen_met(d_mettab, 100, esn0, 0.0, 256);
+	viterbi_chunks_init(d_state0);
+	viterbi_chunks_init(d_state1);
+}
 
-      for (int i = 0; i < consume_count; i++) {
-        if(d_conv_en){
-          //Negate every other bit (???)
-          // Translate and clip [-1.0..1.0] to [28..228]
-          float sample = in[i]*100.0+128.0;
-          if (sample > 255.0)
-            sample = 255.0;
-          else if (sample < 0.0)
-            sample = 0.0;
-          unsigned char sym = (unsigned char)(floor(sample));
+void ccsds_tm_conv_decoder_impl::forecast(int noutput_items, gr_vector_int &ninput_items_required){
+	if(d_conv_en)
+		ninput_items_required[0] = noutput_items*2; //Rate 1/2 code
+	else
+		ninput_items_required[0] = noutput_items; //Either uncoded or coded after binary slicing
+}
 
-	  //sym == 128 means erased, so let's avoid that
-	  sym = (sym == 128) ? 129 : sym;
-          
-          d_viterbi_in[d_count % 4] = sym;
-          if ((d_count % 4) == 3) {
-            // Every fourth symbol, perform butterfly operation
-            viterbi_butterfly2(d_viterbi_in, d_mettab, d_state0, d_state1);
-            
-            // Every sixteenth symbol, read out a byte
-            if (d_count % 16 == 11) {
-              unsigned char cur_byte;
-              viterbi_get_output(d_state0, &cur_byte);
-              //printf("%02X",cur_byte);
-              for(int ii=0; ii<8; ii++)
-                out[noutput_ret++] = (cur_byte & (0x80 >> ii)) ? 1 : 0;
-            }
-          }
-          
-          d_count++;
-        } else {
-          //Otherwise just do a straight binary slice
-          out[noutput_ret++] = (in[i] > 0.0);
-        }
-      }
+int ccsds_tm_conv_decoder_impl::general_work(int noutput_items,
+		gr_vector_int &ninput_items,
+		gr_vector_const_void_star &input_items,
+		gr_vector_void_star &output_items){
 
-      //Always consume all items from input no matter what.
-      consume(0,consume_count);
+	const float *in = (const float *)input_items[0];
+	unsigned char *out = (unsigned char *)output_items[0];
+	const uint64_t nread = nitems_read(0);
 
-      //Variable number of output symbols in the case of convolutional encoding
-      nwritten += noutput_ret;
-      return noutput_ret;
-    }
+	int start_idx = NUM_HISTORY;
 
-  } /* namespace sdrp */
+	int noutput_ret = 0;
+	int consume_count = ninput_items[0];
+
+	//Handle corner case of inconvenient mode switch timing
+	if(d_conv_en && (consume_count > (noutput_items-8)*2))
+		consume_count = (noutput_items-8)*2;
+	else if(!d_conv_en && (consume_count > noutput_items))
+		consume_count = noutput_items;
+
+	//Re-index all tags passing through appropriately
+	std::vector<tag_t> tags;
+	const uint64_t nread = this->nitems_read(0);
+	this->get_tags_in_range(tags, 0, nread, nread+consume_count);
+	for(int ii=0; ii < tags.size(); ii++){
+		//First check for any negation events that may cause issues
+		if(tags[ii].key == d_correlate_key){
+			bool data = pmt::pmt_to_bool(tags[ii].value);
+			if(data != d_negate){
+				d_negate = data;
+				if(d_conv_en){
+					//TODO: Will resetViterbi cause issues down the line with lining up tag indices?
+					resetViterbi();//Reset the viterbi decoder due to change in symbol polarity
+					start_idx = 0;
+				}
+			}
+		}
+
+		remove_item_tag(0,tags[ii]);
+		if(d_conv_en)
+			tags[ii].offset = nwritten+(tags[ii].offset-nread)/2;
+		else
+			tags[ii].offset += nwritten-nread;
+		add_item_tag(0,tags[ii]);
+	}
+
+	for (int i = start_idx; i < consume_count+NUM_HISTORY; i++) {
+		if(d_conv_en){
+			// Translate and clip [-1.0..1.0] to [28..228]
+			float sample = (d_negate) ? -in[i]*100.0+128.0 : in[i]*100.0+128.0;
+			if (sample > 255.0)
+				sample = 255.0;
+			else if (sample < 0.0)
+				sample = 0.0;
+			unsigned char sym = (unsigned char)(floor(sample));
+
+			//sym == 128 means erased, so let's avoid that
+			sym = (sym == 128) ? 129 : sym;
+
+			d_viterbi_in[d_count % 4] = sym;
+			if ((d_count % 4) == 3) {
+				// Every fourth symbol, perform butterfly operation
+				viterbi_butterfly2(d_viterbi_in, d_mettab, d_state0, d_state1);
+
+				// Every sixteenth symbol, read out a byte
+				if (d_count % 16 == 11) {
+					unsigned char cur_byte;
+					viterbi_get_output(d_state0, &cur_byte);
+					//printf("%02X",cur_byte);
+					if(i >= NUM_HISTORY)
+						for(int ii=0; ii<8; ii++)
+							out[noutput_ret++] = (cur_byte & (0x80 >> ii)) ? 1 : 0;
+				}
+			}
+
+			d_count++;
+		} else {
+			//Otherwise just do a straight binary slice
+			out[noutput_ret++] = (in[i] > 0.0);
+		}
+	}
+
+	//Always consume all items from input no matter what.
+	//TODO: How does this work with history?
+	consume(0,consume_count);
+
+	//Variable number of output symbols in the case of convolutional encoding
+	nwritten += noutput_ret;
+	return noutput_ret;
+}
+
+} /* namespace sdrp */
 }/* namespace gr */
