@@ -49,9 +49,12 @@ ccsds_tm_conv_decoder_impl::ccsds_tm_conv_decoder_impl(const std::string &tag_na
 
 	resetViterbi();
 
+	//Create a circular queue for history because GNURadio doesn't handle tags right
+	d_history = new float[NUM_HISTORY];
+	d_history_idx = 0;
+
 	nwritten = 0;
 
-	set_history(NUM_HISTORY+1);
 	d_negate = false;
 }
 
@@ -84,9 +87,6 @@ int ccsds_tm_conv_decoder_impl::general_work(int noutput_items,
 
 	const float *in = (const float *)input_items[0];
 	unsigned char *out = (unsigned char *)output_items[0];
-	const uint64_t nread = nitems_read(0);
-
-	int start_idx = NUM_HISTORY;
 
 	int noutput_ret = 0;
 	int consume_count = ninput_items[0];
@@ -104,26 +104,63 @@ int ccsds_tm_conv_decoder_impl::general_work(int noutput_items,
 	for(int ii=0; ii < tags.size(); ii++){
 		//First check for any negation events that may cause issues
 		if(tags[ii].key == d_correlate_key){
-			bool data = pmt::pmt_to_bool(tags[ii].value);
+			bool data = pmt::to_bool(tags[ii].value);
 			if(data != d_negate){
 				d_negate = data;
+				std::cout << "Found data negation. d_negate = " << d_negate << std::endl;
 				if(d_conv_en){
 					//TODO: Will resetViterbi cause issues down the line with lining up tag indices?
 					resetViterbi();//Reset the viterbi decoder due to change in symbol polarity
-					start_idx = 0;
+					//Re-populate Viterbi decoder with historic data
+					int d_count_temp = 0;
+					int temp_idx = d_history_idx-NUM_HISTORY/2-(d_count % 16);
+					if(temp_idx < 0) temp_idx += NUM_HISTORY;
+					while(temp_idx != d_history_idx){
+						// Translate and clip [-1.0..1.0] to [28..228]
+						float sample = (d_negate) ? -d_history[temp_idx]*100.0+128.0 : d_history[temp_idx]*100.0+128.0;
+						if (sample > 255.0)
+							sample = 255.0;
+						else if (sample < 0.0)
+							sample = 0.0;
+						unsigned char sym = (unsigned char)(floor(sample));
+
+						//sym == 128 means erased, so let's avoid that
+						sym = (sym == 128) ? 129 : sym;
+
+						d_viterbi_in[d_count_temp % 4] = sym;
+						if ((d_count_temp % 4) == 3) {
+							// Every fourth symbol, perform butterfly operation
+							viterbi_butterfly2(d_viterbi_in, d_mettab, d_state0, d_state1);
+
+							// Every sixteenth symbol, read out a byte
+							if (d_count_temp % 16 == 11) {
+								unsigned char cur_byte;
+								viterbi_get_output(d_state0, &cur_byte);
+							}
+						}
+
+				
+
+						//Increment idx for next sample
+						temp_idx++;
+						if(temp_idx == NUM_HISTORY) temp_idx = 0;
+					}
 				}
 			}
 		}
 
 		remove_item_tag(0,tags[ii]);
 		if(d_conv_en)
-			tags[ii].offset = nwritten+(tags[ii].offset-nread)/2;
+			tags[ii].offset = nwritten+(tags[ii].offset-nread)/2+40;
 		else
 			tags[ii].offset += nwritten-nread;
 		add_item_tag(0,tags[ii]);
 	}
 
-	for (int i = start_idx; i < consume_count+NUM_HISTORY; i++) {
+	for (int i = 0; i < consume_count; i++) {
+		d_history[d_history_idx++] = in[i];
+		if(d_history_idx == NUM_HISTORY)
+			d_history_idx = 0;
 		if(d_conv_en){
 			// Translate and clip [-1.0..1.0] to [28..228]
 			float sample = (d_negate) ? -in[i]*100.0+128.0 : in[i]*100.0+128.0;
@@ -145,17 +182,15 @@ int ccsds_tm_conv_decoder_impl::general_work(int noutput_items,
 				if (d_count % 16 == 11) {
 					unsigned char cur_byte;
 					viterbi_get_output(d_state0, &cur_byte);
-					//printf("%02X",cur_byte);
-					if(i >= NUM_HISTORY)
-						for(int ii=0; ii<8; ii++)
-							out[noutput_ret++] = (cur_byte & (0x80 >> ii)) ? 1 : 0;
+					for(int ii=0; ii<8; ii++)
+						out[noutput_ret++] = (cur_byte & (0x80 >> ii)) ? 1 : 0;
 				}
 			}
 
 			d_count++;
 		} else {
 			//Otherwise just do a straight binary slice
-			out[noutput_ret++] = (in[i] > 0.0);
+			out[noutput_ret++] = (d_negate) ? (in[i] < 0.0) : (in[i] > 0.0);
 		}
 	}
 

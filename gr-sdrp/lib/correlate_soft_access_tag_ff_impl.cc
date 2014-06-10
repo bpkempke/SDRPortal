@@ -186,9 +186,9 @@ int correlate_soft_access_tag_ff_impl::work(int noutput_items,
 			else
 				d_negate = false;
 
-			uint64_t offset = (d_conv_en) ? 80 : 0;
+			std::cout << "GOT SYNC" << std::endl;
 			add_item_tag(0, //stream ID
-				abs_out_sample_cnt + i + offset, //sample
+				abs_out_sample_cnt + i, //sample
 				d_key,      //frame info
 				pmt::from_bool(d_negate), //data (unused)
 				d_me        //block src id

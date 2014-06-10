@@ -47,6 +47,11 @@ private:
 	uint64_t nwritten;
 	pmt::pmt_t d_correlate_key;
 
+	float *d_history;
+	int d_history_idx;
+
+	void resetViterbi();
+
 public:
 	ccsds_tm_conv_decoder_impl(const std::string &tag_name);
 
