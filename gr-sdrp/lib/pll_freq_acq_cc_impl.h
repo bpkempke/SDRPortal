@@ -23,6 +23,7 @@
 #ifndef INCLUDED_SDRP_PLL_FREQ_ACQ_CC_IMPL_H
 #define INCLUDED_SDRP_PLL_FREQ_ACQ_CC_IMPL_H
 
+#include <gnuradio/fft/fft.h>
 #include <sdrp/pll_freq_acq_cc.h>
 
 namespace gr {
@@ -31,19 +32,26 @@ namespace sdrp {
 class pll_freq_acq_cc_impl : public pll_freq_acq_cc
 {
 	private:
+		gr::fft::fft_complex *d_fft;
+		int d_fft_size;
+		int d_fft_idx;
 		float d_locksig,d_lock_threshold;
 		bool d_squelch_enable;
+		bool d_acquire;
 
 		float mod_2pi(float in);
 		float phase_detector(gr_complex sample,float ref_phase);
+		void resetFFT();
 
 	public:
-		pll_freq_acq_cc_impl(float loop_bw, float max_freq, float min_freq);
+		pll_freq_acq_cc_impl(float loop_bw, float max_freq, float min_freq, int fft_size);
 		~pll_freq_acq_cc_impl();
 
 		bool lock_detector(void);
 		bool squelch_enable(bool);
 		float set_lock_threshold(float);
+
+		void acquireCarrier(void);
 
 		void set_loop_bandwidth(float bw);
 		void set_damping_factor(float df);

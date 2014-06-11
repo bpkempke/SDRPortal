@@ -61,11 +61,13 @@ class SDRP_API pll_freq_acq_cc
 		 * \param max_freq: maximum (normalized) frequency PLL will lock to.
 		 * \param min_freq: minimum (normalized) frequency PLL will lock to.
 		 */
-		static sptr make(float loop_bw, float max_freq, float min_freq);
+		static sptr make(float loop_bw, float max_freq, float min_freq, int fft_size);
 
 		virtual bool lock_detector(void) = 0;
 		virtual bool squelch_enable(bool) = 0;
 		virtual float set_lock_threshold(float) = 0;
+
+		virtual void acquireCarrier(void) = 0;
 
 		virtual void set_loop_bandwidth(float bw) = 0;
 		virtual void set_damping_factor(float df) = 0;

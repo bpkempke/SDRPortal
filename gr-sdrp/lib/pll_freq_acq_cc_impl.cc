@@ -37,22 +37,36 @@ namespace sdrp {
 #define M_TWOPI (2.0f*M_PI)
 #endif
 
-pll_freq_acq_cc::sptr pll_freq_acq_cc::make(float loop_bw, float max_freq, float min_freq) {
+pll_freq_acq_cc::sptr pll_freq_acq_cc::make(float loop_bw, float max_freq, float min_freq, int fft_size) {
 	return gnuradio::get_initial_sptr
-		(new pll_freq_acq_cc_impl(loop_bw, max_freq, min_freq));
+		(new pll_freq_acq_cc_impl(loop_bw, max_freq, min_freq, fft_size));
 }
 
 pll_freq_acq_cc_impl::pll_freq_acq_cc_impl(float loop_bw,
 		float max_freq,
-		float min_freq)
+		float min_freq,
+		int fft_size)
 	: sync_block("pll_freq_acq_cc",
 			io_signature::make(1, 1, sizeof(gr_complex)),
 			io_signature::make(1, 1, sizeof(gr_complex))),
-	blocks::control_loop(loop_bw, max_freq, min_freq),
-	d_locksig(0), d_lock_threshold(0), d_squelch_enable(false) {
+	blocks::control_loop(loop_bw, max_freq, min_freq), d_fft_idx(0),
+	d_locksig(0), d_lock_threshold(0), d_squelch_enable(false), d_fft(NULL), d_fft_size(fft_size) {
+
+	resetFFT();
 }
 
 pll_freq_acq_cc_impl::~pll_freq_acq_cc_impl() {
+	delete d_fft;
+}
+
+void pll_freq_acq_cc_impl::resetFFT(){
+	if(d_fft) delete d_fft;
+	//Create a fftw object which we can easily compute FFTs through
+	d_fft = new gr::fft::fft_complex(d_fft_size,true,1);
+}
+
+void pll_freq_acq_cc_impl::acquireCarrier(){
+	d_acquire = true;
 }
 
 float pll_freq_acq_cc_impl::mod_2pi(float in) {
@@ -93,6 +107,40 @@ int pll_freq_acq_cc_impl::work(int noutput_items,
 	float t_imag, t_real;
 
 	for(int i = 0; i < noutput_items; i++) {
+		//Check to see if we're looking to acquire the carrier frequency
+		if(d_acquire){
+			gr_complex *dst = d_fft->get_inbuf();
+			dst[d_fft_idx++] = iptr[i];
+			
+			//Check to see if it's time to perform the FFT to perform frequency acquisition
+			if(d_fft_idx == d_fft_size){
+				d_fft_idx = 0;
+				
+				//Perform the FFT itself
+				d_fft->execute();
+
+				//Find the highest peak
+				int max_idx = 0;
+				float max_val = 0.0;
+				for(int ii=0; ii < d_fft_size; ii++){
+					gr_complex cur_sample = d_fft->get_outbuf()[ii];
+					float cur_val = cur_sample.imag()*cur_sample.imag()+cur_sample.real()*cur_sample.real();
+					if(cur_val > max_val){
+						max_val = cur_val;
+						max_idx = ii;
+					}
+				}
+
+				//Convert the highest recorded peak to a tangible frequency estimate
+				float max_freq = ((float)max_idx)/d_fft_size*M_TWOPI;
+				if(max_freq > M_PI)
+					max_freq -= M_TWOPI;
+
+				//Set the loop frequency to this new value
+				set_frequency(max_freq);
+			}
+		}
+
 		gr::sincosf(d_phase, &t_imag, &t_real);
 		optr[i] = iptr[i] * gr_complex(t_real, -t_imag);
 
