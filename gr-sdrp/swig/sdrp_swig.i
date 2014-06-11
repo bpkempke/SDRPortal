@@ -27,6 +27,7 @@
 #include "sdrp/sdrp_packet_interpreter.h"
 #include "sdrp/pll_refout_freqout_ccf.h"
 #include "sdrp/costas_refout_freqout_ccf.h"
+#include "sdrp/pll_freq_acq_cc.h"
 %}
 
 %include "sdrp/dsn_pn_tx.h"
@@ -79,4 +80,7 @@ GR_SWIG_BLOCK_MAGIC2(sdrp, correlate_soft_access_tag_ff);
 
 %include "sdrp/sdrp_packet_interpreter.h"
 GR_SWIG_BLOCK_MAGIC2(sdrp, sdrp_packet_interpreter);
+
+%include "sdrp/pll_freq_acq_cc.h"
+GR_SWIG_BLOCK_MAGIC2(sdrp, pll_freq_acq_cc);
 

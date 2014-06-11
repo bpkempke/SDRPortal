@@ -37,5 +37,6 @@ install(FILES
     pll_refout_freqout_ccf.h
     costas_refout_freqout_ccf.h
     sdrp_packet_interpreter.h
+    pll_freq_acq_cc.h
     ccsds_aos_framer.h DESTINATION include/sdrp
 )
