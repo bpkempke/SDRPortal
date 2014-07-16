@@ -50,7 +50,7 @@ pll_freq_acq_cc_impl::pll_freq_acq_cc_impl(float loop_bw,
 			io_signature::make(1, 1, sizeof(gr_complex)),
 			io_signature::make(1, 1, sizeof(gr_complex))),
 	blocks::control_loop(loop_bw, max_freq, min_freq), d_fft_idx(0),
-	d_locksig(0), d_lock_threshold(0), d_squelch_enable(false), d_fft(NULL), d_fft_size(fft_size) {
+	d_locksig(0), d_lock_threshold(0), d_squelch_enable(false), d_fft(NULL), d_fft_size(fft_size), d_acquire(false) {
 
 	resetFFT();
 }
@@ -136,8 +136,13 @@ int pll_freq_acq_cc_impl::work(int noutput_items,
 				if(max_freq > M_PI)
 					max_freq -= M_TWOPI;
 
+				//DEBUG
+				std::cout << "ACQUIRED CARRIER FREQUENCY OFFSET = " << max_freq << std::endl;
+
 				//Set the loop frequency to this new value
 				set_frequency(max_freq);
+
+				d_acquire = false;
 			}
 		}
 
