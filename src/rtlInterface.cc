@@ -62,7 +62,7 @@ rtlInterface::~rtlInterface(){
 }
 
 void rtlInterface::setRXFreq(paramData in_param){
-	std::cout << "setting frequency of " << (int)rtl_dev << " to " << in_param.getUInt32() << std::endl;
+	std::cout << "setting frequency of " << rtl_dev << " to " << in_param.getUInt32() << std::endl;
 	rtlsdr_set_freq_correction(rtl_dev, 50);
 	rtlsdr_set_center_freq(rtl_dev, in_param.getUInt32());
 }
