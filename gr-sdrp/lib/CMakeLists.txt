@@ -47,6 +47,7 @@ list(APPEND sdrp_sources
     costas_refout_freqout_ccf_impl.cc
     sdrp_packet_interpreter_impl.cc
     pll_freq_acq_cc_impl.cc
+    ws_sink_c_impl.cc
 )
 
 add_library(gnuradio-sdrp SHARED ${sdrp_sources})

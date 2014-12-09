@@ -59,3 +59,14 @@ target_link_libraries(shelld
 	${CMAKE_THREAD_LIBS_INIT}
 )
 
+install(TARGETS sdrportalShared
+	LIBRARY DESTINATION lib${LIB_SUFFIX}
+	ARCHIVE DESTINATION lib${LIB_SUFFIX}
+	RUNTIME DESTINATION bin
+)
+
+install(FILES
+	${CMAKE_CURRENT_BINARY_DIR}/streamConversionHelper.h
+	DESTINATION include/sdrportal
+	COMPONENT "headers"
+)
