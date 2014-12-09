@@ -22,8 +22,8 @@
 #define INCLUDED_SDRP_WS_SINK_C_IMPL_H
 
 #include <sdrp/ws_sink_c.h>
-#include "genericSocketInterface.h"
-#include "streamConverter.h"
+#include <sdrportal/genericSocketInterface.h>
+#include <sdrportal/streamConverter.h>
 
 namespace gr {
   namespace sdrp {
@@ -33,8 +33,8 @@ namespace gr {
     private:
       // Nothing to declare in this block.
 	genericSocketInterface *sock_int;
-	streamConverter<float> stream_conv;
-	primType result_type;
+	streamConverter stream_conv;
+	streamType result_type;
 
     public:
       ws_sink_c_impl(bool is_server, int portnum, std::string otw_format, std::string address);

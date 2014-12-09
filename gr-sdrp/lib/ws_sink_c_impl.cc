@@ -41,9 +41,9 @@ namespace gr {
      * The private constructor
      */
     ws_sink_c_impl::ws_sink_c_impl(bool is_server, int portnum, std::string otw_format, std::string address)
-      : gr_sync_block("ws_sink_c",
-			gr_make_io_signature(1, 1, sizeof(gr_complex)),
-		      gr_make_io_signature(0, 0, 0))
+      : sync_block("ws_sink_c",
+			io_signature::make(1, 1, sizeof(gr_complex)),
+		      io_signature::make(0, 0, 0)), stream_conv(STREAM_FLOAT)
     {
     	if(is_server){
 		sock_int = new genericSocketInterface(SOCKET_WS_BINARY, portnum);
@@ -54,15 +54,15 @@ namespace gr {
 	}
 
 	if(otw_format == "DOUBLE")
-		result_type = DOUBLE;
+		result_type = STREAM_DOUBLE;
 	else if(otw_format == "FLOAT")
-		result_type = FLOAT;
+		result_type = STREAM_FLOAT;
 	else if(otw_format == "INT32")
-		result_type = INT32;
+		result_type = STREAM_INT32_T;
 	else if(otw_format == "INT16")
-		result_type = INT16;
+		result_type = STREAM_INT16_T;
 	else if(otw_format == "INT8")
-		result_type = INT8;
+		result_type = STREAM_INT8_T;
 
     }
 
@@ -81,13 +81,13 @@ namespace gr {
 	const float *in = (const float *) input_items[0];
 
 	//Convert everything to the requested result type
-	stream_conv.convertTo((float*)in, noutput_items*sizeof(gr_complex), result_type);
+	stream_conv.convertFromCommon((float*)in, noutput_items*sizeof(gr_complex), result_type, noutput_items);
 
 //	std::cerr << "noutput_items = " << noutput_items << " in[1000] = " << in[1000] << std::endl;
 
 	//Send everything out to the socket
 	messageType resulting_message;
-	resulting_message.buffer = (char*)stream_conv.getResult();
+	resulting_message.buffer = (char*)stream_conv.getResultFromStreamType(STREAM_FLOAT);
 	resulting_message.num_bytes = noutput_items*sizeof(float)*2;
 	resulting_message.socket_channel = -1;
 	dataToLowerLevel(&resulting_message, 1);
