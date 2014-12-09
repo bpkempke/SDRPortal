@@ -39,4 +39,5 @@ find_package(Portaudio)
 #Add in debugging symbols for now... TODO: Get rid of debugging symbols
 set(CMAKE_CXX_FLAGS "-g -Wall -std=c++0x")
 
+add_subdirectory(lib)
 add_subdirectory(src)

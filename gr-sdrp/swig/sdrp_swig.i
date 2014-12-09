@@ -28,6 +28,7 @@
 #include "sdrp/pll_refout_freqout_ccf.h"
 #include "sdrp/costas_refout_freqout_ccf.h"
 #include "sdrp/pll_freq_acq_cc.h"
+#include "sdrp/ws_sink_c.h"
 %}
 
 %include "sdrp/dsn_pn_tx.h"
@@ -83,4 +84,7 @@ GR_SWIG_BLOCK_MAGIC2(sdrp, sdrp_packet_interpreter);
 
 %include "sdrp/pll_freq_acq_cc.h"
 GR_SWIG_BLOCK_MAGIC2(sdrp, pll_freq_acq_cc);
+
+%include "sdrp/ws_sink_c.h"
+GR_SWIG_BLOCK_MAGIC2(sdrp, ws_sink_c);
 

@@ -22,10 +22,10 @@
 #include "config.h"
 #endif
 
-#include <gr_io_signature.h>
+#include "ws_sink_c_impl.h"
+#include <gnuradio/io_signature.h>
 #include <string>
 #include <iostream>
-#include "ws_sink_c_impl.h"
 
 namespace gr {
   namespace sdrp {
