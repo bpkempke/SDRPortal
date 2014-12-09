@@ -35,6 +35,7 @@ namespace gr {
 	genericSocketInterface *sock_int;
 	streamConverter<float> stream_conv;
 	primType result_type;
+	void inPacketMsg(pmt::pmt_t msg);
 
     public:
       ws_sink_c_impl(bool is_server, int portnum, std::string otw_format, std::string address);
