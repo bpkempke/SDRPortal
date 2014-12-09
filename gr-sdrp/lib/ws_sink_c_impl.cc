@@ -120,7 +120,7 @@ void ws_sink_c_impl::inPacketMsg(pmt::pmt_t msg){
 
 	//Send everything out to the socket
 	messageType resulting_message;
-	resulting_message.buffer = buf;
+	resulting_message.buffer = (char*)buf;
 	resulting_message.num_bytes = total_buf_length;
 	resulting_message.socket_channel = -1;
 	dataToLowerLevel(&resulting_message, 1);

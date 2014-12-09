@@ -51,7 +51,12 @@ list(APPEND sdrp_sources
 )
 
 add_library(gnuradio-sdrp SHARED ${sdrp_sources})
-target_link_libraries(gnuradio-sdrp gnuradio-digital ${Boost_LIBRARIES} ${GNURADIO_RUNTIME_LIBRARIES})
+target_link_libraries(gnuradio-sdrp 
+	sdrportalShared 
+	gnuradio-digital 
+	${Boost_LIBRARIES} 
+	${GNURADIO_RUNTIME_LIBRARIES}
+)
 set_target_properties(gnuradio-sdrp PROPERTIES DEFINE_SYMBOL "gnuradio_sdrp_EXPORTS")
 
 ########################################################################
@@ -79,6 +84,7 @@ add_executable(test-sdrp ${test_sdrp_sources})
 
 target_link_libraries(
   test-sdrp
+  sdrportalShared
   ${GNURADIO_RUNTIME_LIBRARIES}
   ${Boost_LIBRARIES}
   ${CPPUNIT_LIBRARIES}
