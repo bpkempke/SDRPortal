@@ -38,6 +38,7 @@ private:
 	unsigned		d_msg_offset;
 	bool		d_print;
 	bool              d_tags;
+	bool d_pause;
 	// FIXME: Is this adequate tagname length.
 	std::string       d_lengthtagname;
 	enum coding_method_t {METHOD_CONV, METHOD_RS, METHOD_CC, METHOD_TURBO, METHOD_LDPC, METHOD_NONE};
@@ -81,6 +82,7 @@ public:
 	virtual void setCodingParameter(std::string param_name, std::string param_val);
 	virtual void setAccessCode(std::string access_code);
 	virtual void setIdleSequence(std::string idle_sequence);
+	virtual void pauseTX(bool pause);
 
 	int work(int noutput_items,
 			gr_vector_const_void_star &input_items,

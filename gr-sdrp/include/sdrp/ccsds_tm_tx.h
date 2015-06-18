@@ -49,6 +49,7 @@ public:
 	virtual void setCodingParameter(std::string param_name, std::string param_val) = 0;
 	virtual void setAccessCode(std::string access_code) = 0;
 	virtual void setIdleSequence(std::string idle_sequence) = 0;
+	virtual void pauseTX(bool pause) = 0;
 
 
 	virtual gr::msg_queue::sptr msgq() const = 0;

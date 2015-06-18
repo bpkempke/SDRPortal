@@ -215,6 +215,10 @@ std::vector<uint8_t> ccsds_tm_tx_impl::unpackBits(std::vector<uint8_t> in_packet
 	return return_bits;
 }
 
+void ccsds_tm_tx_impl::pauseTX(bool pause){
+	d_pause = pause;
+}
+
 int ccsds_tm_tx_impl::work(int noutput_items,
 			gr_vector_const_void_star &input_items,
 			gr_vector_void_star &output_items){
@@ -222,7 +226,7 @@ int ccsds_tm_tx_impl::work(int noutput_items,
 	gr_complex out_sample;
 	int nn = 0;
 
-	while(nn < noutput_items) {
+	while( ( nn < noutput_items ) && ( d_pause == false ) ) {
 		//Update fractional position no matter what
 		d_frac_pos += d_frac_step;
 		if(d_frac_pos >= 1.0){
