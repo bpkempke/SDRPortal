@@ -42,7 +42,7 @@ square_sub_tracker_ff::sptr square_sub_tracker_ff::make(float loop_bw, float max
 
 square_sub_tracker_ff_impl::square_sub_tracker_ff_impl(float loop_bw, float max_freq, float min_freq)
 	: sync_block("square_sub_tracker_ff",
-			io_signature::make(1, 1, sizeof(float)),
+			io_signature::make(1, -1, sizeof(float)),
 			io_signature::make(1, 1, sizeof(float))),
 	blocks::control_loop(loop_bw, max_freq*M_TWOPI, min_freq*M_TWOPI)
 {	
@@ -50,15 +50,20 @@ square_sub_tracker_ff_impl::square_sub_tracker_ff_impl(float loop_bw, float max_
 	d_phase_last = 0;
 	d_num_cycles = 0;
 	id_filter_idx = 0;
+	d_input = 0;
 	for(int ii=0; ii < 4; ii++)
 		id_filter[ii] = 0.0;
+}
+
+void square_sub_tracker_ff_impl::setInput(int new_input){
+	d_input = new_input;
 }
 
 int square_sub_tracker_ff_impl::work(int noutput_items,
 		gr_vector_const_void_star &input_items,
 		gr_vector_void_star &output_items){
 
-	const float *in = (float *) input_items[0];
+	const float *in = (float *) input_items[d_input];
 	float *out = (float *) output_items[0];
 	int count=0;
 

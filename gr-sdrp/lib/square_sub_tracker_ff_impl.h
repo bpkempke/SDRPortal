@@ -37,6 +37,7 @@ private:
 	float d_cur_bit;
 	int d_sample_count;
 	int d_num_cycles;
+	int d_input;
 	float d_error;
 
 protected:
@@ -44,6 +45,8 @@ protected:
 public:
 	square_sub_tracker_ff_impl(float loop_bw, float max_freq, float min_freq);
 	~square_sub_tracker_ff_impl(){};
+
+	void setInput(int new_input);
 
 	void set_loop_bandwidth(float bw);
 	void set_damping_factor(float df);

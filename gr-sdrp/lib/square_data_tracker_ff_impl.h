@@ -43,6 +43,7 @@ public:
 	square_data_tracker_ff_impl(float loop_bw, float max_freq, float min_freq);
 	~square_data_tracker_ff_impl(){};
 
+
 	void set_loop_bandwidth(float bw);
 	void set_damping_factor(float df);
 	void set_alpha(float alpha);
