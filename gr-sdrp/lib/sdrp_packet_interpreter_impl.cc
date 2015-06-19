@@ -73,23 +73,25 @@ void sdrp_packet_interpreter_impl::inSocketMsg(pmt::pmt_t msg){
 			//If we have a full primary packet, parse it!
 			if(prim_array.size() == parsed_prim_len){
 				int prim_array_idx = sizeof(uint32_t);
-				pmt::pmt_t new_message_dict = pmt::make_dict();
+				pmt::pmt_t vector;
 				while(prim_array_idx < prim_array.size()){
 					uint32_t id, sublen;
 					memcpy(&id, &prim_array[prim_array_idx], sizeof(uint32_t));
-					memcpy(&sublen, &msg_array[prim_array_idx+sizeof(uint32_t)], sizeof(uint32_t));
+					prim_array_idx += sizeof(uint32_t);
+					memcpy(&sublen, &prim_array[prim_array_idx], sizeof(uint32_t));
+					prim_array_idx += sizeof(uint32_t);
 
-					pmt::pmt_t key = pmt::from_long((long)(id));
-					pmt::pmt_t value = pmt::init_u8vector(sublen-sizeof(uint32_t)*2, (const uint8_t*)&prim_array[prim_array_idx+sizeof(uint32_t)*2]);
-
-					new_message_dict = pmt::dict_add(new_message_dict, key, value);
+					vector = pmt::init_u8vector(sublen, (const uint8_t*)&prim_array[prim_array_idx]);
 
 					prim_array_idx += sublen;
 				}
 
+				//Remove the elements we've parsed
+				prim_array.erase(prim_array.begin(), prim_array.begin() + prim_array_idx);
+
 				//Create a message and send it out now that the whole prim packet has been parsed!
-				pmt::pmt_t msg = pmt::cons(new_message_dict, pmt::PMT_NIL);
-				message_port_pub( pmt::mp("sdrp_pdu_out"), msg );
+				pmt::pmt_t pdu = pmt::cons( pmt::PMT_NIL, vector);
+				message_port_pub( pmt::mp("sdrp_pdu_out"), pdu );
 
 				repeat = true;
 			} else repeat = false;
