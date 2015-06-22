@@ -39,7 +39,7 @@ public:
 	// gr::blocks::ccsds_tm_tx::sptr
 	typedef boost::shared_ptr<ccsds_tm_tx> sptr;
 
-	static sptr make(float out_amp, int num_hist, msg_queue::sptr py_msgq);
+	static sptr make(unsigned packet_id, unsigned timestamp_id, float out_amp, int num_hist, msg_queue::sptr py_msgq);
 
 	virtual void setConvEn(bool conv_en) = 0;
 	virtual void setInterpRatio(float in_ratio) = 0;

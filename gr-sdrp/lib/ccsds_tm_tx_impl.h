@@ -34,6 +34,8 @@ namespace sdrp {
 
 class ccsds_tm_tx_impl : public ccsds_tm_tx {
 private:
+	unsigned d_packet_id, d_timestamp_id;
+
 	size_t	 	d_itemsize;
 	unsigned		d_msg_offset;
 	bool		d_print;
@@ -68,7 +70,7 @@ private:
 	bool d_conv_en;
 
 public:
-	ccsds_tm_tx_impl(float out_amp, int num_hist, msg_queue::sptr py_msgq);
+	ccsds_tm_tx_impl(unsigned packet_id, unsigned timestamp_id, float out_amp, int num_hist, msg_queue::sptr py_msgq);
 
 	~ccsds_tm_tx_impl();
 

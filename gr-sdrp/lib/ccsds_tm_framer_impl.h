@@ -43,6 +43,12 @@ namespace gr {
       unsigned int     d_header;	      // header bits
       int	       d_headerbitlen_cnt;    // how many so far
 
+      //Stuff that's useful for timing received messages
+      double           d_sample_rate;
+      uint64_t         d_rx_time_count;
+      uint64_t         d_rx_time_seconds;
+      double           d_rx_time_frac;
+
       unsigned char    d_packet[MAX_PKT_LEN]; // assembled payload
       unsigned char    d_packet_byte;	      // byte being assembled
       int	       d_packet_byte_index;   // which bit of d_packet_byte we're working on
@@ -58,8 +64,8 @@ namespace gr {
       unsigned int d_turbo_k;
       unsigned int d_ldpc_k;
       unsigned int d_tot_bits;
-      pmt::pmt_t d_correlate_key;
-      unsigned int d_packet_id;
+      pmt::pmt_t d_correlate_key, d_sync_key;
+      unsigned int d_packet_id, d_timestamp_id;
       std::vector<char> d_symbol_hist;
       unsigned long d_num_times;
 
@@ -88,13 +94,14 @@ namespace gr {
       void resetDecoder();
 
     public:
-      ccsds_tm_framer_impl(unsigned packet_id, const std::string &tag_name);
+      ccsds_tm_framer_impl(unsigned packet_id, unsigned timestamp_id, const std::string &tag_name, const std::string &sync_tag_name, double sample_rate);
       ~ccsds_tm_framer_impl();
 
       int work(int noutput_items,
 	       gr_vector_const_void_star &input_items,
 	       gr_vector_void_star &output_items);
 
+      virtual void setSampleRate(double sample_rate);
       virtual void setFrameLength(unsigned int num_bits);
       virtual void setCodeRate(unsigned int r_mult, unsigned int r_div);
       virtual void setCodingMethod(std::string in_method);

@@ -55,12 +55,12 @@ inline void ccsds_tm_framer_impl::enter_have_header(int payload_len, int whitene
 	d_packet_byte_index = 0;
 }
 
-ccsds_tm_framer::sptr ccsds_tm_framer::make(unsigned packet_id, const std::string &tag_name){
+ccsds_tm_framer::sptr ccsds_tm_framer::make(unsigned packet_id, unsigned timestamp_id, const std::string &tag_name, const std::string &sync_tag_name, double sample_rate){
 	return gnuradio::get_initial_sptr
-		(new ccsds_tm_framer_impl(packet_id, tag_name));
+		(new ccsds_tm_framer_impl(packet_id, timestamp_id, tag_name, sync_tag_name, sample_rate));
 }
 
-ccsds_tm_framer_impl::ccsds_tm_framer_impl(unsigned packet_id, const std::string &tag_name)
+ccsds_tm_framer_impl::ccsds_tm_framer_impl(unsigned packet_id, unsigned timestamp_id, const std::string &correlate_tag_name, const std::string &sync_tag_name, double sample_rate)
 	: sync_block("ccsds_tm_framer",
 			io_signature::make(1, 1, sizeof(char)),
 			io_signature::make(0, 0, 0)),
@@ -73,9 +73,12 @@ ccsds_tm_framer_impl::ccsds_tm_framer_impl(unsigned packet_id, const std::string
 	d_num_times(0),
 	d_frames_correct(0),
 	d_frames_incorrect(0),
+	d_sample_rate(sample_rate),
+	d_timestamp_id(timestamp_id),
 	d_packet_id(packet_id)
 {
-	d_correlate_key = pmt::string_to_symbol(tag_name);
+	d_correlate_key = pmt::string_to_symbol(correlate_tag_name);
+	d_sync_key = pmt::string_to_symbol(sync_tag_name);
 
 	message_port_register_out(pmt::mp("tm_frame_out"));
 	resetDecoder();
@@ -168,6 +171,10 @@ void ccsds_tm_framer_impl::performHardDecisions(std::vector<uint8_t> &packet_dat
 	}
 }
 
+void ccsds_tm_framer_impl::setSampleRate(double sample_rate){
+	d_sample_rate = sample_rate;
+}
+
 int ccsds_tm_framer_impl::work(int noutput_items,
 		gr_vector_const_void_star &input_items,
 		gr_vector_void_star &output_items){
@@ -192,6 +199,11 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 						std::cout << "entered have_sync " << d_num_times++ << " times" << std::endl;
 						d_symbol_hist.clear();
 						found_tag = true;
+					} else if(tags[ii].key == d_sync_key){
+						const pmt::pmt_t &value = tags[ii].value;
+						d_rx_time_count = tags[ii].offset;
+						d_rx_time_seconds = pmt::to_uint64(pmt::tuple_ref(value, 0));
+						d_rx_time_frac = pmt::to_double(pmt::tuple_ref(value, 1));
 					}
 				}
 				if(!found_tag) count = noutput_items;
@@ -273,12 +285,18 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 							printf("%02X",packet_data[ii]);
 						}
 						std::cout << std::endl;
-					//	for(unsigned ii=0; ii < packet_data.size(); ii++)
-					//		std::cout << (int)packet_data[ii] << ", ";
 
 						pmt::pmt_t new_message_dict = pmt::make_dict();
+
+						//Add data to packet dictionary
 						pmt::pmt_t key = pmt::from_long((long)(d_packet_id));
 						pmt::pmt_t value = pmt::init_u8vector(packet_data.size(), (const uint8_t*)&packet_data[0]);
+						new_message_dict = pmt::dict_add(new_message_dict, key, value);
+
+						//Add timestamp to packet dictionary
+						double timestamp = d_rx_time_seconds + d_rx_time_frac + d_sample_rate*(count-d_rx_time_count);
+						key = pmt::from_long((long)(d_timestamp_id));
+						value = pmt::init_u8vector(sizeof(uint32_t), (const uint8_t*)&timestamp);
 						new_message_dict = pmt::dict_add(new_message_dict, key, value);
 						pmt::pmt_t new_message = pmt::cons(new_message_dict, pmt::PMT_NIL);
 						message_port_pub(pmt::mp("tm_frame_out"), new_message);

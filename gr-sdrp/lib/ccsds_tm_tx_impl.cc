@@ -57,14 +57,16 @@ namespace sdrp {
 pthread_mutex_t packet_queue_mutex;
 pthread_cond_t packet_queue_cv;
 
-ccsds_tm_tx::sptr ccsds_tm_tx::make(float out_amp, int num_hist, msg_queue::sptr py_msgq){
-	return gnuradio::get_initial_sptr(new ccsds_tm_tx_impl(out_amp, num_hist, py_msgq));
+ccsds_tm_tx::sptr ccsds_tm_tx::make(unsigned packet_id, unsigned timestamp_id, float out_amp, int num_hist, msg_queue::sptr py_msgq){
+	return gnuradio::get_initial_sptr(new ccsds_tm_tx_impl(packet_id, timestamp_id, out_amp, num_hist, py_msgq));
 }
 
-ccsds_tm_tx_impl::ccsds_tm_tx_impl(float out_amp, int num_hist, msg_queue::sptr py_msgq)
+ccsds_tm_tx_impl::ccsds_tm_tx_impl(unsigned packet_id, unsigned timestamp_id, float out_amp, int num_hist, msg_queue::sptr py_msgq)
 	: sync_block("ccsds_tm_tx",
 		io_signature::make(0, 0, 0),
-		io_signature::make(0, 1, sizeof(gr_complex))), d_msgq(py_msgq){
+		io_signature::make(0, 1, sizeof(gr_complex))), d_msgq(py_msgq),
+		d_packet_id(packet_id),
+		d_timestamp_id(timestamp_id){
 
 	//Incoming messages consist of arrays of uint8_t's corresponding to the desired data bytes
 	message_port_register_in(pmt::mp("ccsds_tx_msg_in"));
@@ -111,21 +113,38 @@ void ccsds_tm_tx_impl::setInterpRatio(float in_ratio){
 }
 
 void ccsds_tm_tx_impl::inTXMsg(pmt::pmt_t msg){
-	//This should be purely a message containing uint8's
-	pmt::pmt_t msg_vector = pmt::cdr(msg);
-	size_t msg_len = pmt::length(msg_vector);
-	size_t offset(0);
-	uint8_t *msg_array = (uint8_t*)(pmt::uniform_vector_elements(msg_vector, offset));
+	pmt::pmt_t meta(pmt::car(msg));
 
-	std::cout << "GOT A MESSAGE... msg_len = " << msg_len << std::endl;
+	if(!pmt::eq(meta, pmt::PMT_NIL)){
+		pmt::pmt_t timestamp_key = pmt::from_long((long)(d_timestamp_id));
+		pmt::pmt_t packet_key = pmt::from_long((long)(d_packet_id));
 
-	//Make a vector and push it on to the queue of vectors to push out
-	std::vector<uint8_t> new_packet;
-	new_packet.assign(msg_array, msg_array+msg_len);
-	pthread_mutex_lock(&packet_queue_mutex);
-	d_packet_queue.push(new_packet);
-	pthread_cond_signal(&packet_queue_cv);
-	pthread_mutex_unlock(&packet_queue_mutex);
+		//Get timestamp if it's contained within the message
+		if(pmt::dict_has_key(meta, timestamp_key)){
+			//TODO: Implement TX timestamping
+		}
+
+		//Message to transmit must be contained in the dictionary or abort.
+		if(pmt::dict_has_key(meta, packet_key)){
+			//This should be purely a message containing uint8's
+			pmt::pmt_t msg_vector = pmt::dict_ref(meta, packet_key, pmt::PMT_NIL);
+			size_t msg_len = pmt::length(msg_vector);
+			size_t offset(0);
+			uint8_t *msg_array = (uint8_t*)(pmt::uniform_vector_elements(msg_vector, offset));
+		
+			std::cout << "GOT A MESSAGE... msg_len = " << msg_len << std::endl;
+		
+			//Make a vector and push it on to the queue of vectors to push out
+			std::vector<uint8_t> new_packet;
+			new_packet.assign(msg_array, msg_array+msg_len);
+			pthread_mutex_lock(&packet_queue_mutex);
+			d_packet_queue.push(new_packet);
+			pthread_cond_signal(&packet_queue_cv);
+			pthread_mutex_unlock(&packet_queue_mutex);
+		
+		}
+	
+	}
 }
 
 void ccsds_tm_tx_impl::setCodeRate(unsigned int r_mult, unsigned int r_div){
