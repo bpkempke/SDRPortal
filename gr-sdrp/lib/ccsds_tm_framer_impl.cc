@@ -67,7 +67,6 @@ ccsds_tm_framer_impl::ccsds_tm_framer_impl(unsigned packet_id, unsigned timestam
 	d_frame_len(223*8),
 	d_r_mult(1), d_r_div(1),
 	d_rs_e(16), d_rs_i(1), d_rs_q(0),
-	d_turbo_k(8920),
 	d_ldpc_k(7136),
 	d_vp(NULL),
 	d_num_times(0),
@@ -97,6 +96,22 @@ void ccsds_tm_framer_impl::setFrameLength(unsigned int num_bits){
 		//Recreate the convolutional encoder
 		delete_viterbi27_port(d_vp);
 		d_vp = create_viterbi27_port(num_bits);
+
+		//Set up appropriate interleavers if turbo decoding is enabled
+		if(d_coding_method == METHOD_TURBO_2 ||
+			d_coding_method == METHOD_TURBO_3 ||
+			d_coding_method == METHOD_TURBO_4 ||
+			d_coding_method == METHOD_TURBO_6){
+
+			if(num_bits == 1784)
+				d_interleaver = gr::trellis::interleaver("turbo_interleavers/ccsds_interleaver_1784.dat");
+			else if(num_bits == 3568)
+				d_interleaver = gr::trellis::interleaver("turbo_interleavers/ccsds_interleaver_3568.dat");
+			else if(num_bits == 7136)
+				d_interleaver = gr::trellis::interleaver("turbo_interleavers/ccsds_interleaver_7136.dat");
+			else
+				d_interleaver = gr::trellis::interleaver("turbo_interleavers/ccsds_interleaver_8920.dat");
+		}
 	}
 }
       
@@ -117,9 +132,27 @@ void ccsds_tm_framer_impl::setCodingMethod(std::string in_method){
 		d_r_div = 223;
 	}else if(in_method == "CC")
 		d_coding_method = METHOD_CC;
-	else if(in_method == "Turbo")
-		d_coding_method = METHOD_TURBO;
-	else if(in_method == "LDPC")
+	else if(in_method == "Turbo 1/2"){
+		d_coding_method = METHOD_TURBO_2;
+		d_fsm1 = gr::trellis::fsm("turbo_fsms/ccsds_fsm_2_a.fsm");
+		d_fsm2 = gr::trellis::fsm("turbo_fsms/ccsds_fsm_2_b.fsm");
+		setFrameLength(d_frame_len);
+	}else if(in_method == "Turbo 1/3"){
+		d_coding_method = METHOD_TURBO_3;
+		d_fsm1 = gr::trellis::fsm("turbo_fsms/ccsds_fsm_3_a.fsm");
+		d_fsm2 = gr::trellis::fsm("turbo_fsms/ccsds_fsm_3_b.fsm");
+		setFrameLength(d_frame_len);
+	}else if(in_method == "Turbo 1/4"){
+		d_coding_method = METHOD_TURBO_4;
+		d_fsm1 = gr::trellis::fsm("turbo_fsms/ccsds_fsm_4_a.fsm");
+		d_fsm2 = gr::trellis::fsm("turbo_fsms/ccsds_fsm_4_b.fsm");
+		setFrameLength(d_frame_len);
+	}else if(in_method == "Turbo 1/6"){
+		d_coding_method = METHOD_TURBO_6;
+		d_fsm1 = gr::trellis::fsm("turbo_fsms/ccsds_fsm_6_a.fsm");
+		d_fsm2 = gr::trellis::fsm("turbo_fsms/ccsds_fsm_6_b.fsm");
+		setFrameLength(d_frame_len);
+	}else if(in_method == "LDPC")
 		d_coding_method = METHOD_LDPC;
 	else{
 		d_r_mult = 1;
@@ -137,9 +170,6 @@ void ccsds_tm_framer_impl::setCodingParameter(std::string param_name, std::strin
 			d_rs_i = (unsigned int)atoi(param_val.c_str());
 		else if(param_name == "Q")
 			d_rs_q = (unsigned int)atoi(param_val.c_str());
-	} else if(d_coding_method == METHOD_TURBO){
-		if(param_name == "K")
-			d_turbo_k = (unsigned int)atoi(param_val.c_str());
 	} else if(d_coding_method == METHOD_LDPC){
 		if(param_name == "K")
 			d_ldpc_k = (unsigned int)atoi(param_val.c_str());
@@ -221,6 +251,22 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 					if(d_coding_method == METHOD_NONE){
 						//No coding required, push out all the bits regardless of whether they're right!
 						performHardDecisions(packet_data);
+						valid_packet = true;
+					} else if(d_coding_method == METHOD_TURBO_2 || 
+						d_coding_method == METHOD_TURBO_3 ||
+						d_coding_method == METHOD_TURBO_4 ||
+						d_coding_method == METHOD_TURBO_6){
+						//Pass the data off to the viterbi PCCC decoder
+						float (*p2min)(float, float) = &(gr::trellis::min);
+						packet_data.resize(d_frame_len);
+						std::vector<float> symbols_in(d_symbol_hist.begin(), d_symbol_hist.end());
+						gr::trellis::pccc_decoder<unsigned char>(
+							d_fsm1, 0, -1,
+							d_fsm2, 0, -1,
+							d_interleaver, d_tot_bits, 10,
+							p2min,
+							&(symbols_in[0]),
+							&(packet_data[0]));
 						valid_packet = true;
 					} else if(d_coding_method == METHOD_RS){
 						//Need to pay attention to the interleaving depth here...

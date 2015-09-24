@@ -24,6 +24,7 @@
 #define INCLUDED_SDRP_CCSDS_TM_FRAMER_IMPL_H
 
 #include <sdrp/ccsds_tm_framer.h>
+#include <gnuradio/trellis/core_algorithms.h>
 
 namespace gr {
   namespace sdrp {
@@ -33,7 +34,7 @@ namespace gr {
     private:
       void performHardDecisions(std::vector<uint8_t> &packet_data);
       enum state_t {STATE_SYNC_SEARCH, STATE_HAVE_SYNC, STATE_HAVE_HEADER};
-      enum coding_method_t {METHOD_CONV, METHOD_RS, METHOD_CC, METHOD_TURBO, METHOD_LDPC, METHOD_NONE};
+      enum coding_method_t {METHOD_CONV, METHOD_RS, METHOD_CC, METHOD_TURBO_2, METHOD_TURBO_3, METHOD_TURBO_4, METHOD_TURBO_6, METHOD_LDPC, METHOD_NONE};
 
       static const int MAX_PKT_LEN    = 4096;
       static const int HEADERBITLEN   = 32;
@@ -70,6 +71,10 @@ namespace gr {
       unsigned long d_num_times;
 
       void *d_vp;
+
+      //Turbo coding stuff
+      gr::trellis::interleaver d_interleaver;
+      gr::trellis::fsm d_fsm1, d_fsm2;
 
     protected:
       void enter_search();
