@@ -260,7 +260,7 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 						float (*p2min)(float, float) = &(gr::trellis::min);
 						packet_data.resize(d_frame_len);
 						std::vector<float> symbols_in(d_symbol_hist.begin(), d_symbol_hist.end());
-						gr::trellis::pccc_decoder<unsigned char>(
+						gr::trellis::pccc_decoder(//<unsigned char>(
 							d_fsm1, 0, -1,
 							d_fsm2, 0, -1,
 							d_interleaver, d_tot_bits, 10,

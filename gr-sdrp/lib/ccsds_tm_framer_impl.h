@@ -24,7 +24,6 @@
 #define INCLUDED_SDRP_CCSDS_TM_FRAMER_IMPL_H
 
 #include <sdrp/ccsds_tm_framer.h>
-#include <gnuradio/trellis/core_algorithms.h>
 
 namespace gr {
   namespace sdrp {

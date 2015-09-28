@@ -19,6 +19,7 @@
 
 include(GrMiscUtils)
 GR_INCLUDE_SUBDIRECTORY(fec)
+GR_INCLUDE_SUBDIRECTORY(trellis)
 
 ########################################################################
 # Setup library
@@ -50,14 +51,21 @@ list(APPEND sdrp_sources
     ws_sink_c_impl.cc
 )
 
+set(sdrp_sources "${sdrp_sources}" PARENT_SCOPE)
+if(NOT sdrp_sources)
+	MESSAGE(STATUS "No C++ sources... skipping lib/")
+	return()
+endif(NOT sdrp_sources)
+
 add_library(gnuradio-sdrp SHARED ${sdrp_sources})
-target_link_libraries(gnuradio-sdrp 
-	sdrportalShared 
-	gnuradio-digital 
-	${Boost_LIBRARIES} 
-	${GNURADIO_RUNTIME_LIBRARIES}
-)
+target_link_libraries(gnuradio-sdrp sdrportalShared ${Boost_LIBRARIES} ${GNURADIO_ALL_LIBRARIES})
 set_target_properties(gnuradio-sdrp PROPERTIES DEFINE_SYMBOL "gnuradio_sdrp_EXPORTS")
+
+if(APPLE)
+    set_target_properties(gnuradio-sdrp PROPERTIES
+        INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
+    )
+endif(APPLE)
 
 ########################################################################
 # Install built library files
@@ -84,7 +92,6 @@ add_executable(test-sdrp ${test_sdrp_sources})
 
 target_link_libraries(
   test-sdrp
-  sdrportalShared
   ${GNURADIO_RUNTIME_LIBRARIES}
   ${Boost_LIBRARIES}
   ${CPPUNIT_LIBRARIES}

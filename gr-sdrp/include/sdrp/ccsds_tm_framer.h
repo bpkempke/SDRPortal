@@ -26,6 +26,7 @@
 #include <sdrp/api.h>
 #include <gnuradio/sync_block.h>
 #include <gnuradio/msg_queue.h>
+#include <gnuradio/trellis/core_algorithms.h>
 
 namespace gr {
   namespace sdrp {

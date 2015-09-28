@@ -1,6 +1,7 @@
 /* -*- c++ -*- */
 
 #define DIGITAL_API
+//#define TRELLIS_API
 #define SDRP_API
 
 %include "gnuradio.i"			// the common stuff
@@ -8,6 +9,7 @@
 //load generated python docstrings
 %include "sdrp_swig_doc.i"
 %include "gnuradio/digital/constellation.h"
+//%include "gnuradio/trellis/core_algorithms.h"
 
 %{
 #include "sdrp/dsn_pn_tx.h"
