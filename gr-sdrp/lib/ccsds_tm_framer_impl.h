@@ -72,6 +72,7 @@ namespace gr {
       void *d_vp;
 
       //Turbo coding stuff
+      std::vector<float> d_constellation;
       gr::trellis::interleaver d_interleaver;
       gr::trellis::fsm d_fsm1, d_fsm2;
 

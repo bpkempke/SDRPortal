@@ -82,7 +82,6 @@ ccsds_tm_framer_impl::ccsds_tm_framer_impl(unsigned packet_id, unsigned timestam
 	message_port_register_out(pmt::mp("tm_frame_out"));
 	resetDecoder();
 
-	//Set up the reed-solomon decoder
 }
 
 ccsds_tm_framer_impl::~ccsds_tm_framer_impl(){
@@ -102,6 +101,16 @@ void ccsds_tm_framer_impl::setFrameLength(unsigned int num_bits){
 			d_coding_method == METHOD_TURBO_3 ||
 			d_coding_method == METHOD_TURBO_4 ||
 			d_coding_method == METHOD_TURBO_6){
+
+			//Also set up the constellation (what bit sequences map to which symbols)
+			d_constellation.clear();
+			for(int ii=0; ii < pow(2.0, d_r_mult); ii++){
+				for(int jj=d_r_mult-1; jj >= 0; jj--){
+				//for(int jj=0; jj < d_r_mult; jj++){//TODO: Check if endian-ness is correct...
+					float cur_bit = (ii & (1 << jj)) ? 1.0 : 0.0;
+					d_constellation.push_back(cur_bit);
+				}
+			}
 
 			if(num_bits == 1784)
 				d_interleaver = gr::trellis::interleaver("turbo_interleavers/ccsds_interleaver_1784.dat");
@@ -133,21 +142,25 @@ void ccsds_tm_framer_impl::setCodingMethod(std::string in_method){
 	}else if(in_method == "CC")
 		d_coding_method = METHOD_CC;
 	else if(in_method == "Turbo 1/2"){
+		d_r_mult = 2;
 		d_coding_method = METHOD_TURBO_2;
 		d_fsm1 = gr::trellis::fsm("turbo_fsms/ccsds_fsm_2_a.fsm");
 		d_fsm2 = gr::trellis::fsm("turbo_fsms/ccsds_fsm_2_b.fsm");
 		setFrameLength(d_frame_len);
 	}else if(in_method == "Turbo 1/3"){
+		d_r_mult = 3;
 		d_coding_method = METHOD_TURBO_3;
 		d_fsm1 = gr::trellis::fsm("turbo_fsms/ccsds_fsm_3_a.fsm");
 		d_fsm2 = gr::trellis::fsm("turbo_fsms/ccsds_fsm_3_b.fsm");
 		setFrameLength(d_frame_len);
 	}else if(in_method == "Turbo 1/4"){
+		d_r_mult = 4;
 		d_coding_method = METHOD_TURBO_4;
 		d_fsm1 = gr::trellis::fsm("turbo_fsms/ccsds_fsm_4_a.fsm");
 		d_fsm2 = gr::trellis::fsm("turbo_fsms/ccsds_fsm_4_b.fsm");
 		setFrameLength(d_frame_len);
 	}else if(in_method == "Turbo 1/6"){
+		d_r_mult = 6;
 		d_coding_method = METHOD_TURBO_6;
 		d_fsm1 = gr::trellis::fsm("turbo_fsms/ccsds_fsm_6_a.fsm");
 		d_fsm2 = gr::trellis::fsm("turbo_fsms/ccsds_fsm_6_b.fsm");
@@ -256,17 +269,34 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 						d_coding_method == METHOD_TURBO_3 ||
 						d_coding_method == METHOD_TURBO_4 ||
 						d_coding_method == METHOD_TURBO_6){
+
 						//Pass the data off to the viterbi PCCC decoder
 						float (*p2min)(float, float) = &(gr::trellis::min);
-						packet_data.resize(d_frame_len);
 						std::vector<float> symbols_in(d_symbol_hist.begin(), d_symbol_hist.end());
-						gr::trellis::pccc_decoder(//<unsigned char>(
+						std::vector<unsigned char> decoded_bit_data;
+						decoded_bit_data.resize(d_frame_len);
+						std::cout << "d_fsm1.I() = " << d_fsm1.I() << " d_fsm2.I() = " << d_fsm2.I() << std::endl;
+						std::cout << "d_fsm1.O() = " << d_fsm1.O() << " d_fsm2.O() = " << d_fsm2.O() << std::endl;
+						gr::trellis::pccc_decoder_combined(
 							d_fsm1, 0, -1,
 							d_fsm2, 0, -1,
-							d_interleaver, d_tot_bits, 10,
+							d_interleaver, d_frame_len, 10,
 							p2min,
+							d_r_mult, d_constellation,
+							gr::digital::TRELLIS_EUCLIDEAN,
+							1.0,//TODO: This needs to be dynamic...
 							&(symbols_in[0]),
-							&(packet_data[0]));
+							&(decoded_bit_data[0]));
+
+						//Package bits into bytes
+						uint8_t cur_byte;
+						packet_data.clear();
+						for(int ii=0; ii < d_frame_len; ii++){
+							cur_byte <<= 1;
+							cur_byte |= decoded_bit_data[ii];
+							if((ii % 8) == 7)
+								packet_data.push_back(cur_byte);
+						}
 						valid_packet = true;
 					} else if(d_coding_method == METHOD_RS){
 						//Need to pay attention to the interleaving depth here...

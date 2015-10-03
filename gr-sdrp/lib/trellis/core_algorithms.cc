@@ -1073,6 +1073,8 @@ namespace gr {
       std::vector<float> posti2(blocklength*FSM2.I());
 
       //generate prioro1,2 (metrics are not updated per iteration: this is not the best you can do...)
+      std::cout << "blocklength = " << blocklength << " FSM1.I() = " << FSM1.I() << " FSM2.I() = " << FSM2.I() << std::endl;
+      std::cout << "INTERLEAVER.K() = " << INTERLEAVER.K() << std::endl;
       for(int k=0;k<blocklength;k++) {
 	//std::cout << k << std::endl;
 	for(int i=0;i<FSM1.O();i++) {
