@@ -159,10 +159,8 @@ void ccsds_tm_tx_impl::setFrameLength(int in_frame_len){
 
 void ccsds_tm_tx_impl::setCodingMethod(const std::string in_method){
 	if(in_method == "CONV"){
-		std::cout << "setting coding method to CONV" << std::endl;
 		d_coding_method = METHOD_CONV;
 	}else if(in_method == "RS"){
-		std::cout << "Setting coding method to RS" << std::endl;
 		d_coding_method = METHOD_RS;
 		d_frame_len = 223*8;
 		d_r_mult = 255;
@@ -174,7 +172,6 @@ void ccsds_tm_tx_impl::setCodingMethod(const std::string in_method){
 	else if(in_method == "LDPC")
 		d_coding_method = METHOD_LDPC;
 	else {
-		std::cout << "Setting coding method to None" << std::endl;
 		d_coding_method = METHOD_NONE;
 	}
 }

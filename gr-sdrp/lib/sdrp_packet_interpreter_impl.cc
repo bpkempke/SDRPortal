@@ -103,7 +103,6 @@ void sdrp_packet_interpreter_impl::inSocketMsg(pmt::pmt_t msg){
 }
 
 void sdrp_packet_interpreter_impl::inPacketMsg(pmt::pmt_t msg){
-	std::cout << "GOT AN INCOMING PACKET MESSAGE" << std::endl;
 	//This should be a message containing a variety of key-value dictionary pairs
 	uint8_t *buf;
 	uint32_t total_buf_length = 4;
@@ -123,7 +122,6 @@ void sdrp_packet_interpreter_impl::inPacketMsg(pmt::pmt_t msg){
 			total_buf_length += pmt::length(pmt::nth(i, vals));
 		}
 	}
-	std::cout << "total_buf_length = " << total_buf_length << std::endl;
 
 	//Allocate the buffer now that we know how long it's going to be
 	buf = new uint8_t[total_buf_length];

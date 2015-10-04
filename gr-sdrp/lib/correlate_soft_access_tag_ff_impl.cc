@@ -135,9 +135,9 @@ bool correlate_soft_access_tag_ff_impl::set_access_code(std::string access_code)
 			d_access_code[(len-ii-1)/64] |= 1ULL << ((len-ii-1) % 64);
 	}
 
-	for(unsigned ii=0; ii < d_len_64; ii++){
-		printf("%llX\n",d_access_code[ii]);
-	}
+	//for(unsigned ii=0; ii < d_len_64; ii++){
+	//	printf("%llX\n",d_access_code[ii]);
+	//}
 
 	return true;
 }

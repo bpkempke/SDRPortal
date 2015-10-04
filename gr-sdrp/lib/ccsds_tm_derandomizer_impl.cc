@@ -55,13 +55,12 @@ int ccsds_tm_derandomizer_impl::work(int noutput_items,
 	this->get_tags_in_range(tags, 0, nread, nread+noutput_items);
 	for(int ii=0; ii < tags.size(); ii++){
 		if(tags[ii].key == d_correlate_key){
-			std::cout << "FOUND TAG" << std::endl;
 			new_count = tags[ii].offset+1;
 		}
 	}
 
 	for (int i = 0; i < noutput_items; i++) {
-		if(d_rand_en && nread+i > new_count)
+		if(d_rand_en && nread+i >= new_count)
 			out[noutput_ret++] = (d_pn[(nread+i-new_count)%255]) ? -in[i] : in[i];
 		else if(d_rand_en)
 			out[noutput_ret++] = (d_pn[(nread+i-d_count)%255]) ? -in[i] : in[i];

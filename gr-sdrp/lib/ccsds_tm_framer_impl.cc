@@ -107,7 +107,7 @@ void ccsds_tm_framer_impl::setFrameLength(unsigned int num_bits){
 			for(int ii=0; ii < pow(2.0, d_r_mult); ii++){
 				for(int jj=d_r_mult-1; jj >= 0; jj--){
 				//for(int jj=0; jj < d_r_mult; jj++){//TODO: Check if endian-ness is correct...
-					float cur_bit = (ii & (1 << jj)) ? 1.0 : 0.0;
+					float cur_bit = (ii & (1 << jj)) ? 1.0 : -1.0;
 					d_constellation.push_back(cur_bit);
 				}
 			}
@@ -239,7 +239,7 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 						count = tags[ii].offset-nread;
 						count++;
 						enter_have_sync();
-						std::cout << "entered have_sync " << d_num_times++ << " times" << std::endl;
+						std::cout << "Entered have_sync " << ++d_num_times << " time(s)" << std::endl;
 						d_symbol_hist.clear();
 						found_tag = true;
 					} else if(tags[ii].key == d_sync_key){
@@ -276,31 +276,29 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 						d_coding_method == METHOD_TURBO_6){
 
 						//Pass the data off to the viterbi PCCC decoder
-						//float (*p2min)(float, float) = &(gr::trellis::min);
-						//std::vector<float> symbols_in(d_symbol_hist.begin(), d_symbol_hist.end());
-						//std::vector<unsigned char> decoded_bit_data;
-						//decoded_bit_data.resize(d_frame_len);
-						//std::cout << "d_fsm1.I() = " << d_fsm1.I() << " d_fsm2.I() = " << d_fsm2.I() << std::endl;
-						//std::cout << "d_fsm1.O() = " << d_fsm1.O() << " d_fsm2.O() = " << d_fsm2.O() << std::endl;
-						//gr::trellis::pccc_decoder_combined(
-						//	d_fsm1, 0, -1,
-						//	d_fsm2, 0, -1,
-						//	d_interleaver, d_frame_len, 10,
-						//	p2min,
-						//	d_r_mult, d_constellation,
-						//	gr::digital::TRELLIS_EUCLIDEAN,
-						//	1.0,//TODO: This needs to be dynamic...//COULD BE HAVING ISSUES BECAUSE DATA HAS DC BIAS...
-						//	&(symbols_in[0]),
-						//	&(decoded_bit_data[0]));
+						float (*p2min)(float, float) = &(gr::trellis::min);
+						std::vector<unsigned char> decoded_bit_data;
+						decoded_bit_data.resize(d_frame_len);
+						gr::trellis::pccc_decoder_combined(
+							d_fsm1, 0, -1,
+							d_fsm2, 0, -1,
+							d_interleaver, d_frame_len, 10,
+							p2min,
+							d_r_mult, d_constellation,
+							gr::digital::TRELLIS_EUCLIDEAN,
+							1.0,//TODO: This needs to be dynamic...
+							&(d_symbol_hist[0]),
+							&(decoded_bit_data[0]));
 
 						//Package bits into bytes
 						uint8_t cur_byte;
 						packet_data.clear();
 						for(int ii=0; ii < d_frame_len; ii++){
 							cur_byte <<= 1;
-							//cur_byte |= decoded_bit_data[ii];
-							uint8_t temp_bit = d_symbol_hist[ii*6] > 0.0;
-							cur_byte |= temp_bit;//%TODO: JUST FOR TESTING!
+							cur_byte |= decoded_bit_data[ii];//CORRECT
+							//uint8_t temp_bit = d_symbol_hist[ii*6] > 0.0;//DEBUG: UNCODED PORTION
+							//uint8_t temp_bit = d_symbol_hist[ii] > 0.0;//DEBUG: TOTALLY UNCODED
+							//cur_byte |= temp_bit;//%TODO: JUST FOR TESTING!
 							if((ii % 8) == 7)
 								packet_data.push_back(cur_byte);
 						}
