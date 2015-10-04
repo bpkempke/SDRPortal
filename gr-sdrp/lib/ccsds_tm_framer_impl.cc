@@ -62,7 +62,7 @@ ccsds_tm_framer::sptr ccsds_tm_framer::make(unsigned packet_id, unsigned timesta
 
 ccsds_tm_framer_impl::ccsds_tm_framer_impl(unsigned packet_id, unsigned timestamp_id, const std::string &correlate_tag_name, const std::string &sync_tag_name, double sample_rate)
 	: sync_block("ccsds_tm_framer",
-			io_signature::make(1, 1, sizeof(char)),
+			io_signature::make(1, 1, sizeof(float)),
 			io_signature::make(0, 0, 0)),
 	d_frame_len(223*8),
 	d_r_mult(1), d_r_div(1),
@@ -205,7 +205,7 @@ void ccsds_tm_framer_impl::performHardDecisions(std::vector<uint8_t> &packet_dat
 	for(unsigned ii=0; ii < d_symbol_hist.size(); ii++){
 		unsigned cur_bit_pos = d_symbol_hist.size() - ii - 1;
 		unsigned byte_pos = cur_bit_pos % 8;
-		if(d_symbol_hist[ii])
+		if(d_symbol_hist[ii] > 0.0)
 			cur_byte |= 1 << byte_pos;
 		if(byte_pos == 0){
 			packet_data.push_back(cur_byte);
@@ -224,7 +224,7 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 
 	std::vector<tag_t> tags;
 	const uint64_t nread = nitems_read(0);
-	const char *in = (const char *) input_items[0];
+	const float *in = (const float *) input_items[0];
 	int count=0;
 	bool found_tag;
 
@@ -259,6 +259,11 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 
 				//If we're at the end of the packet, first try decoding it, then return to searching
 				if(d_symbol_hist.size() >= d_tot_bits){
+					//for(int ii=0; ii < d_symbol_hist.size(); ii++){
+					//	std::cout << int(d_symbol_hist[ii]);
+					//	if(ii % 6 == 5) std::cout << std::endl;
+					//}
+					//std::cout << std::endl;
 					bool valid_packet = false;
 					std::vector<uint8_t> packet_data;
 					if(d_coding_method == METHOD_NONE){
@@ -271,29 +276,31 @@ int ccsds_tm_framer_impl::work(int noutput_items,
 						d_coding_method == METHOD_TURBO_6){
 
 						//Pass the data off to the viterbi PCCC decoder
-						float (*p2min)(float, float) = &(gr::trellis::min);
-						std::vector<float> symbols_in(d_symbol_hist.begin(), d_symbol_hist.end());
-						std::vector<unsigned char> decoded_bit_data;
-						decoded_bit_data.resize(d_frame_len);
-						std::cout << "d_fsm1.I() = " << d_fsm1.I() << " d_fsm2.I() = " << d_fsm2.I() << std::endl;
-						std::cout << "d_fsm1.O() = " << d_fsm1.O() << " d_fsm2.O() = " << d_fsm2.O() << std::endl;
-						gr::trellis::pccc_decoder_combined(
-							d_fsm1, 0, -1,
-							d_fsm2, 0, -1,
-							d_interleaver, d_frame_len, 10,
-							p2min,
-							d_r_mult, d_constellation,
-							gr::digital::TRELLIS_EUCLIDEAN,
-							1.0,//TODO: This needs to be dynamic...
-							&(symbols_in[0]),
-							&(decoded_bit_data[0]));
+						//float (*p2min)(float, float) = &(gr::trellis::min);
+						//std::vector<float> symbols_in(d_symbol_hist.begin(), d_symbol_hist.end());
+						//std::vector<unsigned char> decoded_bit_data;
+						//decoded_bit_data.resize(d_frame_len);
+						//std::cout << "d_fsm1.I() = " << d_fsm1.I() << " d_fsm2.I() = " << d_fsm2.I() << std::endl;
+						//std::cout << "d_fsm1.O() = " << d_fsm1.O() << " d_fsm2.O() = " << d_fsm2.O() << std::endl;
+						//gr::trellis::pccc_decoder_combined(
+						//	d_fsm1, 0, -1,
+						//	d_fsm2, 0, -1,
+						//	d_interleaver, d_frame_len, 10,
+						//	p2min,
+						//	d_r_mult, d_constellation,
+						//	gr::digital::TRELLIS_EUCLIDEAN,
+						//	1.0,//TODO: This needs to be dynamic...//COULD BE HAVING ISSUES BECAUSE DATA HAS DC BIAS...
+						//	&(symbols_in[0]),
+						//	&(decoded_bit_data[0]));
 
 						//Package bits into bytes
 						uint8_t cur_byte;
 						packet_data.clear();
 						for(int ii=0; ii < d_frame_len; ii++){
 							cur_byte <<= 1;
-							cur_byte |= decoded_bit_data[ii];
+							//cur_byte |= decoded_bit_data[ii];
+							uint8_t temp_bit = d_symbol_hist[ii*6] > 0.0;
+							cur_byte |= temp_bit;//%TODO: JUST FOR TESTING!
 							if((ii % 8) == 7)
 								packet_data.push_back(cur_byte);
 						}

@@ -40,6 +40,7 @@ list(APPEND sdrp_sources
     ccsds_aos_framer_impl.cc
     ccsds_tm_framer_impl.cc
     ccsds_tm_conv_decoder_impl.cc
+    ccsds_tm_derandomizer_impl.cc
     ccsds_tm_tx_impl.cc
     constellation_soft_receiver_cf_impl.cc
     correlate_long_access_code_bb_impl.cc

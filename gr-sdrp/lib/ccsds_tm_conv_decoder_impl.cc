@@ -40,7 +40,7 @@ ccsds_tm_conv_decoder::sptr ccsds_tm_conv_decoder::make(const std::string &tag_n
 ccsds_tm_conv_decoder_impl::ccsds_tm_conv_decoder_impl(const std::string &tag_name)
 	: block("ccsds_tm_conv_decoder",
 			io_signature::make (1, 1, sizeof(float)),
-			io_signature::make (1, 1, sizeof(char)))
+			io_signature::make (1, 1, sizeof(float)))
 {
 	d_correlate_key = pmt::string_to_symbol(tag_name);
 
@@ -86,7 +86,7 @@ int ccsds_tm_conv_decoder_impl::general_work(int noutput_items,
 		gr_vector_void_star &output_items){
 
 	const float *in = (const float *)input_items[0];
-	unsigned char *out = (unsigned char *)output_items[0];
+	float *out = (float *)output_items[0];
 
 	int noutput_ret = 0;
 	int consume_count = ninput_items[0];
@@ -184,14 +184,14 @@ int ccsds_tm_conv_decoder_impl::general_work(int noutput_items,
 					unsigned char cur_byte;
 					viterbi_get_output(d_state0, &cur_byte);
 					for(int ii=0; ii<8; ii++)
-						out[noutput_ret++] = (cur_byte & (0x80 >> ii)) ? 1 : 0;
+						out[noutput_ret++] = (cur_byte & (0x80 >> ii)) ? 1.0 : -1.0;
 				}
 			}
 
 			d_count++;
 		} else {
 			//Otherwise just do a straight binary slice
-			out[noutput_ret++] = (d_negate) ? (in[i] < 0.0) : (in[i] > 0.0);
+			out[noutput_ret++] = (d_negate) ? (-in[i]) : (in[i]);
 		}
 	}
 

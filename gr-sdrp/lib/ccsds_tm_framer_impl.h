@@ -66,7 +66,7 @@ namespace gr {
       unsigned int d_tot_bits;
       pmt::pmt_t d_correlate_key, d_sync_key;
       unsigned int d_packet_id, d_timestamp_id;
-      std::vector<char> d_symbol_hist;
+      std::vector<float> d_symbol_hist;
       unsigned long d_num_times;
 
       void *d_vp;
