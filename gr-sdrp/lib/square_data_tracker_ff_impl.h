@@ -36,6 +36,7 @@ private:
 	float d_phase_last;
 	int d_sample_count;
 	bool filter_updated;
+	bool d_manchester_en;
 
 protected:
 
@@ -62,6 +63,7 @@ public:
 	float get_min_freq() const;
 	float get_max_freq() const;
 
+	void setManchesterEn(bool manchester_en);
 	void forecast(int noutput_items, gr_vector_int &ninput_items_required);
 	int general_work(int noutput_items,
 		gr_vector_int &ninput_items,

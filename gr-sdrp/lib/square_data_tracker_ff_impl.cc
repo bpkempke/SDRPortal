@@ -50,8 +50,13 @@ square_data_tracker_ff_impl::square_data_tracker_ff_impl(float loop_bw, float ma
 	d_phase_last = 0;
 	id_filter_idx = 0;
 	filter_updated = false;
+	d_manchester_en = false;
 	for(int ii=0; ii < 4; ii++)
 		id_filter[ii] = 0.0;
+}
+
+void square_data_tracker_ff_impl::setManchesterEn(bool manchester_en){
+	d_manchester_en = manchester_en;
 }
 
 void square_data_tracker_ff_impl::forecast(int noutput_items, gr_vector_int &ninput_items_required){
@@ -77,10 +82,16 @@ int square_data_tracker_ff_impl::general_work(int noutput_items,
 		id_filter_idx = (int)(d_phase/M_TWOPI*4.0);
 		if(id_filter_idx == 1 && filter_updated == false){
 
-			error = -(id_filter[2]-id_filter[0])*id_filter[3]*d_freq*d_freq;
+			if(d_manchester_en)
+				error = -(id_filter[2]+id_filter[0])*id_filter[3]*d_freq*d_freq;
+			else
+				error = -(id_filter[2]-id_filter[0])*id_filter[3]*d_freq*d_freq;
 
 			//The current id filter has our bit, push it out
-			out[out_count++] = (id_filter[2]+id_filter[0])*d_freq/M_TWOPI;
+			if(d_manchester_en)
+				out[out_count++] = (id_filter[2]-id_filter[0])*d_freq/M_TWOPI;
+			else
+				out[out_count++] = (id_filter[2]+id_filter[0])*d_freq/M_TWOPI;
 
 			//printf debugging
 			//d_sample_count++;
