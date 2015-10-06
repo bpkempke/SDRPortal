@@ -51,6 +51,7 @@ square_data_tracker_ff_impl::square_data_tracker_ff_impl(float loop_bw, float ma
 	id_filter_idx = 0;
 	filter_updated = false;
 	d_manchester_en = false;
+	bit_integrator = 0.0;
 	for(int ii=0; ii < 4; ii++)
 		id_filter[ii] = 0.0;
 }
@@ -87,11 +88,11 @@ int square_data_tracker_ff_impl::general_work(int noutput_items,
 			else
 				error = -(id_filter[2]-id_filter[0])*id_filter[3]*d_freq*d_freq;
 
-			//The current id filter has our bit, push it out
-			if(d_manchester_en)
-				out[out_count++] = (id_filter[2]-id_filter[0])*d_freq/M_TWOPI;
-			else
-				out[out_count++] = (id_filter[2]+id_filter[0])*d_freq/M_TWOPI;
+			////The current id filter has our bit, push it out
+			//if(d_manchester_en)
+			//	out[out_count++] = (id_filter[2]-id_filter[0])*d_freq/M_TWOPI;
+			//else
+			//	out[out_count++] = (id_filter[3]+id_filter[1])*d_freq/M_TWOPI;
 
 			//printf debugging
 			//d_sample_count++;
@@ -109,6 +110,16 @@ int square_data_tracker_ff_impl::general_work(int noutput_items,
 		} else if(id_filter_idx != 1){
 			filter_updated = false;
 		}
+
+		//Bit integrator
+		if(id_filter_idx == 0 && integrator_updated == false){
+			out[out_count++] = bit_integrator*d_freq/M_TWOPI;
+			bit_integrator = 0.0;
+			integrator_updated = true;
+		} else if(id_filter_idx != 0){
+			integrator_updated = false;
+		}
+		bit_integrator += in_bit;
 
 		//Increment integrate and dump filters depending on current position
 		if(id_filter_idx == 0){

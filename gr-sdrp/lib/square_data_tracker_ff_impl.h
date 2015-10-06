@@ -34,8 +34,11 @@ private:
 	float id_filter[4];
 	int id_filter_idx;
 	float d_phase_last;
+	float bit_integrator;
+	float id_filter0_old;
 	int d_sample_count;
 	bool filter_updated;
+	bool integrator_updated;
 	bool d_manchester_en;
 
 protected:
