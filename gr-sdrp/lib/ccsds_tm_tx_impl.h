@@ -65,7 +65,7 @@ private:
 	float d_frac_pos;
 	msg_queue::sptr d_msgq;
 	message::sptr d_msg;
-	std::deque<gr_complex> sample_queue;
+	std::deque<float> sample_queue;
 	unsigned char d_enc_state;
 	bool d_conv_en;
 
