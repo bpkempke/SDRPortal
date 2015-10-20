@@ -64,7 +64,7 @@ ccsds_tm_tx::sptr ccsds_tm_tx::make(unsigned packet_id, unsigned timestamp_id, f
 ccsds_tm_tx_impl::ccsds_tm_tx_impl(unsigned packet_id, unsigned timestamp_id, float out_amp, int num_hist, msg_queue::sptr py_msgq)
 	: sync_block("ccsds_tm_tx",
 		io_signature::make(0, 0, 0),
-		io_signature::make(0, 1, sizeof(gr_complex))), d_msgq(py_msgq),
+		io_signature::make(0, 1, sizeof(float))), d_msgq(py_msgq),
 		d_packet_id(packet_id),
 		d_timestamp_id(timestamp_id){
 
@@ -320,16 +320,17 @@ int ccsds_tm_tx_impl::work(int noutput_items,
 		}
 		
 		//Compute output sample based on neighboring samples
-		out[nn] = 0;
-		float square_pos = d_frac_pos/d_frac_step;
-		square_pos -= (int)square_pos;
-		if(square_pos < 0 || square_pos >= 1.0)
-			std::cout << "square_pos = " << square_pos << std::endl;
-		int cur_sinc_pos = (int)(square_pos*INTERP);
-		for(int ii=0; ii < d_num_hist*2+1; ii++){
-			out[nn] += sample_queue[d_num_hist*2-ii*d_frac_step+d_frac_pos]*d_sinc_lookup[cur_sinc_pos];
-			cur_sinc_pos += INTERP;
-		}
+		//out[nn] = 0;
+		//float square_pos = d_frac_pos/d_frac_step;
+		//square_pos -= (int)square_pos;
+		//if(square_pos < 0 || square_pos >= 1.0)
+		//	std::cout << "square_pos = " << square_pos << std::endl;
+		//int cur_sinc_pos = (int)(square_pos*INTERP);
+		//for(int ii=0; ii < d_num_hist*2+1; ii++){
+		//	out[nn] += sample_queue[d_num_hist*2-ii*d_frac_step+d_frac_pos]*d_sinc_lookup[cur_sinc_pos];
+		//	cur_sinc_pos += INTERP;
+		//}
+		out[nn] = sample_queue[0];//d_frac_pos];
 //		if(d_print)
 //			std::cout << out[nn] << std::endl;
 
