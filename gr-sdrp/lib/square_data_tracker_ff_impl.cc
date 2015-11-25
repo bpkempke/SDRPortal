@@ -119,7 +119,14 @@ int square_data_tracker_ff_impl::general_work(int noutput_items,
 		} else if(id_filter_idx != 0){
 			integrator_updated = false;
 		}
-		bit_integrator += in_bit;
+		if(d_manchester_en){
+			if(id_filter_idx < 2)
+				bit_integrator += in_bit;
+			else
+				bit_integrator -= in_bit;
+		} else {
+			bit_integrator += in_bit;
+		}
 
 		//Increment integrate and dump filters depending on current position
 		if(id_filter_idx == 0){
