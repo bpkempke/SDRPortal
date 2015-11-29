@@ -84,7 +84,7 @@ int square_data_tracker_ff_impl::general_work(int noutput_items,
 		if(id_filter_idx == 1 && filter_updated == false){
 
 			if(d_manchester_en)
-				error = -(id_filter[2]+id_filter[0])*id_filter[3]*d_freq*d_freq;
+				error = (id_filter[2]+id_filter[0])*id_filter[3]*d_freq*d_freq;
 			else
 				error = -(id_filter[2]-id_filter[0])*id_filter[3]*d_freq*d_freq;
 
